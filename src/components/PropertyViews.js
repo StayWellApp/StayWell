@@ -1,5 +1,5 @@
 // --- src/components/PropertyViews.js ---
-// Replace the entire contents of your file with this code.
+// Final Corrected Code with Day/Week Views
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
@@ -7,13 +7,10 @@ import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, arrayUnio
 import { TaskDetailModal, AddTaskForm } from './TaskViews';
 import { ChecklistTemplateForm } from './ChecklistViews';
 import { InventoryView } from './InventoryViews';
-
-// ✨ NEW: Import FullCalendar
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid'; // ✨ 1. IMPORT TIMEGRID PLUGIN
 
-
-// --- (No changes to amenityCategories, allAmenities, initialAmenitiesState, propertyTypes) ---
 const amenityCategories = {
     essentials: {
         title: "Essentials",
@@ -46,10 +43,8 @@ const amenityCategories = {
         }
     }
 };
-
 const allAmenities = Object.values(amenityCategories).reduce((acc, category) => ({ ...acc, ...category.items }), {});
 const initialAmenitiesState = Object.keys(allAmenities).reduce((acc, key) => ({ ...acc, [key]: false }), {});
-
 const propertyTypes = ["House", "Apartment", "Guesthouse", "Hotel", "Cabin", "Barn", "Bed & Breakfast", "Boat", "Camper/RV", "Castle", "Tiny Home", "Treehouse"];
 
 export const PropertyCard = ({ property, onSelect }) => (
@@ -331,25 +326,21 @@ const ChecklistsView = ({ user }) => {
     );
 };
 
-// --- ✨ CORRECTED AND UPDATED CalendarView Component ---
 const CalendarView = ({ property }) => {
     const [newCalLink, setNewCalLink] = useState("");
-
-    // --- MOCK BOOKING DATA ---
-    // In a future step, we will replace this by fetching and parsing iCal links.
     const bookings = [
         {
             id: 'booking-001',
             title: `Guest: John Doe`,
-            start: '2025-07-10',
-            end: '2025-07-15',
-            backgroundColor: '#3b82f6', // Tailwind's blue-500
-            borderColor: '#2563eb'      // Tailwind's blue-600
+            start: '2025-07-10T14:00:00', // Added time for week/day view
+            end: '2025-07-15T11:00:00',
+            backgroundColor: '#3b82f6',
+            borderColor: '#2563eb'
         },
         {
             id: 'booking-002',
             title: `Guest: Jane Smith`,
-            start: '2025-07-22',
+            start: '2025-07-22', // All-day event
             end: '2025-07-28',
             backgroundColor: '#3b82f6',
             borderColor: '#2563eb'
@@ -357,8 +348,8 @@ const CalendarView = ({ property }) => {
         {
             id: 'booking-003',
             title: `Guest: Sam Wilson`,
-            start: '2025-08-01',
-            end: '2025-08-04',
+            start: '2025-08-01T16:00:00',
+            end: '2025-08-04T10:00:00',
             backgroundColor: '#3b82f6',
             borderColor: '#2563eb'
         }
@@ -385,16 +376,14 @@ const CalendarView = ({ property }) => {
     return (
         <div className="bg-gray-50 p-6 rounded-lg border">
             <h3 className="text-2xl font-semibold text-gray-700 mb-4">Booking Calendar</h3>
-            
-            {/* The FullCalendar Component replaces the placeholder div */}
             <div className="bg-white p-4 rounded-lg border shadow-sm">
                 <FullCalendar
-                    plugins={[dayGridPlugin]}
+                    plugins={[dayGridPlugin, timeGridPlugin]} // ✨ 2. ADD TIMEGRID PLUGIN
                     initialView="dayGridMonth"
                     headerToolbar={{
                         left: 'prev,next today',
                         center: 'title',
-                        right: 'dayGridMonth'
+                        right: 'dayGridMonth,timeGridWeek,timeGridDay' // ✨ 3. ADD WEEK/DAY BUTTONS
                     }}
                     events={bookings}
                     editable={false}
@@ -402,8 +391,6 @@ const CalendarView = ({ property }) => {
                     weekends={true}
                 />
             </div>
-
-            {/* iCal Sync Section */}
             <div className="mt-6 pt-6 border-t">
                 <h4 className="font-semibold text-gray-600 mb-2">Sync Calendars (iCal)</h4>
                 <form onSubmit={handleAddCalendarLink} className="flex space-x-2">
