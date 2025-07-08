@@ -1,24 +1,5 @@
-Of course. Thank you for providing the code. Now I can see exactly what is needed. My apologies again for the previous error; I will be much more careful this time to integrate the new code properly.
-
-Let's do this the right way.
-
-### **Step 1: Install FullCalendar for React**
-
-First, if you haven't already, please open a terminal in your project's root directory (`staywellapp/staywell/StayWell-b55a138a491a147f4b514bf0c48290b41348b3b8/`) and run this command. This adds the calendar library to your project.
-
-```bash
-npm install --save @fullcalendar/react @fullcalendar/daygrid
-```
-
-### **Step 2: Replace the `PropertyViews.js` File**
-
-Here is the complete, corrected code for your `src/components/PropertyViews.js` file. I have carefully added the new calendar functionality without removing any of your existing work.
-
-Simply copy the entire code block below and replace the contents of your `src/components/PropertyViews.js` file with it.
-
-```javascript
 // --- src/components/PropertyViews.js ---
-// Replace the entire contents of your PropertyViews.js file with this code.
+// Replace the entire contents of your file with this code.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
@@ -71,7 +52,6 @@ const initialAmenitiesState = Object.keys(allAmenities).reduce((acc, key) => ({ 
 
 const propertyTypes = ["House", "Apartment", "Guesthouse", "Hotel", "Cabin", "Barn", "Bed & Breakfast", "Boat", "Camper/RV", "Castle", "Tiny Home", "Treehouse"];
 
-// --- (No changes to PropertyCard, PropertyForm, AmenitiesForm) ---
 export const PropertyCard = ({ property, onSelect }) => (
     <div className="bg-white rounded-lg border border-gray-200 shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
         <div className="bg-gray-200 h-40 flex items-center justify-center"><span className="text-gray-400">Property Photo</span></div>
@@ -165,7 +145,6 @@ const AmenitiesForm = ({ amenities, setAmenities }) => {
     );
 };
 
-// --- (No changes to PropertyDetailView) ---
 export const PropertyDetailView = ({ property, onBack, user }) => {
     const [view, setView] = useState('tasks');
     const [isEditing, setIsEditing] = useState(false);
@@ -234,7 +213,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     );
 };
 
-// --- (No changes to TasksView) ---
 const TasksView = ({ property, user }) => {
     const [tasks, setTasks] = useState([]);
     const [loadingTasks, setLoadingTasks] = useState(true);
@@ -297,7 +275,6 @@ const TasksView = ({ property, user }) => {
     );
 };
 
-// --- (No changes to ChecklistsView) ---
 const ChecklistsView = ({ user }) => {
     const [checklistTemplates, setChecklistTemplates] = useState([]);
     const [showChecklistForm, setShowChecklistForm] = useState(false);
@@ -354,18 +331,20 @@ const ChecklistsView = ({ user }) => {
     );
 };
 
-// --- ✨ UPDATED CalendarView Component ---
+// --- ✨ CORRECTED AND UPDATED CalendarView Component ---
 const CalendarView = ({ property }) => {
+    const [newCalLink, setNewCalLink] = useState("");
+
     // --- MOCK BOOKING DATA ---
-    // In the future, we will fetch this data from our iCal links.
+    // In a future step, we will replace this by fetching and parsing iCal links.
     const bookings = [
         {
             id: 'booking-001',
             title: `Guest: John Doe`,
             start: '2025-07-10',
             end: '2025-07-15',
-            backgroundColor: '#3b82f6', // blue-500
-            borderColor: '#2563eb'      // blue-600
+            backgroundColor: '#3b82f6', // Tailwind's blue-500
+            borderColor: '#2563eb'      // Tailwind's blue-600
         },
         {
             id: 'booking-002',
@@ -385,23 +364,29 @@ const CalendarView = ({ property }) => {
         }
     ];
 
-    // Placeholder state and handler for the iCal sync form
-    const [newCalLink, setNewCalLink] = useState("");
     const handleAddCalendarLink = async (e) => {
         e.preventDefault();
-        if (!newCalLink.startsWith("https") || !newCalLink.endsWith(".ics")) { alert("Please enter a valid iCal link (should start with https and end with .ics)."); return; }
+        if (!newCalLink.startsWith("https") || !newCalLink.endsWith(".ics")) {
+            alert("Please enter a valid iCal link (should start with https and end with .ics).");
+            return;
+        }
         try {
             const propertyRef = doc(db, "properties", property.id);
-            await updateDoc(propertyRef, { calendarLinks: arrayUnion(newCalLink) });
+            await updateDoc(propertyRef, {
+                calendarLinks: arrayUnion(newCalLink)
+            });
             setNewCalLink("");
-        } catch (error) { console.error("Error adding calendar link:", error); alert("Failed to add calendar link."); }
+        } catch (error) {
+            console.error("Error adding calendar link:", error);
+            alert("Failed to add calendar link.");
+        }
     };
 
     return (
         <div className="bg-gray-50 p-6 rounded-lg border">
             <h3 className="text-2xl font-semibold text-gray-700 mb-4">Booking Calendar</h3>
             
-            {/* The FullCalendar Component */}
+            {/* The FullCalendar Component replaces the placeholder div */}
             <div className="bg-white p-4 rounded-lg border shadow-sm">
                 <FullCalendar
                     plugins={[dayGridPlugin]}
@@ -409,20 +394,26 @@ const CalendarView = ({ property }) => {
                     headerToolbar={{
                         left: 'prev,next today',
                         center: 'title',
-                        right: 'dayGridMonth' // Keeping it simple for now
+                        right: 'dayGridMonth'
                     }}
-                    events={bookings} // Using our mock data
+                    events={bookings}
                     editable={false}
                     dayMaxEvents={true}
                     weekends={true}
                 />
             </div>
 
-            {/* The iCal Sync Section */}
+            {/* iCal Sync Section */}
             <div className="mt-6 pt-6 border-t">
                 <h4 className="font-semibold text-gray-600 mb-2">Sync Calendars (iCal)</h4>
                 <form onSubmit={handleAddCalendarLink} className="flex space-x-2">
-                    <input type="url" value={newCalLink} onChange={e => setNewCalLink(e.target.value)} placeholder="Paste iCal link..." className="flex-grow px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    <input
+                        type="url"
+                        value={newCalLink}
+                        onChange={e => setNewCalLink(e.target.value)}
+                        placeholder="Paste iCal link..."
+                        className="flex-grow px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
                     <button type="submit" className="bg-blue-500 text-white px-4 rounded-lg hover:bg-blue-600 transition-colors text-sm">Add</button>
                 </form>
                 <ul className="mt-3 space-y-2">
@@ -435,8 +426,6 @@ const CalendarView = ({ property }) => {
     );
 };
 
-
-// --- (No changes to AnalyticsView) ---
 const AnalyticsView = ({ property }) => {
     const [consumables, setConsumables] = useState([]);
     const [totalCost, setTotalCost] = useState(0);
@@ -455,7 +444,7 @@ const AnalyticsView = ({ property }) => {
             setTotalCost(cost);
         });
         return unsubscribe;
-    }, [property.id]);
+    }, [property..id]);
 
     return (
         <div className="bg-gray-50 p-6 rounded-lg border">
@@ -468,4 +457,3 @@ const AnalyticsView = ({ property }) => {
         </div>
     );
 };
-```
