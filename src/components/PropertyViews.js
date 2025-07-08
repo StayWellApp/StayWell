@@ -444,7 +444,7 @@ const AnalyticsView = ({ property }) => {
             setTotalCost(cost);
         });
         return unsubscribe;
-    }, [property..id]);
+    }, [property.id]);
 
     return (
         <div className="bg-gray-50 p-6 rounded-lg border">
