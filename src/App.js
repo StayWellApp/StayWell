@@ -10,7 +10,8 @@ import { Login, SignUp } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
 import PropertiesView from './components/PropertiesView';
-import { PropertyDetailView } from './components/PropertyViews'; // Note the import change
+import { PropertyDetailView } from './components/PropertyViews';
+import TeamView from './components/TeamView'; // ✨ NEW: Import TeamView
 
 const AuthScreen = () => {
     const [showLogin, setShowLogin] = useState(true);
@@ -35,7 +36,6 @@ function App() {
     const [loading, setLoading] = useState(true);
     const [activeView, setActiveView] = useState('dashboard');
 
-    // State management for properties
     const [properties, setProperties] = useState([]);
     const [selectedProperty, setSelectedProperty] = useState(null);
 
@@ -50,7 +50,6 @@ function App() {
                     setUserRole(userDoc.data().role);
                 }
 
-                // Fetch properties for the logged-in user
                 const propertiesQuery = query(collection(db, "properties"), where("ownerId", "==", currentUser.uid));
                 onSnapshot(propertiesQuery, (snapshot) => {
                     setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -90,7 +89,6 @@ function App() {
     }
 
     const renderView = () => {
-        // If a property is selected, always show its detail view regardless of the active tab
         if (selectedProperty) {
             return <PropertyDetailView 
                         property={selectedProperty} 
@@ -111,7 +109,8 @@ function App() {
             case 'calendar':
                 return <div className="p-8"><h1 className="text-3xl font-bold">Master Calendar (Coming Soon)</h1></div>;
             case 'team':
-                return <div className="p-8"><h1 className="text-3xl font-bold">Team Management (Coming Soon)</h1></div>;
+                // ✨ NEW: Render the TeamView component
+                return <TeamView user={user} />;
             case 'settings':
                 return <div className="p-8"><h1 className="text-3xl font-bold">Settings (Coming Soon)</h1></div>;
             default:
