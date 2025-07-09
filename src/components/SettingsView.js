@@ -72,7 +72,7 @@ const SettingsView = ({ user }) => {
         setNotifications(newNotifications);
         await setDoc(doc(db, 'userSettings', user.uid), { notifications: newNotifications }, { merge: true });
     };
-
+    
     return (
         <div className="p-4 sm:p-6 md:p-8">
             <header className="mb-8">
@@ -232,16 +232,18 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
     };
     
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50"> {/* Removed flex items-center justify-center and animate-fade-in */}
-            {/* Inner modal box: Now centered using absolute top/left/translate */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        // Outermost div: Full screen overlay, removed animation and explicit padding.
+        // It now purely serves as a fixed, transparent backdrop that centers its child.
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"> 
+            {/* Inner modal box: Uses w-full max-w-2xl for size, and its internal padding. */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
                 {/* Header */}
                 <div className="p-6 border-b dark:border-gray-700 flex-shrink-0">
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{existingRole ? 'Edit Role' : 'Create New Role'}</h3>
                 </div>
 
-                {/* Form Body */}
-                <form onSubmit={handleSubmit} className="flex-grow flex flex-col overflow-hidden">
+                {/* Form Body - properly flexible and scrollable */}
+                <form onSubmit={handleSubmit} className="flex-grow flex flex-col">
                     {/* Scrollable Content */}
                     <div className="p-6 space-y-6 overflow-y-auto flex-grow">
                         <div>
