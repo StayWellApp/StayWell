@@ -6,6 +6,10 @@ import { ThemeContext } from '../contexts/ThemeContext';
 import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, DollarSign, Clock, Languages } from 'lucide-react';
 import { PERMISSION_CATEGORIES, INITIAL_PERMISSIONS_STATE, STANDARD_ROLES } from '../config/permissions';
 
+// Import the new CustomSelect component
+import CustomSelect from './CustomSelect';
+
+
 // --- Reusable Components for the Tabbed Layout ---
 const SettingsTab = ({ id, label, icon: Icon, activeTab, setActiveTab }) => (
     <button
@@ -257,22 +261,14 @@ const SettingsView = ({ user }) => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label htmlFor="language-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Language</label>
-                                    <select
+                                    {/* Replaced native select with CustomSelect for Language */}
+                                    <CustomSelect
                                         id="language-select"
+                                        labelText="Language"
+                                        options={languageOptions}
                                         value={language}
-                                        onChange={(e) => setLanguage(e.target.value)}
-                                        className="mt-1 input-style"
-                                    >
-                                        {languageOptions.map(opt => (
-                                            <option key={opt.value} value={opt.value}>
-                                                {/* Note: Native <select> options cannot render complex HTML like <span> for flags. */}
-                                                {/* These classes are prepared here for use with a custom dropdown component if implemented. */}
-                                                {/* For native select, only the text label will be visible. */}
-                                                {opt.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={setLanguage}
+                                    />
                                 </div>
                                 <div className="flex justify-end pt-2">
                                     <button type="submit" disabled={isSavingLocalization} className="button-primary">{isSavingLocalization ? 'Saving...' : 'Save Localization'}</button>
