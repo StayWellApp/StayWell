@@ -1,4 +1,5 @@
-// staywellapp/staywell/StayWell-b674a0192561b2b27907bdae71b82cfa6713bb79/src/config/permissions.js
+// --- src/config/permissions.js ---
+
 export const PERMISSION_CATEGORIES = [
     {
         id: 'properties',
@@ -6,7 +7,7 @@ export const PERMISSION_CATEGORIES = [
         description: 'Permissions related to viewing and managing properties.',
         permissions: [
             { id: 'properties_view_all', label: 'View all properties in the account' },
-            { id: 'properties_view_assigned', label: 'Can only view properties specifically assigned to them' },
+            { id: 'properties_view_assigned', label: 'Can only view properties specifically assigned to them' }, // Added for clarity
             { id: 'properties_create_edit_delete', label: 'Create, edit, and delete properties' },
         ]
     },
@@ -16,10 +17,10 @@ export const PERMISSION_CATEGORIES = [
         description: 'Permissions for handling tasks and assignments.',
         permissions: [
             { id: 'tasks_view_all', label: 'View all tasks for all properties' },
-            { id: 'tasks_view_assigned', label: 'Can only view tasks specifically assigned to them' },
+            { id: 'tasks_view_assigned', label: 'Can only view tasks specifically assigned to them' }, // Changed from _assigned_only for consistency
             { id: 'tasks_create_edit_delete', label: 'Create, edit, and delete any task' },
             { id: 'tasks_assign_others', label: 'Assign tasks to other team members' },
-            { id: 'tasks_complete', label: 'Mark tasks as complete' }, // Added for cleaner/maintenance
+            { id: 'tasks_complete', label: 'Mark tasks as complete' },
         ]
     },
     {
@@ -36,16 +37,16 @@ export const PERMISSION_CATEGORIES = [
         description: 'Permissions for creating and managing templates.',
         permissions: [
             { id: 'checklists_manage', label: 'Create, edit, and delete checklist templates' },
-            { id: 'checklists_complete', label: 'Complete checklists on properties' }, // Added for cleaner/maintenance
+            { id: 'checklists_complete', label: 'Complete checklists on properties' },
         ]
     },
     {
-        id: 'inventory',
-        label: 'Storage & Inventory',
-        description: 'Permissions for viewing and managing inventory.',
+        id: 'inventory', // Changed from 'storage' for more general use
+        label: 'Inventory & Supplies',
+        description: 'Permissions for viewing and managing inventory and supplies.',
         permissions: [
             { id: 'inventory_view', label: 'View storage locations and stock levels' },
-            { id: 'inventory_update_stock_levels', label: 'Update stock levels and manage locations' },
+            { id: 'inventory_manage', label: 'Update stock levels and manage locations' }, // Renamed from storage_manage
         ]
     },
     {
@@ -72,40 +73,39 @@ export const PERMISSION_CATEGORIES = [
         description: 'Permissions for managing account-wide settings.',
         permissions: [
             { id: 'settings_manage', label: 'Access and modify general account settings' },
-            { id: 'roles_manage', label: 'Create and manage custom roles' }, // Ability to manage roles
+            { id: 'roles_manage', label: 'Create and manage custom roles and their permissions' },
         ]
     },
 ];
 
 // Helper to create initial permission states from categories
+// Ensures all permission IDs from PERMISSION_CATEGORIES are present, defaulted to false
 export const INITIAL_PERMISSIONS_STATE = PERMISSION_CATEGORIES.reduce((acc, category) => {
     category.permissions.forEach(permission => {
-        acc[permission.id] = false; // Default all to false
+        acc[permission.id] = false;
     });
     return acc;
 }, {});
 
-
 // Define standard built-in roles with their default permissions
-// These permissions should be a subset/override of INITIAL_PERMISSIONS_STATE
+// These roles cannot be deleted, but their permissions can be customized by the owner.
 export const STANDARD_ROLES = [
     {
         id: 'Owner',
         label: 'Owner',
-        description: 'Has full administrative control and access to all features.',
-        isDeletable: false, // Owner role cannot be deleted
-        isEditable: true, // Owner's permissions can be viewed/edited (though often full access)
-        // Default permissions for Owner - typically all true
+        description: 'Has full administrative control and access to all features. This role cannot be deleted.',
+        isDeletable: false,
+        isEditable: true, // Permissions can be viewed/edited by owner, but defaults are all true
         defaultPermissions: Object.keys(INITIAL_PERMISSIONS_STATE).reduce((acc, permId) => {
-            acc[permId] = true;
+            acc[permId] = true; // Owner has all permissions by default
             return acc;
         }, {}),
     },
     {
         id: 'Admin',
         label: 'Admin',
-        description: 'Comprehensive administrative control, excluding critical owner-level actions like deleting the account or managing owner-specific settings.',
-        isDeletable: false,
+        description: 'Comprehensive administrative control, excluding critical owner-level actions. Can manage properties, tasks, team, and custom roles.',
+        isDeletable: false, // Standard Admin role cannot be deleted
         isEditable: true,
         defaultPermissions: {
             ...INITIAL_PERMISSIONS_STATE, // Start with all false
@@ -119,7 +119,7 @@ export const STANDARD_ROLES = [
             'checklists_manage': true,
             'checklists_complete': true,
             'inventory_view': true,
-            'inventory_update_stock_levels': true,
+            'inventory_manage': true, // Admin can manage all inventory
             'bookings_manage': true,
             'bookings_view_all': true,
             'bookings_view_assigned': true,
@@ -131,27 +131,28 @@ export const STANDARD_ROLES = [
     {
         id: 'Manager',
         label: 'Manager',
-        description: 'Manages properties, tasks, and team members for assigned properties. Cannot create/delete properties globally.',
+        description: 'Manages properties, tasks, and can assign team members for assigned properties. Cannot create/delete properties globally or manage team members.',
         isDeletable: false,
         isEditable: true,
         defaultPermissions: {
             ...INITIAL_PERMISSIONS_STATE, // Start with all false
-            'properties_view_assigned': true,
+            'properties_view_assigned': true, // Can only view assigned
             'tasks_view_assigned': true,
             'tasks_create_edit_delete': true,
             'tasks_assign_others': true,
             'tasks_complete': true,
-            'checklists_manage': true, // Can manage checklist templates
+            'checklists_manage': true, // Managers can manage checklist templates
             'checklists_complete': true,
             'inventory_view': true,
-            'inventory_update_stock_levels': true,
+            'inventory_manage': true, // Managers can manage inventory for assigned properties
             'bookings_view_assigned': true,
+            'reports_view': true, // Managers might see reports for assigned
         }
     },
     {
         id: 'Cleaner',
         label: 'Cleaner',
-        description: 'Manages cleaning tasks and related inventory for assigned properties. Primarily completes tasks and updates stock.',
+        description: 'Primarily handles cleaning tasks and updates inventory for assigned properties. Can mark tasks and checklist items complete.',
         isDeletable: false,
         isEditable: true,
         defaultPermissions: {
@@ -161,13 +162,14 @@ export const STANDARD_ROLES = [
             'tasks_complete': true,
             'checklists_complete': true,
             'inventory_view': true,
-            'inventory_update_stock_levels': true,
+            'inventory_manage': false, // Cleaners might view/update stock, but not manage locations
+            'inventory_update_stock_levels': true, // Specific permission for updating stock
         }
     },
     {
         id: 'Maintenance',
         label: 'Maintenance',
-        description: 'Manages maintenance tasks and related inventory for assigned properties. Primarily completes tasks and updates stock.',
+        description: 'Handles maintenance tasks and related inventory for assigned properties. Can mark tasks and checklist items complete.',
         isDeletable: false,
         isEditable: true,
         defaultPermissions: {
@@ -177,7 +179,8 @@ export const STANDARD_ROLES = [
             'tasks_complete': true,
             'checklists_complete': true,
             'inventory_view': true,
-            'inventory_update_stock_levels': true,
+            'inventory_manage': false, // Maintenance might view/update stock, but not manage locations
+            'inventory_update_stock_levels': true, // Specific permission for updating stock
         }
     }
 ];
