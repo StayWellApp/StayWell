@@ -1,11 +1,11 @@
 // --- src/components/PropertiesView.js ---
-// Create this new file. It will manage the list of all properties.
+// Replace the entire contents of this file.
 
 import React, { useState } from 'react';
-import { PropertyCard, PropertyForm } from './PropertyViews'; // We'll move these here
+import { PropertyCard, PropertyForm } from './PropertyViews';
 import { Plus } from 'lucide-react';
 
-const PropertiesView = ({ properties, onAddProperty, onSelectProperty, onUpdateProperty }) => {
+const PropertiesView = ({ properties, onAddProperty, onSelectProperty }) => {
     const [showAddForm, setShowAddForm] = useState(false);
 
     const handleSave = (propertyData) => {
@@ -14,11 +14,11 @@ const PropertiesView = ({ properties, onAddProperty, onSelectProperty, onUpdateP
     };
 
     return (
-        <div className="p-8 bg-gray-50 min-h-full">
+        <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-full">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Your Properties</h1>
-                    <p className="text-gray-600 mt-1">View, manage, and add your properties below.</p>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Your Properties</h1>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">View, manage, and add your properties below.</p>
                 </div>
                 <button
                     onClick={() => setShowAddForm(true)}
