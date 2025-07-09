@@ -4,40 +4,45 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
-import { Building, AlertTriangle, Package, ListTodo, Calendar, PieChart as PieChartIcon, Siren } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Building, AlertTriangle, Package, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip } from 'recharts';
+import { TaskDetailModal } from './TaskViews'; // Import the modal for task details
 
-const ClientDashboard = ({ user, setActiveView, onSelectProperty }) => {
+const ClientDashboard = ({ user, setActiveView }) => {
+    // --- STATE MANAGEMENT ---
     const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
     const [urgentTasks, setUrgentTasks] = useState([]);
+    const [allOpenTasks, setAllOpenTasks] = useState([]);
     const [lowStockItems, setLowStockItems] = useState([]);
     const [taskStatusData, setTaskStatusData] = useState([]);
+    const [team, setTeam] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    // Modal visibility states
+    const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
+    const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+    const [selectedTask, setSelectedTask] = useState(null);
 
-    // Mock data for upcoming bookings until a real data source is available
+    // Mock data for upcoming bookings
     const upcomingBookings = [
         { id: 'booking-1', propertyName: 'Seaside Villa', guestName: 'John Doe', checkIn: '2025-07-10' },
         { id: 'booking-2', propertyName: 'Downtown Loft', guestName: 'Jane Smith', checkIn: '2025-07-12' },
-        { id: 'booking-3', propertyName: 'Mountain Cabin', guestName: 'Sam Wilson', checkIn: '2025-07-15' },
     ];
 
     useEffect(() => {
         if (!user) return;
         setLoading(true);
 
-        // --- Listener for Properties (for stats) ---
         const propertiesUnsubscribe = onSnapshot(query(collection(db, "properties"), where("ownerId", "==", user.uid)), (snapshot) => {
             setStats(prev => ({ ...prev, properties: snapshot.size }));
         });
 
-        // --- Listener for ALL Tasks (for stats, urgent list, and chart) ---
         const tasksUnsubscribe = onSnapshot(query(collection(db, "tasks"), where("ownerId", "==", user.uid)), (snapshot) => {
             const allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const openTasks = allTasks.filter(task => task.status !== 'Completed');
+            setAllOpenTasks(openTasks);
+            setUrgentTasks(openTasks.filter(task => task.priority === 'High').slice(0, 5));
             
-            // Filter for urgent tasks
-            setUrgentTasks(allTasks.filter(task => task.priority === 'High' && task.status !== 'Completed').slice(0, 5));
-            
-            // Calculate stats for the chart
             const statusCounts = allTasks.reduce((acc, task) => {
                 acc[task.status] = (acc[task.status] || 0) + 1;
                 return acc;
@@ -47,12 +52,13 @@ const ClientDashboard = ({ user, setActiveView, onSelectProperty }) => {
                 { name: 'In Progress', value: statusCounts['In Progress'] || 0 },
                 { name: 'Completed', value: statusCounts['Completed'] || 0 },
             ]);
-
-            // Update open tasks count
-            setStats(prev => ({ ...prev, openTasks: (statusCounts['Pending'] || 0) + (statusCounts['In Progress'] || 0) }));
+            setStats(prev => ({ ...prev, openTasks: openTasks.length }));
         });
 
-        // --- Fetch Low Stock Items ---
+        const teamUnsubscribe = onSnapshot(query(collection(db, 'users'), where('ownerId', '==', user.uid)), (snapshot) => {
+            setTeam(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
         const fetchLowStockItems = async () => {
             const locationsQuery = query(collection(db, "storageLocations"), where("ownerId", "==", user.uid));
             const locationsSnapshot = await getDocs(locationsQuery);
@@ -75,8 +81,14 @@ const ClientDashboard = ({ user, setActiveView, onSelectProperty }) => {
         return () => {
             propertiesUnsubscribe();
             tasksUnsubscribe();
+            teamUnsubscribe();
         };
     }, [user]);
+
+    const handleOpenTask = (task) => {
+        setSelectedTask(task);
+        setIsTasksModalOpen(false); // Close the list modal when opening the detail modal
+    };
 
     return (
         <div className="p-4 sm:p-6 md:p-8">
@@ -89,8 +101,8 @@ const ClientDashboard = ({ user, setActiveView, onSelectProperty }) => {
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <StatCard icon={<Building size={24} />} title="Total Properties" value={stats.properties} color="blue" onClick={() => setActiveView('properties')} />
-                        <StatCard icon={<ListTodo size={24} />} title="Open Tasks" value={stats.openTasks} color="green" onClick={() => setActiveView('tasks')} />
-                        <StatCard icon={<AlertTriangle size={24} />} title="Low Stock Items" value={stats.lowStockItems} color="red" onClick={() => setActiveView('storage')} />
+                        <StatCard icon={<ListTodo size={24} />} title="Open Tasks" value={stats.openTasks} color="green" onClick={() => setIsTasksModalOpen(true)} />
+                        <StatCard icon={<AlertTriangle size={24} />} title="Low Stock Items" value={stats.lowStockItems} color="red" onClick={() => setIsStockModalOpen(true)} />
                     </div>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
@@ -98,55 +110,41 @@ const ClientDashboard = ({ user, setActiveView, onSelectProperty }) => {
                             {urgentTasks.length > 0 ? (
                                 <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                                     {urgentTasks.map(task => (
-                                        <li key={task.id} className="py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 px-2 -mx-2 rounded-lg" onClick={() => alert(`Navigate to task: ${task.taskName}`)}>
-                                            <p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p>
+                                        <li key={task.id} className="py-3 px-2 -mx-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex justify-between items-center" onClick={() => handleOpenTask(task)}>
+                                            <div>
+                                                <p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p>
+                                            </div>
+                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${task.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'}`}>{task.status}</span>
                                         </li>
                                     ))}
                                 </ul>
                             ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No high-priority tasks. Well done!</p>}
                         </DashboardCard>
-
-                        <DashboardCard icon={<PieChartIcon size={22} />} title="Task Status">
-                            <TaskStatusChart data={taskStatusData} />
-                        </DashboardCard>
+                        <DashboardCard icon={<PieChartIcon size={22} />} title="Task Status"><TaskStatusChart data={taskStatusData} /></DashboardCard>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <DashboardCard icon={<Calendar size={22} />} title="Upcoming Bookings">
-                            {upcomingBookings.length > 0 ? (
-                                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {upcomingBookings.map(booking => (
-                                        <li key={booking.id} className="py-3 flex justify-between items-center">
-                                            <div>
-                                                <p className="font-medium text-gray-800 dark:text-gray-100">{booking.guestName}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">{booking.propertyName}</p>
-                                            </div>
-                                            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{new Date(booking.checkIn).toLocaleDateString()}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No upcoming bookings.</p>}
-                        </DashboardCard>
-                        
-                        <DashboardCard icon={<Package size={22} />} title="Low Inventory Alerts">
-                            {lowStockItems.length > 0 ? (
-                                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {lowStockItems.map(item => (
-                                        <li key={item.id} className="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 px-2 -mx-2 rounded-lg" onClick={() => setActiveView('storage')}>
-                                            <div>
-                                                <p className="font-medium text-gray-800 dark:text-gray-100">{item.name}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">{item.locationName}</p>
-                                            </div>
-                                            <span className="text-sm font-bold text-red-500 dark:text-red-400">{item.currentStock} / {item.parLevel}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">All supplies are well-stocked.</p>}
-                        </DashboardCard>
-                    </div>
+                    <DashboardCard icon={<Calendar size={22} />} title="Upcoming Bookings">
+                        {upcomingBookings.length > 0 ? (
+                            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                                {upcomingBookings.map(booking => (
+                                    <li key={booking.id} className="py-3 flex justify-between items-center">
+                                        <div>
+                                            <p className="font-medium text-gray-800 dark:text-gray-100">{booking.guestName}</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">{booking.propertyName}</p>
+                                        </div>
+                                        <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{new Date(booking.checkIn).toLocaleDateString()}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No upcoming bookings.</p>}
+                    </DashboardCard>
                 </>
             )}
+
+            {isTasksModalOpen && <TasksModal tasks={allOpenTasks} onOpenTask={handleOpenTask} onClose={() => setIsTasksModalOpen(false)} />}
+            {isStockModalOpen && <StockModal items={lowStockItems} onClose={() => setIsStockModalOpen(false)} />}
+            {selectedTask && <TaskDetailModal task={selectedTask} team={team} onClose={() => setSelectedTask(null)} />}
         </div>
     );
 };
@@ -160,10 +158,7 @@ const StatCard = ({ icon, title, value, color, onClick }) => {
     return (
         <div onClick={onClick} className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center space-x-4 transition-all hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer">
             <div className={`p-3 rounded-full ${colors[color]}`}>{icon}</div>
-            <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-            </div>
+            <div><p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p><p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p></div>
         </div>
     );
 };
@@ -176,27 +171,46 @@ const DashboardCard = ({ icon, title, children, className = '' }) => (
 );
 
 const TaskStatusChart = ({ data }) => {
-    const COLORS = {
-        'Pending': '#facc15', // yellow-400
-        'In Progress': '#3b82f6', // blue-500
-        'Completed': '#22c55e', // green-500
-    };
+    const COLORS = { 'Pending': '#facc15', 'In Progress': '#3b82f6', 'Completed': '#22c55e' };
     const chartData = data.filter(d => d.value > 0);
-
-    if (chartData.length === 0) {
-        return <p className="text-center py-4 text-gray-500 dark:text-gray-400">No task data to display.</p>;
-    }
-
+    if (chartData.length === 0) return <p className="text-center py-4 text-gray-500 dark:text-gray-400">No task data.</p>;
     return (
-        <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-                <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[entry.name]} />)}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', backdropFilter: 'blur(4px)', border: '1px solid #4b5563', borderRadius: '0.75rem' }} />
-            </PieChart>
+        <ResponsiveContainer width="100%" height={150}>
+            <PieChart><Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5}>{chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[entry.name]} />)}</Pie><Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', backdropFilter: 'blur(4px)', border: '1px solid #4b5563', borderRadius: '0.75rem' }} /><Legend iconSize={10} /></PieChart>
         </ResponsiveContainer>
     );
 };
+
+const TasksModal = ({ tasks, onOpenTask, onClose }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">All Open Tasks</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"><X size={24} /></button></div>
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto">
+                {tasks.map(task => (
+                    <li key={task.id} onClick={() => onOpenTask(task)} className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex justify-between items-center">
+                        <div><p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p><p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p></div>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${task.priority === 'High' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300'}`}>{task.priority}</span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    </div>
+);
+
+const StockModal = ({ items, onClose }) => (
+     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Low Stock Items</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"><X size={24} /></button></div>
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto">
+                {items.map(item => (
+                    <li key={item.id} className="p-4 flex justify-between items-center">
+                        <div><p className="font-medium text-gray-800 dark:text-gray-100">{item.name}</p><p className="text-sm text-gray-500 dark:text-gray-400">{item.locationName}</p></div>
+                        <span className="text-sm font-bold text-red-500 dark:text-red-400">{item.currentStock} / {item.parLevel}</span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    </div>
+);
 
 export default ClientDashboard;
