@@ -1,5 +1,5 @@
 // --- src/components/ChecklistViews.js ---
-// This file handles creating, viewing, and managing checklist templates.
+// This file handles creating, viewing, and managing checklist templates with improved UI/UX.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
@@ -41,8 +41,7 @@ const preGeneratedTemplates = [
 export const ChecklistsView = ({ user }) => {
     const [templates, setTemplates] = useState([]);
     const [properties, setProperties] = useState([]);
-    const [showForm, setShowForm] = useState(false);
-    const [editingTemplate, setEditingTemplate] = useState(null);
+    const [editingTemplateId, setEditingTemplateId] = useState(null); // Can be 'new', an id, or null
     const [expandedState, setExpandedState] = useState({}); // Manages expanded templates and items
     const [loading, setLoading] = useState(true);
 
@@ -51,7 +50,9 @@ export const ChecklistsView = ({ user }) => {
         if (!user) return;
         const qTemplates = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
         const unsubTemplates = onSnapshot(qTemplates, (snapshot) => {
-            setTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const sortedTemplates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                .sort((a, b) => (a.createdAt?.seconds < b.createdAt?.seconds) ? 1 : -1);
+            setTemplates(sortedTemplates);
             setLoading(false);
         });
 
@@ -90,13 +91,12 @@ export const ChecklistsView = ({ user }) => {
     // --- CRUD Operations ---
     const handleSave = async (templateData) => {
         try {
-            if (editingTemplate) {
-                await updateDoc(doc(db, "checklistTemplates", editingTemplate.id), templateData);
-                setEditingTemplate(null);
+            if (editingTemplateId && editingTemplateId !== 'new') {
+                await updateDoc(doc(db, "checklistTemplates", editingTemplateId), templateData);
             } else {
                 await addDoc(collection(db, "checklistTemplates"), { ...templateData, ownerId: user.uid, createdAt: serverTimestamp() });
             }
-            setShowForm(false);
+            setEditingTemplateId(null);
         } catch (error) { console.error("Error saving template:", error); alert("Failed to save template."); }
     };
 
@@ -119,27 +119,29 @@ export const ChecklistsView = ({ user }) => {
     
     // --- Render Helper for Checklist Items ---
     const renderChecklistItem = (item, templateId, index) => {
-        // This handles both old (string) and new (object) item formats
         const itemObject = typeof item === 'string' ? { text: item, instructions: '', imageUrl: '' } : item;
         const isExpanded = !!expandedState[templateId]?.[index];
         const hasDetails = itemObject.instructions || itemObject.imageUrl;
 
         return (
-            <li key={index} className="text-sm text-gray-800 dark:text-gray-200">
+            <li key={index} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 py-3">
                 <div className="flex items-center justify-between">
-                    <span>{itemObject.text}</span>
+                    <div className="flex items-center">
+                         <span className="h-2 w-2 bg-gray-300 dark:bg-gray-600 rounded-full mr-3"></span>
+                         <span className="text-gray-800 dark:text-gray-200">{itemObject.text}</span>
+                    </div>
                     {hasDetails && (
-                        <button onClick={() => toggleItem(templateId, index)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                        <button onClick={() => toggleItem(templateId, index)} className="p-1 rounded-full text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-700 dark:hover:text-gray-200">
                             <ChevronDown size={20} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                         </button>
                     )}
                 </div>
                 {isExpanded && hasDetails && (
-                    <div className="mt-2 pl-4 pr-2 py-2 bg-white dark:bg-gray-800 rounded-md animate-fade-in-down">
-                        {itemObject.instructions && <p className="text-sm text-gray-600 dark:text-gray-300 flex items-start"><Info size={14} className="mr-2 mt-0.5 flex-shrink-0"/>{itemObject.instructions}</p>}
+                    <div className="mt-3 ml-3 pl-4 border-l-2 border-blue-500 animate-fade-in-down">
+                        {itemObject.instructions && <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start"><Info size={14} className="mr-2 mt-0.5 flex-shrink-0 text-blue-500"/>{itemObject.instructions}</p>}
                         {itemObject.imageUrl && (
                             <div className="mt-2">
-                                <img src={itemObject.imageUrl} alt="Instructional" className="rounded-lg max-w-xs max-h-48 border dark:border-gray-600" />
+                                <img src={itemObject.imageUrl} alt="Instructional" className="rounded-lg max-w-xs max-h-48 border dark:border-gray-600 shadow-sm" />
                             </div>
                         )}
                     </div>
@@ -153,54 +155,65 @@ export const ChecklistsView = ({ user }) => {
         <div className="p-4 sm:p-6 md:p-8">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Checklist Templates</h1>
-                <button onClick={() => { setEditingTemplate(null); setShowForm(true); }} className="button-primary flex items-center">
+                <button onClick={() => setEditingTemplateId('new')} className="button-primary flex items-center">
                     <Plus size={18} className="mr-2" />Create Template
                 </button>
             </div>
 
-            {showForm && <ChecklistTemplateForm onSave={handleSave} onCancel={() => { setShowForm(false); setEditingTemplate(null); }} existingTemplate={editingTemplate} properties={properties} />}
+            {editingTemplateId === 'new' && <ChecklistTemplateForm onSave={handleSave} onCancel={() => setEditingTemplateId(null)} properties={properties} />}
 
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="space-y-4 mt-6">
                 {loading ? <p className="text-center py-8 text-gray-500 dark:text-gray-400">Loading templates...</p> : templates.length > 0 ? (
-                    <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {templates.map(template => {
-                            const isTemplateExpanded = !!expandedState[template.id]?.isExpanded;
-                            return (
-                                <li key={template.id} className="py-3">
-                                    <div className="p-2 flex justify-between items-center">
-                                        <div className="flex-grow cursor-pointer" onClick={() => toggleTemplate(template.id)}>
-                                            <div className="flex items-center">
-                                                <ChevronDown size={20} className={`mr-2 text-gray-400 transition-transform ${isTemplateExpanded ? 'rotate-180' : ''}`} />
-                                                <span className="font-semibold text-gray-800 dark:text-gray-100">{template.name}</span>
-                                            </div>
-                                            <div className="flex items-center space-x-4 ml-8 mt-1 text-xs">
-                                                <span className="flex items-center text-gray-500 dark:text-gray-400"><Tag size={12} className="mr-1.5" />{template.taskType || 'Any Task'}</span>
-                                                <span className="flex items-center text-gray-500 dark:text-gray-400"><Building size={12} className="mr-1.5" />{template.linkedProperties?.length > 0 ? `${template.linkedProperties.length} Properties` : 'All Properties'}</span>
-                                            </div>
+                     templates.map(template => {
+                        const isTemplateExpanded = !!expandedState[template.id]?.isExpanded;
+
+                        if (editingTemplateId === template.id) {
+                            return <ChecklistTemplateForm 
+                                key={template.id}
+                                existingTemplate={template}
+                                onSave={handleSave} 
+                                onCancel={() => setEditingTemplateId(null)} 
+                                properties={properties} 
+                            />
+                        }
+
+                        return (
+                            <div key={template.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-shadow hover:shadow-md">
+                                <div className="p-4 flex justify-between items-center">
+                                    <div className="flex-grow cursor-pointer" onClick={() => toggleTemplate(template.id)}>
+                                        <div className="flex items-center">
+                                            <ChevronDown size={20} className={`mr-3 text-gray-400 transition-transform ${isTemplateExpanded ? 'rotate-180' : ''}`} />
+                                            <span className="font-semibold text-lg text-gray-800 dark:text-gray-100">{template.name}</span>
                                         </div>
-                                        <div className="space-x-4 flex-shrink-0">
-                                            <button onClick={() => { setEditingTemplate(template); setShowForm(true); }} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
-                                            <button onClick={() => handleDelete(template.id)} className="font-semibold text-red-600 dark:text-red-400 hover:underline">Delete</button>
+                                        <div className="flex items-center space-x-4 ml-9 mt-1 text-xs">
+                                            <span className="flex items-center text-gray-500 dark:text-gray-400"><Tag size={12} className="mr-1.5" />{template.taskType || 'Any Task'}</span>
+                                            <span className="flex items-center text-gray-500 dark:text-gray-400"><Building size={12} className="mr-1.5" />{template.linkedProperties?.length > 0 ? `${template.linkedProperties.length} Linked Properties` : 'All Properties'}</span>
                                         </div>
                                     </div>
-                                    {isTemplateExpanded && (
-                                        <div className="pl-8 pr-4 py-2 mt-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-fade-in-down">
-                                            <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Checklist Items:</h4>
+                                    <div className="space-x-4 flex-shrink-0">
+                                        <button onClick={() => setEditingTemplateId(template.id)} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
+                                        <button onClick={() => handleDelete(template.id)} className="font-semibold text-red-600 dark:text-red-400 hover:underline">Delete</button>
+                                    </div>
+                                </div>
+                                {isTemplateExpanded && (
+                                    <div className="px-4 pb-4 animate-fade-in-down">
+                                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 mt-2 border dark:border-gray-700">
+                                            <h4 className="font-semibold text-sm text-gray-600 dark:text-gray-300 mb-2">Checklist Items:</h4>
                                             {(template.items && template.items.length > 0) ? (
-                                                <ul className="space-y-2">
+                                                <ul className="space-y-1">
                                                     {template.items.map((item, index) => renderChecklistItem(item, template.id, index))}
                                                 </ul>
                                             ) : (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 py-2">This template has no checklist items.</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">This template has no checklist items.</p>
                                             )}
                                         </div>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })
                 ) : (
-                    <div className="text-center py-8"><p className="text-gray-500 dark:text-gray-400">You don't have any checklist templates yet.</p><button onClick={handleGenerateSamples} className="mt-2 button-secondary flex items-center mx-auto"><ListPlus size={16} className="mr-2"/>Generate Sample Templates</button></div>
+                    <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700"><p className="text-gray-500 dark:text-gray-400">You don't have any checklist templates yet.</p><button onClick={handleGenerateSamples} className="mt-4 button-secondary flex items-center mx-auto"><ListPlus size={16} className="mr-2"/>Generate Sample Templates</button></div>
                 )}
             </div>
         </div>
@@ -208,7 +221,7 @@ export const ChecklistsView = ({ user }) => {
 };
 
 
-// --- Form Component (No changes needed here, but included for completeness) ---
+// --- Form Component (with Dark Mode Style Fixes) ---
 export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, properties }) => {
     const [name, setName] = useState('');
     const [taskType, setTaskType] = useState('Cleaning');
@@ -265,8 +278,8 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{existingTemplate ? 'Edit Template' : 'Create New Template'}</h4>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Template Name</label><input type="text" value={name} onChange={e => setName(e.target.value)} className="mt-1 w-full input-style" placeholder="e.g., Post-Guest Cleaning" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Type</label><select value={taskType} onChange={e => setTaskType(e.target.value)} className="mt-1 w-full input-style"><option>Cleaning</option><option>Maintenance</option><option>Inspection</option></select></div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Template Name</label><input type="text" value={name} onChange={e => setName(e.target.value)} className="mt-1 w-full input-style dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200" placeholder="e.g., Post-Guest Cleaning" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Type</label><select value={taskType} onChange={e => setTaskType(e.target.value)} className="mt-1 w-full input-style dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200"><option>Cleaning</option><option>Maintenance</option><option>Inspection</option></select></div>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Link to Properties (Optional)</label>
@@ -282,10 +295,10 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
                     <div className="space-y-4">
                         {items.map((item, index) => (
                             <div key={index} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border dark:border-gray-600">
-                                <div className="flex items-center space-x-2"><input type="text" value={item.text} onChange={e => handleItemChange(index, 'text', e.target.value)} className="w-full input-style" placeholder={`Item ${index + 1} Title`} /><button type="button" onClick={() => handleRemoveItem(index)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><Trash2 size={16} /></button></div>
+                                <div className="flex items-center space-x-2"><input type="text" value={item.text} onChange={e => handleItemChange(index, 'text', e.target.value)} className="w-full input-style dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200" placeholder={`Item ${index + 1} Title`} /><button type="button" onClick={() => handleRemoveItem(index)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><Trash2 size={16} /></button></div>
                                 <div className="mt-3 space-y-3">
-                                    <div className="flex items-start space-x-2"><Info size={16} className="text-gray-400 mt-1 flex-shrink-0" /><textarea value={item.instructions} onChange={e => handleItemChange(index, 'instructions', e.target.value)} className="w-full input-style text-sm" placeholder="Add detailed step-by-step instructions..." rows="2" /></div>
-                                    <div className="flex items-center space-x-2"><Image size={16} className="text-gray-400 flex-shrink-0" /><input type="text" value={item.imageUrl} onChange={e => handleItemChange(index, 'imageUrl', e.target.value)} className="w-full input-style text-sm" placeholder="Optional: Paste image URL here..." /></div>
+                                    <div className="flex items-start space-x-2"><Info size={16} className="text-gray-400 mt-1 flex-shrink-0" /><textarea value={item.instructions} onChange={e => handleItemChange(index, 'instructions', e.target.value)} className="w-full input-style text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200" placeholder="Add detailed step-by-step instructions..." rows="2" /></div>
+                                    <div className="flex items-center space-x-2"><Image size={16} className="text-gray-400 flex-shrink-0" /><input type="text" value={item.imageUrl} onChange={e => handleItemChange(index, 'imageUrl', e.target.value)} className="w-full input-style text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200" placeholder="Optional: Paste image URL here..." /></div>
                                 </div>
                             </div>
                         ))}
