@@ -1,141 +1,187 @@
-// --- src/components/TeamView.js ---
-// Replace the entire contents of this file.
-
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase-config';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { Plus, Mail, Shield } from 'lucide-react';
+import { db, functions } from '../firebase-config';
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { Plus, Trash2, Send } from 'lucide-react';
+
+// Define the available roles for team members
+const availableRoles = ['Manager', 'Cleaner', 'Maintenance', 'Admin'];
 
 const TeamView = ({ user }) => {
     const [team, setTeam] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showInviteForm, setShowInviteForm] = useState(false);
 
-    const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteRole, setInviteRole] = useState('Staff');
-
     useEffect(() => {
         if (!user) return;
-        const teamQuery = query(collection(db, 'users'), where('ownerId', '==', user.uid));
-        const unsubscribe = onSnapshot(teamQuery, (snapshot) => {
+        setLoading(true);
+        // Query for users who have this user's UID as their ownerId
+        const q = query(collection(db, "users"), where("ownerId", "==", user.uid));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
             const teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Sort to show the Owner (you) first
+            teamMembers.sort((a, b) => (a.role === 'Owner' ? -1 : b.role === 'Owner' ? 1 : 0));
             setTeam(teamMembers);
             setLoading(false);
         });
-
         return () => unsubscribe();
     }, [user]);
 
-    const handleInvite = (e) => {
-        e.preventDefault();
-        if (!inviteEmail) {
-            alert("Please enter an email to send an invite.");
-            return;
+    const handleRoleChange = async (memberId, newRole) => {
+        const memberRef = doc(db, "users", memberId);
+        try {
+            await updateDoc(memberRef, { role: newRole });
+            // You could add a success toast/notification here
+        } catch (error) {
+            console.error("Error updating role:", error);
+            alert("Failed to update role.");
         }
-        alert(`Invite functionality is for demonstration. In a real app, an email would be sent to ${inviteEmail}.`);
-        setInviteEmail('');
-        setInviteRole('Staff');
-        setShowInviteForm(false);
     };
 
-    const InviteForm = () => (
-        <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-lg border border-gray-200 dark:border-gray-700 my-6 animate-fade-in-down">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Invite New Team Member</h3>
-            <form onSubmit={handleInvite} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="inviteEmail">Email Address</label>
-                    <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                            type="email"
-                            id="inviteEmail"
-                            value={inviteEmail}
-                            onChange={(e) => setInviteEmail(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="member@example.com"
-                            required
-                        />
-                    </div>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="inviteRole">Role</label>
-                     <div className="relative">
-                        <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <select
-                            id="inviteRole"
-                            value={inviteRole}
-                            onChange={(e) => setInviteRole(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option>Staff</option>
-                            <option>Admin</option>
-                        </select>
-                    </div>
-                </div>
-                <div className="flex justify-end space-x-3 pt-2">
-                     <button type="button" onClick={() => setShowInviteForm(false)} className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
-                    <button type="submit" className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700">Send Invite</button>
-                </div>
-            </form>
-        </div>
-    );
+    const handleDeleteMember = async (memberId) => {
+        if (window.confirm("Are you sure you want to remove this team member? This action cannot be undone.")) {
+            try {
+                await deleteDoc(doc(db, "users", memberId));
+                // You could add a success toast/notification here
+            } catch (error) {
+                console.error("Error deleting team member:", error);
+                alert("Failed to delete team member.");
+            }
+        }
+    };
 
     return (
-        <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-full">
+        <div className="p-4 sm:p-6 md:p-8">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Team Management</h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">Invite and manage your team members.</p>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">Invite, view, and manage roles for your team members.</p>
                 </div>
-                <button
-                    onClick={() => setShowInviteForm(true)}
-                    className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm"
-                >
-                    <Plus size={18} className="mr-2" />
+                <button onClick={() => setShowInviteForm(!showInviteForm)} className="button-primary">
+                    <Plus size={18} className="-ml-1 mr-2" />
                     Invite Member
                 </button>
             </div>
 
-            {showInviteForm && <InviteForm />}
+            {showInviteForm && <InviteForm user={user} onInviteSent={() => setShowInviteForm(false)} />}
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name / Email</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Role</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                            <th scope="col" className="relative px-6 py-3"><span className="sr-only">Edit</span></th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {loading ? (
-                            <tr><td colSpan="4" className="text-center py-8 text-gray-500 dark:text-gray-400">Loading team...</td></tr>
-                        ) : (
-                            team.map(member => (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-x-auto">
+                {loading ? <p className="text-center p-8 text-gray-500">Loading team...</p> : (
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-700/50">
+                            <tr>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Role</th>
+                                <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {team.map((member) => (
                                 <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{member.displayName || member.email}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
-                                            {member.role}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
-                                            Active
-                                        </span>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{member.displayName}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{member.email}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {/* --- Role Change Dropdown --- */}
+                                        <select
+                                            value={member.role}
+                                            onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                                            className="input-style py-1.5 text-sm"
+                                            disabled={member.role === 'Owner'} // The owner cannot change their own role here
+                                        >
+                                            {/* Ensure the current role is always an option, even if it's custom */}
+                                            {![...availableRoles, 'Owner'].includes(member.role) && <option value={member.role}>{member.role}</option>}
+                                            
+                                            {/* The owner's role is fixed */}
+                                            <option value="Owner" disabled>{member.role === 'Owner' ? 'Owner' : ''}</option>
+
+                                            {availableRoles.map(role => (
+                                                <option key={role} value={role}>{role}</option>
+                                            ))}
+                                        </select>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <a href="#" className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">Edit</a>
+                                        {member.role !== 'Owner' && (
+                                            <button onClick={() => handleDeleteMember(member.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
+        </div>
+    );
+};
+
+const InviteForm = ({ user, onInviteSent }) => {
+    const [email, setEmail] = useState('');
+    const [role, setRole] = useState(availableRoles[0]); // Default to the first role in the list
+    const [isInviting, setIsInviting] = useState(false);
+    const [feedback, setFeedback] = useState({ message: '', type: '' });
+
+    const handleInvite = async (e) => {
+        e.preventDefault();
+        setIsInviting(true);
+        setFeedback({ message: '', type: '' });
+
+        const inviteUser = httpsCallable(functions, 'inviteUser');
+        try {
+            const result = await inviteUser({ email, role, ownerId: user.uid, ownerName: user.displayName });
+            if (result.data.success) {
+                setFeedback({ message: 'Invitation sent successfully!', type: 'success' });
+                setEmail('');
+            } else {
+                throw new Error(result.data.error || 'An unknown error occurred.');
+            }
+        } catch (error) {
+            console.error("Error sending invite:", error);
+            setFeedback({ message: `Error: ${error.message}`, type: 'error' });
+        } finally {
+            setIsInviting(false);
+            setTimeout(() => onInviteSent(), 2000); // Close form after a delay
+        }
+    };
+
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 animate-fade-in-down">
+            <form onSubmit={handleInvite} className="flex flex-col md:flex-row items-end gap-4">
+                <div className="w-full">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
+                    <input
+                        type="email"
+                        id="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="mt-1 input-style"
+                        placeholder="teammate@example.com"
+                        required
+                    />
+                </div>
+                <div className="w-full md:w-auto">
+                    <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                    <select
+                        id="role"
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        className="mt-1 input-style"
+                    >
+                        {availableRoles.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                </div>
+                <button type="submit" disabled={isInviting} className="button-primary w-full md:w-auto">
+                    <Send size={16} className="mr-2"/>
+                    {isInviting ? 'Sending...' : 'Send Invite'}
+                </button>
+            </form>
+            {feedback.message && (
+                <p className={`mt-2 text-sm ${feedback.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                    {feedback.message}
+                </p>
+            )}
         </div>
     );
 };
