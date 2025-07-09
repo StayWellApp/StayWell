@@ -4,25 +4,19 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
-// ✨ CORRECTED: Import Login and SignUp separately
 import { Login, SignUp } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
-// We will create/update these components in the next steps
-// import PropertiesView from './components/PropertiesView'; 
-// import SettingsView from './components/SettingsView';
-// import TeamView from './components/TeamView';
-// import MasterCalendarView from './components/MasterCalendarView';
+import PropertiesView from './components/PropertiesView';
+import { PropertyDetailView } from './components/PropertyViews'; // Note the import change
 
-// ✨ NEW: A simple component to handle the Auth screen
 const AuthScreen = () => {
     const [showLogin, setShowLogin] = useState(true);
-
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center">
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-md p-4">
                 {showLogin ? <Login /> : <SignUp />}
                 <button
                     onClick={() => setShowLogin(!showLogin)}
@@ -35,12 +29,16 @@ const AuthScreen = () => {
     );
 };
 
-
 function App() {
     const [user, setUser] = useState(null);
     const [userRole, setUserRole] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeView, setActiveView] = useState('dashboard');
+
+    // State management for properties
+    const [properties, setProperties] = useState([]);
+    const [selectedProperty, setSelectedProperty] = useState(null);
+
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -51,9 +49,17 @@ function App() {
                 if (userDoc.exists()) {
                     setUserRole(userDoc.data().role);
                 }
+
+                // Fetch properties for the logged-in user
+                const propertiesQuery = query(collection(db, "properties"), where("ownerId", "==", currentUser.uid));
+                onSnapshot(propertiesQuery, (snapshot) => {
+                    setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                });
+
             } else {
                 setUser(null);
                 setUserRole(null);
+                setProperties([]);
             }
             setLoading(false);
         });
@@ -61,10 +67,21 @@ function App() {
     }, []);
 
     const handleLogout = async () => {
+        await signOut(auth);
+        setActiveView('dashboard');
+        setSelectedProperty(null);
+    };
+
+    const handleAddProperty = async (propertyData) => {
+        if (!user) return;
         try {
-            await signOut(auth);
+            await addDoc(collection(db, "properties"), {
+                ...propertyData,
+                ownerId: user.uid,
+                createdAt: serverTimestamp()
+            });
         } catch (error) {
-            console.error("Error signing out: ", error);
+            console.error("Error adding property: ", error);
         }
     };
 
@@ -73,11 +90,24 @@ function App() {
     }
 
     const renderView = () => {
+        // If a property is selected, always show its detail view regardless of the active tab
+        if (selectedProperty) {
+            return <PropertyDetailView 
+                        property={selectedProperty} 
+                        onBack={() => setSelectedProperty(null)} 
+                        user={user} 
+                    />;
+        }
+
         switch (activeView) {
             case 'dashboard':
                 return <ClientDashboard user={user} />;
             case 'properties':
-                return <div className="p-8"><h1 className="text-3xl font-bold">Properties View (Coming Soon)</h1></div>;
+                return <PropertiesView 
+                            properties={properties}
+                            onAddProperty={handleAddProperty}
+                            onSelectProperty={setSelectedProperty}
+                        />;
             case 'calendar':
                 return <div className="p-8"><h1 className="text-3xl font-bold">Master Calendar (Coming Soon)</h1></div>;
             case 'team':
@@ -92,7 +122,7 @@ function App() {
     return (
         <div className="App">
             {!user ? (
-                <AuthScreen /> // Use the new AuthScreen component
+                <AuthScreen />
             ) : (
                 <Layout activeView={activeView} setActiveView={setActiveView} onLogout={handleLogout}>
                     {renderView()}

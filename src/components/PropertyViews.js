@@ -1,5 +1,6 @@
 // --- src/components/PropertyViews.js ---
 // Replace the entire contents of your PropertyViews.js file with this code.
+// This file now ONLY contains components related to a SINGLE property's detail view.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
@@ -11,48 +12,10 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-// ✨ CORRECTED: Replaced non-existent icons with valid ones
-import { Plus, Building, Bed, Bath, Users, Wifi, Tv, Wind, Utensils, Sun, Droplet, CookingPot, Flame, Tent, Bandage, Siren } from 'lucide-react';
+import { Plus, Building, Bed, Bath, Users, Wifi, Tv, Wind, Utensils, Sun, Droplet, CookingPot, Flame, Tent, Bandage, Siren, CheckSquare, Calendar, BarChart2, Archive, Settings } from 'lucide-react';
 
-// --- (No changes to this section) ---
-const amenityCategories = {
-    essentials: {
-        title: "Essentials",
-        items: {
-            wifi: { label: "Wi-Fi", icon: <Wifi size={18} /> },
-            tv: { label: "TV", icon: <Tv size={18} /> },
-            kitchen: { label: "Kitchen", icon: <Utensils size={18} /> },
-            washer: { label: "Washer", icon: <Droplet size={18} /> },
-            ac: { label: "Air Conditioning", icon: <Wind size={18} /> },
-            workspace: { label: "Dedicated Workspace", icon: <Building size={18} /> },
-        }
-    },
-    features: {
-        title: "Standout Features",
-        items: {
-            pool: { label: "Pool", icon: <Sun size={18} /> },
-            hotTub: { label: "Hot Tub", icon: <Droplet size={18} /> },
-            patio: { label: "Patio", icon: <Tent size={18} /> },
-            // ✨ CORRECTED ICONS
-            bbq: { label: "BBQ Grill", icon: <CookingPot size={18} /> },
-            firePit: { label: "Fire Pit", icon: <Flame size={18} /> },
-            fireplace: { label: "Indoor Fireplace", icon: <Flame size={18} /> },
-        }
-    },
-    safety: {
-        title: "Safety Items",
-        items: {
-            smokeAlarm: { label: "Smoke Alarm", icon: <Siren size={18} /> },
-            // ✨ CORRECTED ICON
-            firstAid: { label: "First Aid Kit", icon: <Bandage size={18} /> },
-            fireExtinguisher: { label: "Fire Extinguisher", icon: <Flame size={18} /> },
-        }
-    }
-};
-const allAmenities = Object.values(amenityCategories).reduce((acc, category) => ({ ...acc, ...category.items }), {});
-const initialAmenitiesState = Object.keys(allAmenities).reduce((acc, key) => ({ ...acc, [key]: false }), {});
-const propertyTypes = ["House", "Apartment", "Guesthouse", "Hotel", "Cabin", "Barn", "Bed & Breakfast", "Boat", "Camper/RV", "Castle", "Tiny Home", "Treehouse"];
 
+// This component is now exported for use in PropertiesView.js
 export const PropertyCard = ({ property, onSelect }) => (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col">
         <div className="bg-gray-100 h-48 flex items-center justify-center relative">
@@ -72,6 +35,7 @@ export const PropertyCard = ({ property, onSelect }) => (
     </div>
 );
 
+// This component is now exported for use in PropertiesView.js
 export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
     const [propertyName, setPropertyName] = useState('');
     const [propertyType, setPropertyType] = useState(propertyTypes[0]);
@@ -125,6 +89,42 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
     );
 };
 
+const amenityCategories = {
+    essentials: {
+        title: "Essentials",
+        items: {
+            wifi: { label: "Wi-Fi", icon: <Wifi size={18} /> },
+            tv: { label: "TV", icon: <Tv size={18} /> },
+            kitchen: { label: "Kitchen", icon: <Utensils size={18} /> },
+            washer: { label: "Washer", icon: <Droplet size={18} /> },
+            ac: { label: "Air Conditioning", icon: <Wind size={18} /> },
+            workspace: { label: "Dedicated Workspace", icon: <Building size={18} /> },
+        }
+    },
+    features: {
+        title: "Standout Features",
+        items: {
+            pool: { label: "Pool", icon: <Sun size={18} /> },
+            hotTub: { label: "Hot Tub", icon: <Droplet size={18} /> },
+            patio: { label: "Patio", icon: <Tent size={18} /> },
+            bbq: { label: "BBQ Grill", icon: <CookingPot size={18} /> },
+            firePit: { label: "Fire Pit", icon: <Flame size={18} /> },
+            fireplace: { label: "Indoor Fireplace", icon: <Flame size={18} /> },
+        }
+    },
+    safety: {
+        title: "Safety Items",
+        items: {
+            smokeAlarm: { label: "Smoke Alarm", icon: <Siren size={18} /> },
+            firstAid: { label: "First Aid Kit", icon: <Bandage size={18} /> },
+            fireExtinguisher: { label: "Fire Extinguisher", icon: <Flame size={18} /> },
+        }
+    }
+};
+const allAmenities = Object.values(amenityCategories).reduce((acc, category) => ({ ...acc, ...category.items }), {});
+const initialAmenitiesState = Object.keys(allAmenities).reduce((acc, key) => ({ ...acc, [key]: false }), {});
+const propertyTypes = ["House", "Apartment", "Guesthouse", "Hotel", "Cabin", "Barn", "Bed & Breakfast", "Boat", "Camper/RV", "Castle", "Tiny Home", "Treehouse"];
+
 const AmenitiesForm = ({ amenities, setAmenities }) => {
     const toggleAmenity = (amenity) => {
         setAmenities(prev => ({ ...prev, [amenity]: !prev[amenity] }));
@@ -169,7 +169,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     );
 
     return (
-        <div className="bg-gray-50 p-4 sm:p-6 md:p-8 min-h-screen">
+        <div className="p-8 bg-gray-50 min-h-full">
             <div className="max-w-7xl mx-auto">
                 <button onClick={onBack} className="mb-6 text-blue-600 font-semibold hover:underline">← Back to Properties</button>
                 
@@ -203,11 +203,12 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
 
                 <div className="border-b border-gray-200">
                     <div className="flex space-x-4 overflow-x-auto">
-                        <TabButton tabName="tasks" label="Tasks" icon={<Users size={18}/>} />
-                        <TabButton tabName="checklists" label="Templates" icon={<Users size={18}/>} />
-                        <TabButton tabName="inventory" label="Inventory" icon={<Users size={18}/>} />
-                        <TabButton tabName="calendar" label="Calendar" icon={<Users size={18}/>} />
-                        <TabButton tabName="analytics" label="Analytics" icon={<Users size={18}/>} />
+                        <TabButton tabName="tasks" label="Tasks" icon={<CheckSquare size={18}/>} />
+                        <TabButton tabName="checklists" label="Templates" icon={<CheckSquare size={18}/>} />
+                        <TabButton tabName="inventory" label="Inventory" icon={<Archive size={18}/>} />
+                        <TabButton tabName="calendar" label="Calendar" icon={<Calendar size={18}/>} />
+                        <TabButton tabName="analytics" label="Analytics" icon={<BarChart2 size={18}/>} />
+                        <TabButton tabName="settings" label="Settings" icon={<Settings size={18}/>} />
                     </div>
                 </div>
                 <div className="mt-6">
@@ -216,6 +217,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                     {view === 'inventory' && <InventoryView property={property} user={user} />}
                     {view === 'calendar' && <CalendarView property={property} user={user} />}
                     {view === 'analytics' && <AnalyticsView property={property} />}
+                    {view === 'settings' && <SettingsView property={property} />}
                 </div>
             </div>
         </div>
@@ -559,3 +561,10 @@ const AnalyticsView = ({ property }) => {
         </div>
     );
 };
+
+const SettingsView = ({ property }) => (
+    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <h3 className="text-2xl font-semibold text-gray-800">Settings</h3>
+        <p className="text-gray-600">Settings for {property.name}.</p>
+    </div>
+);
