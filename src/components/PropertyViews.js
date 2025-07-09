@@ -11,38 +11,38 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { Plus } from 'lucide-react'; // ✨ NEW: Import Plus icon
+import { Plus, Building, Bed, Bath, Users, Wifi, Tv, Wind, Utensils, Sun, Droplet, Grill, Fireplace, Tent, FirstAid, Siren, Flame } from 'lucide-react';
 
 // --- (No changes to this section) ---
 const amenityCategories = {
     essentials: {
         title: "Essentials",
         items: {
-            wifi: { label: "Wi-Fi", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a10 10 0 0114.142 0M1.394 8.536a15 15 0 0121.212 0" /> },
-            tv: { label: "TV", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /> },
-            kitchen: { label: "Kitchen", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /> },
-            washer: { label: "Washer", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m-15.357-2a8.001 8.001 0 0115.357-2m0 0H15" /> },
-            ac: { label: "Air Conditioning", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /> },
-            workspace: { label: "Dedicated Workspace", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /> },
+            wifi: { label: "Wi-Fi", icon: <Wifi size={18} /> },
+            tv: { label: "TV", icon: <Tv size={18} /> },
+            kitchen: { label: "Kitchen", icon: <Utensils size={18} /> },
+            washer: { label: "Washer", icon: <Droplet size={18} /> },
+            ac: { label: "Air Conditioning", icon: <Wind size={18} /> },
+            workspace: { label: "Dedicated Workspace", icon: <Building size={18} /> },
         }
     },
     features: {
         title: "Standout Features",
         items: {
-            pool: { label: "Pool", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2h8a2 2 0 002-2v-1a2 2 0 012-2h1.945C18.055 11 18 10.662 18 10c0-4.418-3.582-8-8-8S2 5.582 2 10c0 .662.055 1 .945 1z" /> },
-            hotTub: { label: "Hot Tub", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.657 7.343A8 8 0 0117.657 18.657z" /> },
-            patio: { label: "Patio", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /> },
-            bbq: { label: "BBQ Grill", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /> },
-            firePit: { label: "Fire Pit", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /> },
-            fireplace: { label: "Indoor Fireplace", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /> },
+            pool: { label: "Pool", icon: <Sun size={18} /> },
+            hotTub: { label: "Hot Tub", icon: <Droplet size={18} /> },
+            patio: { label: "Patio", icon: <Tent size={18} /> },
+            bbq: { label: "BBQ Grill", icon: <Grill size={18} /> },
+            firePit: { label: "Fire Pit", icon: <Fireplace size={18} /> },
+            fireplace: { label: "Indoor Fireplace", icon: <Fireplace size={18} /> },
         }
     },
     safety: {
         title: "Safety Items",
         items: {
-            smokeAlarm: { label: "Smoke Alarm", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /> },
-            firstAid: { label: "First Aid Kit", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H9m4 0h2m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /> },
-            fireExtinguisher: { label: "Fire Extinguisher", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /> },
+            smokeAlarm: { label: "Smoke Alarm", icon: <Siren size={18} /> },
+            firstAid: { label: "First Aid Kit", icon: <FirstAid size={18} /> },
+            fireExtinguisher: { label: "Fire Extinguisher", icon: <Flame size={18} /> },
         }
     }
 };
@@ -51,17 +51,20 @@ const initialAmenitiesState = Object.keys(allAmenities).reduce((acc, key) => ({ 
 const propertyTypes = ["House", "Apartment", "Guesthouse", "Hotel", "Cabin", "Barn", "Bed & Breakfast", "Boat", "Camper/RV", "Castle", "Tiny Home", "Treehouse"];
 
 export const PropertyCard = ({ property, onSelect }) => (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
-        <div className="bg-gray-200 h-40 flex items-center justify-center"><span className="text-gray-400">Property Photo</span></div>
-        <div className="p-4 flex flex-col flex-grow">
-            <h3 className="font-bold text-xl text-gray-800 truncate">{property.propertyName}</h3>
-            <p className="text-gray-600 text-sm truncate">{property.address}</p>
-            <div className="mt-4 flex justify-between items-center text-sm text-gray-700 border-t pt-3">
-                <div className="flex items-center"><svg className="w-5 h-5 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg><span>{property.guests} Guests</span></div>
-                <div className="flex items-center"><svg className="w-5 h-5 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M9 21v-2a3 3 0 00-3-3H4a3 3 0 00-3 3v2m15-12V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h7m8-10l-3-3m0 0l-3 3m3-3v12"></path></svg><span>{property.bedrooms} Beds</span></div>
-                <div className="flex items-center"><svg className="w-5 h-5 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg><span>{property.bathrooms} Baths</span></div>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col">
+        <div className="bg-gray-100 h-48 flex items-center justify-center relative">
+            <Building className="text-gray-300 w-16 h-16" />
+            <div className="absolute top-2 right-2 bg-white/50 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold text-gray-700">{property.propertyType}</div>
+        </div>
+        <div className="p-5 flex flex-col flex-grow">
+            <h3 className="font-bold text-lg text-gray-900 truncate">{property.propertyName}</h3>
+            <p className="text-gray-500 text-sm truncate flex-grow">{property.address}</p>
+            <div className="mt-4 flex justify-around items-center text-sm text-gray-600 border-t pt-4">
+                <div className="flex items-center space-x-2"><Users size={16} className="text-gray-500" /><span>{property.guests} Guests</span></div>
+                <div className="flex items-center space-x-2"><Bed size={16} className="text-gray-500" /><span>{property.bedrooms} Beds</span></div>
+                <div className="flex items-center space-x-2"><Bath size={16} className="text-gray-500" /><span>{property.bathrooms} Baths</span></div>
             </div>
-             <button onClick={onSelect} className="mt-4 w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">Manage Property</button>
+             <button onClick={onSelect} className="mt-5 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Manage Property</button>
         </div>
     </div>
 );
@@ -97,23 +100,23 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
     };
 
     return (
-        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6 animate-fade-in-down">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">{existingProperty ? 'Edit Property' : 'Add a New Property'}</h3>
+        <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm mb-6 animate-fade-in-down">
+            <h3 className="text-2xl font-semibold text-gray-900 mb-6">{existingProperty ? 'Edit Property' : 'Add a New Property'}</h3>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div><label className="block text-gray-600 mb-1" htmlFor="propertyName">Property Name</label><input type="text" id="propertyName" value={propertyName} onChange={(e) => setPropertyName(e.target.value)} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., Downtown Loft" /></div>
-                    <div><label className="block text-gray-600 mb-1" htmlFor="propertyType">Property Type</label><select id="propertyType" value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className="w-full px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">{propertyTypes.map(type => <option key={type}>{type}</option>)}</select></div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="propertyName">Property Name</label><input type="text" id="propertyName" value={propertyName} onChange={(e) => setPropertyName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., Downtown Loft" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="propertyType">Property Type</label><select id="propertyType" value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">{propertyTypes.map(type => <option key={type}>{type}</option>)}</select></div>
                 </div>
-                <div><label className="block text-gray-600 mb-1" htmlFor="address">Address</label><input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 123 Main St, Anytown" /></div>
-                <div><label className="block text-gray-600 mb-1" htmlFor="description">Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="A brief description of the property..."></textarea></div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div><label className="block text-gray-600 mb-1" htmlFor="guests">Max Guests</label><input type="number" id="guests" value={guests} min="1" onChange={(e) => setGuests(parseInt(e.target.value))} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-                    <div><label className="block text-gray-600 mb-1" htmlFor="bedrooms">Bedrooms</label><input type="number" id="bedrooms" value={bedrooms} min="0" onChange={(e) => setBedrooms(parseInt(e.target.value))} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-                    <div><label className="block text-gray-600 mb-1" htmlFor="bathrooms">Bathrooms</label><input type="number" id="bathrooms" value={bathrooms} min="1" step="0.5" onChange={(e) => setBathrooms(parseFloat(e.target.value))} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="address">Address</label><input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 123 Main St, Anytown" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="description">Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="A brief description of the property..."></textarea></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="guests">Max Guests</label><input type="number" id="guests" value={guests} min="1" onChange={(e) => setGuests(parseInt(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="bedrooms">Bedrooms</label><input type="number" id="bedrooms" value={bedrooms} min="0" onChange={(e) => setBedrooms(parseInt(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="bathrooms">Bathrooms</label><input type="number" id="bathrooms" value={bathrooms} min="1" step="0.5" onChange={(e) => setBathrooms(parseFloat(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
                 </div>
                 <AmenitiesForm amenities={amenities} setAmenities={setAmenities} />
-                <div><label className="block text-gray-600 mb-1" htmlFor="photo">Main Photo</label><input type="file" id="photo" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/><p className="text-xs text-gray-400 mt-1">Image uploads coming soon!</p></div>
-                <div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onCancel} className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button><button type="submit" className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors">{existingProperty ? 'Update Property' : 'Save Property'}</button></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="photo">Main Photo</label><input type="file" id="photo" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/><p className="text-xs text-gray-500 mt-1">Image uploads coming soon!</p></div>
+                <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200"><button type="button" onClick={onCancel} className="bg-gray-100 text-gray-700 font-semibold px-6 py-2 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button><button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">{existingProperty ? 'Update Property' : 'Save Property'}</button></div>
             </form>
         </div>
     );
@@ -125,14 +128,14 @@ const AmenitiesForm = ({ amenities, setAmenities }) => {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             {Object.entries(amenityCategories).map(([categoryKey, category]) => (
                 <div key={categoryKey}>
-                    <label className="block text-gray-800 font-semibold mb-2">{category.title}</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    <label className="block text-gray-800 font-semibold mb-3">{category.title}</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                         {Object.entries(category.items).map(([key, { label, icon }]) => (
-                            <button key={key} type="button" onClick={() => toggleAmenity(key)} className={`flex items-center space-x-2 px-3 py-2 border rounded-lg text-sm transition-colors ${amenities[key] ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 hover:bg-gray-100'}`}>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icon}</svg>
+                            <button key={key} type="button" onClick={() => toggleAmenity(key)} className={`flex items-center space-x-3 px-4 py-3 border rounded-lg text-sm font-medium transition-all duration-200 ${amenities[key] ? 'bg-blue-500 text-white border-blue-500 shadow-sm' : 'bg-white text-gray-700 hover:border-blue-500 hover:text-blue-600'}`}>
+                                {icon}
                                 <span>{label}</span>
                             </button>
                         ))}
@@ -155,57 +158,62 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         } catch (error) { console.error("Error updating property:", error); alert("Failed to update property."); }
     };
 
-    const TabButton = ({ tabName, label }) => (
-        <button onClick={() => setView(tabName)} className={`px-4 py-2 text-lg font-semibold ${view === tabName ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}>
-            {label}
+    const TabButton = ({ tabName, label, icon }) => (
+        <button onClick={() => setView(tabName)} className={`flex items-center space-x-2 px-4 py-3 text-base font-semibold rounded-t-lg border-b-2 transition-colors ${view === tabName ? 'border-blue-600 text-blue-600' : 'text-gray-500 border-transparent hover:text-blue-600 hover:border-gray-300'}`}>
+            {icon}
+            <span>{label}</span>
         </button>
     );
 
     return (
-        <div className="bg-white p-6 md:p-10 rounded-2xl shadow-lg">
-            <button onClick={onBack} className="mb-6 text-blue-600 hover:underline">← Back to All Properties</button>
-            
-            {isEditing ? (
-                <PropertyForm existingProperty={property} onSave={handleUpdateProperty} onCancel={() => setIsEditing(false)} />
-            ) : (
-                <>
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-sm font-semibold text-gray-500 uppercase">{property.propertyType}</p>
-                            <h2 className="text-3xl font-bold text-gray-800">{property.propertyName}</h2>
-                            <p className="text-gray-500 mb-6">{property.address}</p>
+        <div className="bg-gray-50 p-4 sm:p-6 md:p-8 min-h-screen">
+            <div className="max-w-7xl mx-auto">
+                <button onClick={onBack} className="mb-6 text-blue-600 font-semibold hover:underline">← Back to Properties</button>
+                
+                {isEditing ? (
+                    <PropertyForm existingProperty={property} onSave={handleUpdateProperty} onCancel={() => setIsEditing(false)} />
+                ) : (
+                    <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm mb-8">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider">{property.propertyType}</p>
+                                <h2 className="text-4xl font-bold text-gray-900 mt-1">{property.propertyName}</h2>
+                                <p className="text-gray-500 mt-2">{property.address}</p>
+                            </div>
+                            <button onClick={() => setIsEditing(true)} className="bg-gray-100 text-gray-700 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">Edit</button>
                         </div>
-                        <button onClick={() => setIsEditing(true)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">Edit</button>
-                    </div>
-                    <p className="text-gray-600 mb-6">{property.description}</p>
-                    
-                    <div className="border-t pt-6">
-                        <h3 className="text-2xl font-semibold text-gray-700 mb-4">What this place offers</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {property.amenities && Object.entries(allAmenities).map(([key, { label, icon }]) => property.amenities[key] && (
-                                <div key={key} className="flex items-center text-gray-700">
-                                    <svg className="w-6 h-6 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icon}</svg>
-                                    <span>{label}</span>
-                                </div>
-                            ))}
+                        <p className="text-gray-600 mt-4">{property.description}</p>
+                        
+                        <div className="mt-8 border-t border-gray-200 pt-6">
+                            <h3 className="text-xl font-semibold text-gray-800 mb-4">What this place offers</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
+                                {property.amenities && Object.entries(allAmenities).map(([key, { label, icon }]) => property.amenities[key] && (
+                                    <div key={key} className="flex items-center text-gray-700 space-x-3">
+                                        <div className="text-blue-600">{icon}</div>
+                                        <span>{label}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </>
-            )}
+                )}
 
-            <div className="mt-8 border-t pt-4">
-                <div className="flex border-b mb-6 overflow-x-auto">
-                    <TabButton tabName="tasks" label="Tasks" />
-                    <TabButton tabName="checklists" label="Cleaning Templates" />
-                    <TabButton tabName="inventory" label="Inventory" />
-                    <TabButton tabName="calendar" label="Calendar" />
-                    <TabButton tabName="analytics" label="Analytics" />
+                <div className="border-b border-gray-200">
+                    <div className="flex space-x-4 overflow-x-auto">
+                        <TabButton tabName="tasks" label="Tasks" icon={<Users size={18}/>} />
+                        <TabButton tabName="checklists" label="Templates" icon={<Users size={18}/>} />
+                        <TabButton tabName="inventory" label="Inventory" icon={<Users size={18}/>} />
+                        <TabButton tabName="calendar" label="Calendar" icon={<Users size={18}/>} />
+                        <TabButton tabName="analytics" label="Analytics" icon={<Users size={18}/>} />
+                    </div>
                 </div>
-                {view === 'tasks' && <TasksView property={property} user={user} />}
-                {view === 'checklists' && <ChecklistsView property={property} user={user} />}
-                {view === 'inventory' && <InventoryView property={property} user={user} />}
-                {view === 'calendar' && <CalendarView property={property} user={user} />}
-                {view === 'analytics' && <AnalyticsView property={property} />}
+                <div className="mt-6">
+                    {view === 'tasks' && <TasksView property={property} user={user} />}
+                    {view === 'checklists' && <ChecklistsView property={property} user={user} />}
+                    {view === 'inventory' && <InventoryView property={property} user={user} />}
+                    {view === 'calendar' && <CalendarView property={property} user={user} />}
+                    {view === 'analytics' && <AnalyticsView property={property} />}
+                </div>
             </div>
         </div>
     );
@@ -259,23 +267,32 @@ const TasksView = ({ property, user }) => {
     };
 
     return (
-        <div>
-            <div className="flex justify-end items-center mb-4"><button onClick={() => setShowAddTaskForm(!showAddTaskForm)} className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors shadow-sm">{showAddTaskForm ? 'Cancel' : '+ Add Task'}</button></div>
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-2xl font-semibold text-gray-800">Tasks</h3>
+                <button onClick={() => setShowAddTaskForm(!showAddTaskForm)} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm">
+                    <Plus size={18} className="mr-2" />
+                    {showAddTaskForm ? 'Cancel' : 'Add Task'}
+                </button>
+            </div>
             {showAddTaskForm && <AddTaskForm onAddTask={handleAddTask} checklistTemplates={checklistTemplates} team={team} />}
-            {loadingTasks ? <p>Loading tasks...</p> : (
-                <ul className="space-y-3 mt-4">
-                    {tasks.length > 0 ? tasks.map(task => (
-                        <li key={task.id} onClick={() => setSelectedTask(task)} className="bg-gray-50 p-4 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100">
-                            <div>
-                                <p className="font-semibold text-gray-800">{task.taskName}</p>
-                                <p className="text-sm text-gray-500">{task.taskType} {task.templateName && `- ${task.templateName}`}</p>
-                                <p className="text-xs text-blue-500 mt-1">{task.assignedToEmail ? `Assigned to: ${task.assignedToEmail}`: 'Unassigned'}</p>
-                            </div>
-                            <span className={`text-sm font-medium px-3 py-1 rounded-full ${task.status === 'Completed' ? 'bg-green-100 text-green-700' : task.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>{task.status}</span>
-                        </li>
-                    )) : <p className="text-gray-500">No tasks for this property yet.</p>}
-                </ul>
-            )}
+            
+            <div className="mt-4 border-t border-gray-200">
+                {loadingTasks ? <p className="text-center py-8 text-gray-500">Loading tasks...</p> : (
+                    <ul className="divide-y divide-gray-200">
+                        {tasks.length > 0 ? tasks.map(task => (
+                            <li key={task.id} onClick={() => setSelectedTask(task)} className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors">
+                                <div>
+                                    <p className="font-semibold text-gray-900">{task.taskName}</p>
+                                    <p className="text-sm text-gray-500">{task.taskType} {task.templateName && `- ${task.templateName}`}</p>
+                                    <p className="text-xs text-blue-600 mt-1">{task.assignedToEmail ? `Assigned to: ${task.assignedToEmail}`: 'Unassigned'}</p>
+                                </div>
+                                <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${task.status === 'Completed' ? 'bg-green-100 text-green-800' : task.status === 'In Progress' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{task.status}</span>
+                            </li>
+                        )) : <p className="text-center py-8 text-gray-500">No tasks for this property yet.</p>}
+                    </ul>
+                )}
+            </div>
             {selectedTask && <TaskDetailModal task={selectedTask} team={team} checklistTemplates={checklistTemplates} onClose={() => setSelectedTask(null)} />}
         </div>
     );
@@ -319,16 +336,25 @@ const ChecklistsView = ({ user }) => {
     };
     
     return (
-        <div>
-            <div className="flex justify-end items-center mb-4"><button onClick={() => { setEditingTemplate(null); setShowChecklistForm(true); }} className="w-full md:w-auto bg-blue-100 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors">Create New Template</button></div>
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+             <div className="flex justify-between items-center mb-4">
+                <h3 className="text-2xl font-semibold text-gray-800">Checklist Templates</h3>
+                <button onClick={() => { setEditingTemplate(null); setShowChecklistForm(true); }} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm">
+                    <Plus size={18} className="mr-2" />
+                    Create Template
+                </button>
+            </div>
             {showChecklistForm && <ChecklistTemplateForm onSave={handleSaveChecklist} onCancel={() => setShowChecklistForm(false)} existingTemplate={editingTemplate} />}
-            <ul className="space-y-2">
+            <ul className="mt-4 space-y-3">
                 {checklistTemplates.map(template => (
-                    <li key={template.id} className="bg-white p-3 rounded-md border flex justify-between items-center">
-                        <span className="text-sm text-gray-700">{template.name} ({template.items.length} items)</span>
-                        <div className="space-x-2">
-                            <button onClick={() => { setEditingTemplate(template); setShowChecklistForm(true); }} className="text-xs text-blue-500 hover:underline">Edit</button>
-                            <button onClick={() => handleDeleteChecklist(template.id)} className="text-xs text-red-500 hover:underline">Delete</button>
+                    <li key={template.id} className="bg-gray-50 p-4 rounded-lg border flex justify-between items-center">
+                        <div>
+                            <span className="font-semibold text-gray-800">{template.name}</span>
+                            <span className="text-sm text-gray-500 ml-2">({template.items.length} items)</span>
+                        </div>
+                        <div className="space-x-4">
+                            <button onClick={() => { setEditingTemplate(template); setShowChecklistForm(true); }} className="font-semibold text-blue-600 hover:underline">Edit</button>
+                            <button onClick={() => handleDeleteChecklist(template.id)} className="font-semibold text-red-600 hover:underline">Delete</button>
                         </div>
                     </li>
                 ))}
@@ -337,7 +363,6 @@ const ChecklistsView = ({ user }) => {
     );
 };
 
-// --- ✨ UPDATED CalendarView with "+ New Task" Button ---
 const CalendarView = ({ property, user }) => {
     const [events, setEvents] = useState([]);
     const [newCalLink, setNewCalLink] = useState("");
@@ -431,7 +456,7 @@ const CalendarView = ({ property, user }) => {
     };
 
     return (
-        <div className="bg-gray-50 p-6 rounded-lg border">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             {showAddTaskForm && (
                 <div className="mb-6">
                     <AddTaskForm 
@@ -447,23 +472,22 @@ const CalendarView = ({ property, user }) => {
 
             <div className="flex justify-between items-center mb-4">
                 <div>
-                    <h3 className="text-2xl font-semibold text-gray-700">Unified Calendar</h3>
+                    <h3 className="text-2xl font-semibold text-gray-800">Unified Calendar</h3>
                     <p className="text-sm text-gray-500">Click a date to add a task, or use the button.</p>
                 </div>
-                {/* ✨ NEW: "+ New Task" Button */}
                 <button 
                     onClick={() => {
-                        setSelectedDate(null); // Ensure no date is pre-selected
+                        setSelectedDate(null);
                         setShowAddTaskForm(true);
                     }}
-                    className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-600 transition-colors shadow-sm"
+                    className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm"
                 >
                     <Plus size={18} className="mr-2" />
                     New Task
                 </button>
             </div>
             
-            <div className="bg-white p-4 rounded-lg border shadow-sm">
+            <div className="bg-white rounded-lg">
                 <FullCalendar
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                     initialView="dayGridMonth"
@@ -479,21 +503,21 @@ const CalendarView = ({ property, user }) => {
                     dateClick={handleDateClick}
                 />
             </div>
-            <div className="mt-6 pt-6 border-t">
-                <h4 className="font-semibold text-gray-600 mb-2">Sync Calendars (iCal)</h4>
+            <div className="mt-8 pt-6 border-t border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-2">Sync Calendars (iCal)</h4>
                 <form onSubmit={handleAddCalendarLink} className="flex space-x-2">
                     <input
                         type="url"
                         value={newCalLink}
                         onChange={e => setNewCalLink(e.target.value)}
                         placeholder="Paste iCal link..."
-                        className="flex-grow px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="flex-grow px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
-                    <button type="submit" className="bg-blue-500 text-white px-4 rounded-lg hover:bg-blue-600 transition-colors text-sm">Add</button>
+                    <button type="submit" className="bg-gray-700 text-white font-semibold px-4 rounded-lg hover:bg-gray-800 transition-colors text-sm">Add</button>
                 </form>
                 <ul className="mt-3 space-y-2">
                     {property.calendarLinks && property.calendarLinks.map((link, index) => (
-                        <li key={index} className="text-xs text-gray-500 bg-white p-2 rounded border truncate">{link}</li>
+                        <li key={index} className="text-xs text-gray-500 bg-gray-50 p-2 rounded border truncate">{link}</li>
                     ))}
                 </ul>
             </div>
@@ -522,12 +546,12 @@ const AnalyticsView = ({ property }) => {
     }, [property.id]);
 
     return (
-        <div className="bg-gray-50 p-6 rounded-lg border">
-            <h3 className="text-2xl font-semibold text-gray-700 mb-4">Cost Analytics</h3>
-            <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Cost Analytics</h3>
+            <div className="bg-gray-50 p-6 rounded-lg">
                 <h4 className="text-lg font-medium text-gray-500">Estimated Cost Per Turnover</h4>
-                <p className="text-4xl font-bold text-gray-800 mt-2">${totalCost.toFixed(2)}</p>
-                <p className="text-xs text-gray-400 mt-1">Based on the 'Par Level' of your guest consumables.</p>
+                <p className="text-4xl font-bold text-gray-900 mt-2">${totalCost.toFixed(2)}</p>
+                <p className="text-xs text-gray-500 mt-1">Based on the 'Par Level' of your guest consumables.</p>
             </div>
         </div>
     );
