@@ -11,7 +11,8 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { Plus, Building, Bed, Bath, Users, Wifi, Tv, Wind, Utensils, Sun, Droplet, Grill, Fireplace, Tent, FirstAid, Siren, Flame } from 'lucide-react';
+// ✨ CORRECTED: Replaced non-existent icons with valid ones
+import { Plus, Building, Bed, Bath, Users, Wifi, Tv, Wind, Utensils, Sun, Droplet, CookingPot, Flame, Tent, Bandage, Siren } from 'lucide-react';
 
 // --- (No changes to this section) ---
 const amenityCategories = {
@@ -32,16 +33,18 @@ const amenityCategories = {
             pool: { label: "Pool", icon: <Sun size={18} /> },
             hotTub: { label: "Hot Tub", icon: <Droplet size={18} /> },
             patio: { label: "Patio", icon: <Tent size={18} /> },
-            bbq: { label: "BBQ Grill", icon: <Grill size={18} /> },
-            firePit: { label: "Fire Pit", icon: <Fireplace size={18} /> },
-            fireplace: { label: "Indoor Fireplace", icon: <Fireplace size={18} /> },
+            // ✨ CORRECTED ICONS
+            bbq: { label: "BBQ Grill", icon: <CookingPot size={18} /> },
+            firePit: { label: "Fire Pit", icon: <Flame size={18} /> },
+            fireplace: { label: "Indoor Fireplace", icon: <Flame size={18} /> },
         }
     },
     safety: {
         title: "Safety Items",
         items: {
             smokeAlarm: { label: "Smoke Alarm", icon: <Siren size={18} /> },
-            firstAid: { label: "First Aid Kit", icon: <FirstAid size={18} /> },
+            // ✨ CORRECTED ICON
+            firstAid: { label: "First Aid Kit", icon: <Bandage size={18} /> },
             fireExtinguisher: { label: "Fire Extinguisher", icon: <Flame size={18} /> },
         }
     }
