@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { TaskDetailModal, AddTaskForm } from './TaskViews';
 import { ChecklistTemplateForm } from './ChecklistViews';
 import { InventoryView } from './InventoryViews';
