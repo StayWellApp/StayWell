@@ -72,7 +72,7 @@ const SettingsView = ({ user }) => {
         setNotifications(newNotifications);
         await setDoc(doc(db, 'userSettings', user.uid), { notifications: newNotifications }, { merge: true });
     };
-    
+
     return (
         <div className="p-4 sm:p-6 md:p-8">
             <header className="mb-8">
@@ -87,7 +87,7 @@ const SettingsView = ({ user }) => {
                         <SettingsTab id="roles" label="Roles & Permissions" icon={Shield} activeTab={activeTab} setActiveTab={setActiveTab} />
                         <SettingsTab id="appearance" label="Appearance" icon={Palette} activeTab={activeTab} setActiveTab={setActiveTab} />
                         <SettingsTab id="notifications" label="Notifications" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
-                        <SettingsTab id="account" label="Account" icon={AlertCircle} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <SettingsTab id="account" label="Account" icon={AlertCircle} activeTab={activeTab} setActiveTab={activeTab} />
                     </nav>
                 </aside>
 
@@ -230,7 +230,7 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
         e.preventDefault();
         onSave({ roleName, permissions });
     };
-    
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fade-in">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
@@ -239,10 +239,10 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{existingRole ? 'Edit Role' : 'Create New Role'}</h3>
                 </div>
 
-                {/* Form Body - Removed overflow-hidden from form, and made the content div flex-grow */}
-                <form onSubmit={handleSubmit} className="flex-grow flex flex-col"> {/* Removed overflow-hidden */}
-                    {/* Scrollable Content */}
-                    <div className="p-6 space-y-6 overflow-y-auto flex-grow"> {/* Added flex-grow here */}
+                {/* Form Body - Now properly flexible */}
+                <form onSubmit={handleSubmit} className="flex flex-col flex-grow"> {/* Added flex-grow here and removed overflow-hidden */}
+                    {/* Scrollable Content - Added flex-grow */}
+                    <div className="p-6 space-y-6 overflow-y-auto flex-grow">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role Name</label>
                             <input type="text" value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="e.g., Property Manager" className="mt-1 input-style" required />
