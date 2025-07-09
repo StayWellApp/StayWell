@@ -6,7 +6,8 @@ import { auth, db } from './firebase-config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
-import { Auth } from './components/Auth';
+// ✨ CORRECTED: Import Login and SignUp separately
+import { Login, SignUp } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
 // We will create/update these components in the next steps
@@ -14,6 +15,26 @@ import ClientDashboard from './components/ClientDashboard';
 // import SettingsView from './components/SettingsView';
 // import TeamView from './components/TeamView';
 // import MasterCalendarView from './components/MasterCalendarView';
+
+// ✨ NEW: A simple component to handle the Auth screen
+const AuthScreen = () => {
+    const [showLogin, setShowLogin] = useState(true);
+
+    return (
+        <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center">
+            <div className="w-full max-w-md">
+                {showLogin ? <Login /> : <SignUp />}
+                <button
+                    onClick={() => setShowLogin(!showLogin)}
+                    className="mt-4 text-center w-full text-sm text-blue-600 hover:underline"
+                >
+                    {showLogin ? "Need an account? Sign Up" : "Already have an account? Login"}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 
 function App() {
     const [user, setUser] = useState(null);
@@ -48,7 +69,7 @@ function App() {
     };
 
     if (loading) {
-        return <div className="flex justify-center items-center h-screen">Loading...</div>;
+        return <div className="flex justify-center items-center h-screen font-semibold text-gray-500">Loading Application...</div>;
     }
 
     const renderView = () => {
@@ -56,16 +77,12 @@ function App() {
             case 'dashboard':
                 return <ClientDashboard user={user} />;
             case 'properties':
-                // This will be the new component for listing all properties
                 return <div className="p-8"><h1 className="text-3xl font-bold">Properties View (Coming Soon)</h1></div>;
             case 'calendar':
-                // This will be the new master calendar for all properties
                 return <div className="p-8"><h1 className="text-3xl font-bold">Master Calendar (Coming Soon)</h1></div>;
             case 'team':
-                // This will be the new team management view
                 return <div className="p-8"><h1 className="text-3xl font-bold">Team Management (Coming Soon)</h1></div>;
             case 'settings':
-                 // This will be the new settings view
                 return <div className="p-8"><h1 className="text-3xl font-bold">Settings (Coming Soon)</h1></div>;
             default:
                 return <ClientDashboard user={user} />;
@@ -75,7 +92,7 @@ function App() {
     return (
         <div className="App">
             {!user ? (
-                <Auth />
+                <AuthScreen /> // Use the new AuthScreen component
             ) : (
                 <Layout activeView={activeView} setActiveView={setActiveView} onLogout={handleLogout}>
                     {renderView()}
