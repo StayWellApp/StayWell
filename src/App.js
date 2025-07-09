@@ -1,11 +1,12 @@
 // --- src/App.js ---
-// Replace the entire contents of your App.js file with this code.
+// This is the complete, updated code for your main App component.
 
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, onSnapshot, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
+// Component Imports
 import { Login, SignUp } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
@@ -13,8 +14,10 @@ import PropertiesView from './components/PropertiesView';
 import { PropertyDetailView } from './components/PropertyViews';
 import TeamView from './components/TeamView';
 import MasterCalendarView from './components/MasterCalendarView';
+import { StorageView } from './components/StorageViews'; // <-- 1. IMPORT the new StorageView
 import SettingsView from './components/SettingsView';
 
+// A simple screen for handling the Login/SignUp forms
 const AuthScreen = () => {
     const [showLogin, setShowLogin] = useState(true);
     return (
@@ -33,38 +36,44 @@ const AuthScreen = () => {
 };
 
 function App() {
+    // --- STATE MANAGEMENT ---
     const [user, setUser] = useState(null);
     const [userRole, setUserRole] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [activeView, setActiveView] = useState('dashboard');
+    const [activeView, setActiveView] = useState('dashboard'); // Default view
     const [properties, setProperties] = useState([]);
     const [selectedProperty, setSelectedProperty] = useState(null);
 
+    // --- AUTH & DATA FETCHING ---
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
+                // Fetch user role
                 const userDocRef = doc(db, "users", currentUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
                     setUserRole(userDoc.data().role);
                 }
 
+                // Listen for property changes
                 const propertiesQuery = query(collection(db, "properties"), where("ownerId", "==", currentUser.uid));
                 onSnapshot(propertiesQuery, (snapshot) => {
                     setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                 });
 
             } else {
+                // Reset state on logout
                 setUser(null);
                 setUserRole(null);
                 setProperties([]);
             }
             setLoading(false);
         });
-        return () => unsubscribe();
+        return () => unsubscribe(); // Cleanup subscription on unmount
     }, []);
 
+    // --- EVENT HANDLERS ---
     const handleLogout = async () => {
         await signOut(auth);
         setActiveView('dashboard');
@@ -84,17 +93,18 @@ function App() {
         }
     };
 
-    // ✨ NEW: Function to handle navigation from the sidebar
     const handleNavClick = (viewId) => {
-        setSelectedProperty(null); // This is the key fix for the navigation bug
+        setSelectedProperty(null); // Deselect property when changing main views
         setActiveView(viewId);
     };
 
+    // --- RENDER LOGIC ---
     if (loading) {
         return <div className="flex justify-center items-center h-screen font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-900">Loading Application...</div>;
     }
 
     const renderView = () => {
+        // If a property is selected, always show its detail view
         if (selectedProperty) {
             return <PropertyDetailView 
                         property={selectedProperty} 
@@ -103,6 +113,7 @@ function App() {
                     />;
         }
 
+        // Otherwise, show the selected main view
         switch (activeView) {
             case 'dashboard':
                 return <ClientDashboard user={user} />;
@@ -116,6 +127,8 @@ function App() {
                 return <MasterCalendarView user={user} />;
             case 'team':
                 return <TeamView user={user} />;
+            case 'storage': // <-- 2. ADD CASE to render StorageView
+                return <StorageView user={user} />;
             case 'settings':
                 return <SettingsView user={user} />;
             default:
@@ -132,7 +145,7 @@ function App() {
                     user={user} 
                     userRole={userRole}
                     activeView={activeView} 
-                    setActiveView={handleNavClick} // Use the new handler
+                    setActiveView={handleNavClick} // Use the handler to manage view state
                     onLogout={handleLogout}
                 >
                     {renderView()}
