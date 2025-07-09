@@ -1,4 +1,4 @@
-// --- src/components/StaffDashboard.js ---
+// --- src/components/StaffDashboard.js --- TEST
 // Replace the entire contents of your StaffDashboard.js file with this code.
 
 import React, { useState, useEffect, useRef } from 'react';
