@@ -3,8 +3,9 @@ import { db } from '../firebase-config';
 import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit } from 'lucide-react';
-import { PERMISSION_CATEGORIES, INITIAL_PERMISSIONS_STATE, STANDARD_ROLES } from '../config/permissions'; // Import STANDARD_ROLES, INITIAL_PERMISSIONS_STATE
+// Added new icons for localization
+import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, DollarSign, Clock, Languages } from 'lucide-react';
+import { PERMISSION_CATEGORIES, INITIAL_PERMISSIONS_STATE, STANDARD_ROLES } from '../config/permissions';
 
 // --- Reusable Components for the Tabbed Layout ---
 const SettingsTab = ({ id, label, icon: Icon, activeTab, setActiveTab }) => (
@@ -37,12 +38,30 @@ const SettingsView = ({ user }) => {
     const { themeSetting, setThemeSetting } = useContext(ThemeContext);
     const [notifications, setNotifications] = useState({});
 
+    // New states for Localization settings
+    const [currency, setCurrency] = useState('USD');
+    const [timezone, setTimezone] = useState('UTC');
+    const [language, setLanguage] = useState('en');
+    const [isSavingLocalization, setIsSavingLocalization] = useState(false);
+
+
     useEffect(() => {
         if (!user) return;
         const userSettingsRef = doc(db, 'userSettings', user.uid);
         const userSettingsUnsub = onSnapshot(userSettingsRef, (docSnap) => {
             if (docSnap.exists()) {
-                setNotifications(docSnap.data().notifications || {});
+                const settingsData = docSnap.data();
+                setNotifications(settingsData.notifications || {});
+                setCurrency(settingsData.currency || 'USD'); // Fetch currency, default to USD
+                setTimezone(settingsData.timezone || 'UTC'); // Fetch timezone, default to UTC
+                setLanguage(settingsData.language || 'en'); // Fetch language, default to en
+                // Also fetch standardRolePermissions if it's not already handled here
+                // Note: standardRolePermissions are already handled in RolesPanel's useEffect
+            } else {
+                // Set default values if no settings doc exists
+                setCurrency('USD');
+                setTimezone('UTC');
+                setLanguage('en');
             }
         });
         return () => userSettingsUnsub();
@@ -72,6 +91,38 @@ const SettingsView = ({ user }) => {
         setNotifications(newNotifications);
         await setDoc(doc(db, 'userSettings', user.uid), { notifications: newNotifications }, { merge: true });
     };
+
+    // New handler for Localization settings
+    const handleLocalizationSave = async (e) => {
+        e.preventDefault();
+        setIsSavingLocalization(true);
+        try {
+            await updateDoc(doc(db, 'userSettings', user.uid), {
+                currency: currency,
+                timezone: timezone,
+                language: language
+            }, { merge: true });
+            alert('Localization settings updated successfully!');
+        } catch (err) {
+            console.error("Error updating localization settings:", err);
+            alert('Failed to update localization settings.');
+        } finally {
+            setIsSavingLocalization(false);
+        }
+    };
+
+    // Options for dropdowns
+    const currencyOptions = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'];
+    const timezoneOptions = [
+        'UTC', 'America/New_York', 'America/Los_Angeles', 'Europe/London',
+        'Europe/Berlin', 'Asia/Tokyo', 'Australia/Sydney'
+    ];
+    const languageOptions = [
+        { value: 'en', label: 'English' },
+        { value: 'es', label: 'Spanish' },
+        { value: 'fr', label: 'French' },
+        { value: 'de', label: 'German' },
+    ];
     
     return (
         <div className="p-4 sm:p-6 md:p-8">
@@ -87,6 +138,7 @@ const SettingsView = ({ user }) => {
                         <SettingsTab id="roles" label="Roles & Permissions" icon={Shield} activeTab={activeTab} setActiveTab={setActiveTab} />
                         <SettingsTab id="appearance" label="Appearance" icon={Palette} activeTab={activeTab} setActiveTab={setActiveTab} />
                         <SettingsTab id="notifications" label="Notifications" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <SettingsTab id="localization" label="Localization" icon={Globe} activeTab={activeTab} setActiveTab={setActiveTab} /> {/* New Tab */}
                         <SettingsTab id="account" label="Account" icon={AlertCircle} activeTab={activeTab} setActiveTab={setActiveTab} />
                     </nav>
                 </aside>
@@ -132,6 +184,54 @@ const SettingsView = ({ user }) => {
                                 <NotificationToggle id="taskUpdates" label="Task Updates" checked={!!notifications.taskUpdates} onChange={(e) => handleNotificationChange('taskUpdates', e.target.checked)} />
                                 <NotificationToggle id="bookingAlerts" label="New Booking Alerts" checked={!!notifications.bookingAlerts} onChange={(e) => handleNotificationChange('bookingAlerts', e.target.checked)} />
                              </div>
+                        </SettingsPanel>
+                    )}
+                    {activeTab === 'localization' && ( // New Localization Panel
+                        <SettingsPanel title="Localization Settings">
+                            <form onSubmit={handleLocalizationSave} className="space-y-4 max-w-lg">
+                                <div>
+                                    <label htmlFor="currency-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
+                                    <select
+                                        id="currency-select"
+                                        value={currency}
+                                        onChange={(e) => setCurrency(e.target.value)}
+                                        className="mt-1 input-style"
+                                    >
+                                        {currencyOptions.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="timezone-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</label>
+                                    <select
+                                        id="timezone-select"
+                                        value={timezone}
+                                        onChange={(e) => setTimezone(e.target.value)}
+                                        className="mt-1 input-style"
+                                    >
+                                        {timezoneOptions.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="language-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Language</label>
+                                    <select
+                                        id="language-select"
+                                        value={language}
+                                        onChange={(e) => setLanguage(e.target.value)}
+                                        className="mt-1 input-style"
+                                    >
+                                        {languageOptions.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex justify-end pt-2">
+                                    <button type="submit" disabled={isSavingLocalization} className="button-primary">{isSavingLocalization ? 'Saving...' : 'Save Localization'}</button>
+                                </div>
+                            </form>
                         </SettingsPanel>
                     )}
                     {activeTab === 'account' && (
@@ -398,7 +498,7 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
                                                     checked={!!permissions[perm.id]}
                                                     onChange={() => handlePermissionChange(perm.id)}
                                                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                    disabled={existingRole?.id === 'Owner' && permissions[perm.id]} // Owner's true permissions are not editable
+                                                    disabled={existingRole?.id === 'Owner' && permissions[perm.id] === true} // Owner's true permissions are not editable
                                                 />
                                                 <span className="text-sm text-gray-700 dark:text-gray-300">{perm.label}</span>
                                             </label>
