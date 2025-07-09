@@ -1,5 +1,5 @@
 // --- src/components/StorageViews.js ---
-// This is the complete, updated code with dark mode styles.
+// This is the complete, corrected code with dark mode styles and bug fixes.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
@@ -29,13 +29,10 @@ export const StorageView = ({ user }) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const locations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setStorageLocations(locations);
-            if (locations.length > 0 && !selectedLocationId) {
-                // To prevent jumping back to the list view after an edit
-            }
             setLoading(false);
         });
         return unsubscribe;
-    }, [user, selectedLocationId]);
+    }, [user]);
 
     const handleSaveLocation = async (locationName) => {
         if (!locationName.trim()) return;
@@ -190,6 +187,14 @@ const LinkPropertiesModal = ({ location, user, onClose }) => {
     const [linkedIds, setLinkedIds] = useState(location.linkedProperties || []);
 
     useEffect(() => {
+        // This listener ensures the local state `linkedIds` is always in sync with Firestore
+        const unsub = onSnapshot(doc(db, "storageLocations", location.id), (doc) => {
+            setLinkedIds(doc.data()?.linkedProperties || []);
+        });
+        return unsub;
+    }, [location.id]);
+
+    useEffect(() => {
         const q = query(collection(db, 'properties'), where('ownerId', '==', user.uid));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             setAllProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -199,12 +204,16 @@ const LinkPropertiesModal = ({ location, user, onClose }) => {
 
     const handleToggleLink = async (propertyId) => {
         const locationRef = doc(db, 'storageLocations', location.id);
-        const newLinkedIds = linkedIds.includes(propertyId)
-            ? linkedIds.filter(id => id !== propertyId)
-            : [...linkedIds, propertyId];
-        
-        await updateDoc(locationRef, { linkedProperties: newLinkedIds });
-        setLinkedIds(newLinkedIds);
+        // Use Firestore's atomic array operators to prevent race conditions
+        if (linkedIds.includes(propertyId)) {
+            await updateDoc(locationRef, {
+                linkedProperties: arrayRemove(propertyId)
+            });
+        } else {
+            await updateDoc(locationRef, {
+                linkedProperties: arrayUnion(propertyId)
+            });
+        }
     };
 
     return (
