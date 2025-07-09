@@ -169,7 +169,7 @@ export const ChecklistsView = ({ user }) => {
                 </button>
             </div>
 
-            {editingTemplateId === 'new' && <ChecklistTemplateForm onSave={handleSave} onCancel={() => setEditingTemplateId(null)} properties={properties} />}
+            {editingTemplateId === 'new' && <ChecklistTemplateForm key="new-template" onSave={handleSave} onCancel={() => setEditingTemplateId(null)} properties={properties} />}
 
             <div className="space-y-4 mt-6">
                 {loading ? <p className="text-center py-8 text-gray-500 dark:text-gray-400">Loading templates...</p> : templates.length > 0 ? (
@@ -178,7 +178,7 @@ export const ChecklistsView = ({ user }) => {
 
                         if (editingTemplateId === template.id) {
                             return <ChecklistTemplateForm 
-                                key={template.id} // The key is still useful for React's reconciliation
+                                key={template.id} // This key forces a re-mount, ensuring the form gets fresh initial data
                                 existingTemplate={template}
                                 onSave={handleSave} 
                                 onCancel={() => setEditingTemplateId(null)} 
@@ -230,48 +230,37 @@ export const ChecklistsView = ({ user }) => {
 };
 
 
-// --- Form Component (REFACTORED with useEffect for robust state synchronization) ---
+// --- Form Component (REFACTORED to rely on re-mounting via key prop) ---
 export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, properties }) => {
-    const [name, setName] = useState('');
-    const [taskType, setTaskType] = useState('Cleaning');
-    const [linkedProperties, setLinkedProperties] = useState([]);
-    const [items, setItems] = useState([{ text: '', instructions: '', imageUrl: '' }]);
-
-    // This effect synchronizes the component's state with the `existingTemplate` prop.
-    // It runs whenever `existingTemplate` changes, ensuring the form is always up-to-date.
-    useEffect(() => {
-        if (existingTemplate) {
-            setName(existingTemplate.name || '');
-            setTaskType(existingTemplate.taskType || 'Cleaning');
-            setLinkedProperties(existingTemplate.linkedProperties || []);
-
-            if (existingTemplate.items && existingTemplate.items.length > 0) {
-                setItems(
-                    existingTemplate.items.map(item => {
-                        const itemData = typeof item === 'string' ? { text: item } : item;
-                        return {
-                            text: itemData.text || '',
-                            instructions: itemData.instructions || '',
-                            imageUrl: itemData.imageUrl || '',
-                        };
-                    })
-                );
-            } else {
-                setItems([{ text: '', instructions: '', imageUrl: '' }]);
-            }
-        } else {
-            // Reset the form for creating a new template
-            setName('');
-            setTaskType('Cleaning');
-            setLinkedProperties([]);
-            setItems([{ text: '', instructions: '', imageUrl: '' }]);
+    // State is initialized directly from props. This runs ONCE when the component mounts.
+    // The `key` prop in the parent ensures this component re-mounts (and this code re-runs)
+    // every time a different template is selected for editing.
+    const [name, setName] = useState(existingTemplate?.name || '');
+    const [taskType, setTaskType] = useState(existingTemplate?.taskType || 'Cleaning');
+    const [linkedProperties, setLinkedProperties] = useState(existingTemplate?.linkedProperties || []);
+    const [items, setItems] = useState(() => {
+        if (existingTemplate?.items && existingTemplate.items.length > 0) {
+            return existingTemplate.items.map(item => ({
+                text: item.text || '',
+                instructions: item.instructions || '',
+                imageUrl: item.imageUrl || '',
+            }));
         }
-    }, [existingTemplate]);
+        return [{ text: '', instructions: '', imageUrl: '' }];
+    });
+
+    // NOTE: The useEffect hook has been removed. It's no longer needed because the `key`
+    // prop strategy is cleaner and more reliable for resetting form state.
 
     const handleItemChange = (index, field, value) => {
-        const newItems = [...items];
-        newItems[index][field] = value;
-        setItems(newItems);
+        setItems(currentItems => 
+            currentItems.map((item, i) => {
+                if (i === index) {
+                    return { ...item, [field]: value };
+                }
+                return item;
+            })
+        );
     };
 
     const handlePropertyLink = (propId) => {
