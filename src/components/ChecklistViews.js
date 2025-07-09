@@ -169,7 +169,7 @@ export const ChecklistsView = ({ user }) => {
                 </button>
             </div>
 
-            {editingTemplateId === 'new' && <ChecklistTemplateForm onSave={handleSave} onCancel={() => setEditingTemplateId(null)} properties={properties} />}
+            {editingTemplateId === 'new' && <ChecklistTemplateForm key="new-template" onSave={handleSave} onCancel={() => setEditingTemplateId(null)} properties={properties} />}
 
             <div className="space-y-4 mt-6">
                 {loading ? <p className="text-center py-8 text-gray-500 dark:text-gray-400">Loading templates...</p> : templates.length > 0 ? (
@@ -178,7 +178,7 @@ export const ChecklistsView = ({ user }) => {
 
                         if (editingTemplateId === template.id) {
                             return <ChecklistTemplateForm 
-                                key={template.id}
+                                key={template.id} // This key is crucial for re-mounting the component
                                 existingTemplate={template}
                                 onSave={handleSave} 
                                 onCancel={() => setEditingTemplateId(null)} 
@@ -230,38 +230,29 @@ export const ChecklistsView = ({ user }) => {
 };
 
 
-// --- Form Component (with Dark Mode Style Fixes) ---
+// --- Form Component (REFACTORED for robust state initialization) ---
 export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, properties }) => {
-    const [name, setName] = useState('');
-    const [taskType, setTaskType] = useState('Cleaning');
-    const [linkedProperties, setLinkedProperties] = useState([]);
-    const [items, setItems] = useState([{ text: '', instructions: '', imageUrl: '' }]);
-
-    useEffect(() => {
-        if (existingTemplate) {
-            setName(existingTemplate.name || '');
-            setTaskType(existingTemplate.taskType || 'Cleaning');
-            setLinkedProperties(existingTemplate.linkedProperties || []);
-            if (existingTemplate.items && existingTemplate.items.length > 0) {
-                // Ensure instructions are always a string to prevent controlled/uncontrolled errors.
-                const convertedItems = existingTemplate.items.map(item => {
-                    if (typeof item === 'string') {
-                        return { text: item, instructions: '', imageUrl: '' };
-                    }
-                    return { ...item, instructions: item.instructions || '' };
-                });
-                setItems(convertedItems);
-            } else {
-                setItems([{ text: '', instructions: '', imageUrl: '' }]);
-            }
-        } else {
-            // For new templates
-            setName('');
-            setTaskType('Cleaning');
-            setLinkedProperties([]);
-            setItems([{ text: '', instructions: '', imageUrl: '' }]);
+    // State is initialized directly from props.
+    // The `key` prop in the parent component ensures this component re-mounts and
+    // re-initializes its state whenever a different template is edited.
+    const [name, setName] = useState(existingTemplate?.name || '');
+    const [taskType, setTaskType] = useState(existingTemplate?.taskType || 'Cleaning');
+    const [linkedProperties, setLinkedProperties] = useState(existingTemplate?.linkedProperties || []);
+    const [items, setItems] = useState(() => {
+        if (existingTemplate?.items && existingTemplate.items.length > 0) {
+            return existingTemplate.items.map(item => {
+                const itemData = (typeof item === 'string') ? { text: item } : item;
+                return {
+                    text: itemData.text || '',
+                    instructions: itemData.instructions || '',
+                    imageUrl: itemData.imageUrl || '',
+                };
+            });
         }
-    }, [existingTemplate]);
+        return [{ text: '', instructions: '', imageUrl: '' }];
+    });
+
+    // No useEffect needed for prop synchronization due to the `key` prop strategy.
 
     const handleItemChange = (index, field, value) => {
         const newItems = [...items];
