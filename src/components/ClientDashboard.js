@@ -1,17 +1,14 @@
-// --- src/components/ClientDashboard.js ---
-// This is the complete, corrected code.
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
-import { Building, AlertTriangle, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X } from 'lucide-react'; // <-- FIX: Removed unused 'Package' icon
+import { Building, AlertTriangle, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X, ClipboardCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TaskDetailModal } from './TaskViews';
 
 const ClientDashboard = ({ user, setActiveView }) => {
     const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
-    const [urgentTasks, setUrgentTasks] = useState([]);
     const [unassignedTasks, setUnassignedTasks] = useState([]);
+    const [todaysTasks, setTodaysTasks] = useState([]); // <-- NEW STATE for Today's Tasks
     const [allOpenTasks, setAllOpenTasks] = useState([]);
     const [lowStockItems, setLowStockItems] = useState([]);
     const [taskStatusData, setTaskStatusData] = useState([]);
@@ -21,11 +18,6 @@ const ClientDashboard = ({ user, setActiveView }) => {
     const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
-
-    const upcomingBookings = [
-        { id: 'booking-1', propertyName: 'Seaside Villa', guestName: 'John Doe', checkIn: '2025-07-10' },
-        { id: 'booking-2', propertyName: 'Downtown Loft', guestName: 'Jane Smith', checkIn: '2025-07-12' },
-    ];
 
     useEffect(() => {
         if (!user) return;
@@ -38,8 +30,16 @@ const ClientDashboard = ({ user, setActiveView }) => {
         const tasksUnsubscribe = onSnapshot(query(collection(db, "tasks"), where("ownerId", "==", user.uid)), (snapshot) => {
             const allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const openTasks = allTasks.filter(task => task.status !== 'Completed');
+            
+            // --- NEW: Logic to get today's date and filter tasks ---
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize to start of the day
+            const todayISO = today.toISOString().split('T')[0];
+
+            setTodaysTasks(allTasks.filter(task => task.scheduledDate === todayISO));
+            // --- End of new logic ---
+
             setAllOpenTasks(openTasks);
-            setUrgentTasks(openTasks.filter(task => task.priority === 'High').slice(0, 5));
             setUnassignedTasks(openTasks.filter(task => !task.assignedTo));
             
             const statusCounts = allTasks.reduce((acc, task) => {
@@ -75,7 +75,7 @@ const ClientDashboard = ({ user, setActiveView }) => {
             setStats(prev => ({ ...prev, lowStockItems: lowItems.length }));
         };
         
-        Promise.all([fetchLowStockItems()]).then(() => setLoading(false));
+        fetchLowStockItems().finally(() => setLoading(false));
 
         return () => {
             propertiesUnsubscribe();
@@ -86,7 +86,7 @@ const ClientDashboard = ({ user, setActiveView }) => {
 
     const handleOpenTask = (task) => {
         setSelectedTask(task);
-        setIsTasksModalOpen(false);
+        setIsTasksModalOpen(false); // Close any other modals if open
     };
 
     return (
@@ -104,12 +104,30 @@ const ClientDashboard = ({ user, setActiveView }) => {
                         <StatCard icon={<AlertTriangle size={24} />} title="Low Stock Items" value={stats.lowStockItems} color="red" onClick={() => setIsStockModalOpen(true)} />
                     </div>
                     
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* --- NEW: Today's Tasks Card --- */}
+                        <DashboardCard icon={<ClipboardCheck size={22} />} title="Today's Tasks" className="lg:col-span-1">
+                            {todaysTasks.length > 0 ? (
+                                <ul className="divide-y divide-gray-200 dark:divide-gray-700 -mx-2">
+                                    {todaysTasks.map(task => (
+                                        <li key={task.id} className="py-3 px-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex justify-between items-center" onClick={() => handleOpenTask(task)}>
+                                            <div>
+                                                <p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p>
+                                            </div>
+                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${task.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{task.status}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No tasks scheduled for today.</p>}
+                        </DashboardCard>
+                        
+                        {/* --- Unassigned Tasks Card --- */}
                         <DashboardCard icon={<Siren size={22} />} title="Unassigned Tasks" className="lg:col-span-1">
                             {unassignedTasks.length > 0 ? (
-                                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                                <ul className="divide-y divide-gray-200 dark:divide-gray-700 -mx-2">
                                     {unassignedTasks.map(task => (
-                                        <li key={task.id} className="py-3 px-2 -mx-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex justify-between items-center" onClick={() => handleOpenTask(task)}>
+                                        <li key={task.id} className="py-3 px-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex justify-between items-center" onClick={() => handleOpenTask(task)}>
                                             <div>
                                                 <p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p>
@@ -119,24 +137,10 @@ const ClientDashboard = ({ user, setActiveView }) => {
                                 </ul>
                             ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No unassigned tasks.</p>}
                         </DashboardCard>
-                        <DashboardCard icon={<PieChartIcon size={22} />} title="Task Status"><TaskStatusChart data={taskStatusData} /></DashboardCard>
-                    </div>
 
-                    <DashboardCard icon={<Calendar size={22} />} title="Upcoming Bookings">
-                        {upcomingBookings.length > 0 ? (
-                            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                                {upcomingBookings.map(booking => (
-                                    <li key={booking.id} className="py-3 flex justify-between items-center">
-                                        <div>
-                                            <p className="font-medium text-gray-800 dark:text-gray-100">{booking.guestName}</p>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">{booking.propertyName}</p>
-                                        </div>
-                                        <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{new Date(booking.checkIn).toLocaleDateString()}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No upcoming bookings.</p>}
-                    </DashboardCard>
+                        {/* --- Task Status Chart --- */}
+                        <DashboardCard icon={<PieChartIcon size={22} />} title="Task Status" className="lg:col-span-1"><TaskStatusChart data={taskStatusData} /></DashboardCard>
+                    </div>
                 </>
             )}
 

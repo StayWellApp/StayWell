@@ -1,6 +1,3 @@
-// --- src/components/PropertyViews.js ---
-// This is the complete, updated file.
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, arrayUnion, deleteDoc } from 'firebase/firestore';
@@ -64,7 +61,7 @@ export const PropertyCard = ({ property, onSelect }) => (
                 <div className="flex items-center space-x-2"><Bed size={16} className="text-gray-500" /><span>{property.bedrooms} Beds</span></div>
                 <div className="flex items-center space-x-2"><Bath size={16} className="text-gray-500" /><span>{property.bathrooms} Baths</span></div>
             </div>
-             <button onClick={onSelect} className="mt-5 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Manage Property</button>
+             <button onClick={onSelect} className="mt-5 w-full button-primary">Manage Property</button>
         </div>
     </div>
 );
@@ -104,19 +101,19 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
             <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">{existingProperty ? 'Edit Property' : 'Add a New Property'}</h3>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="propertyName">Property Name</label><input type="text" id="propertyName" value={propertyName} onChange={(e) => setPropertyName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., Downtown Loft" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="propertyType">Property Type</label><select id="propertyType" value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">{propertyTypes.map(type => <option key={type}>{type}</option>)}</select></div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="propertyName">Property Name</label><input type="text" id="propertyName" value={propertyName} onChange={(e) => setPropertyName(e.target.value)} className="input-style" placeholder="e.g., Downtown Loft" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="propertyType">Property Type</label><select id="propertyType" value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className="input-style">{propertyTypes.map(type => <option key={type}>{type}</option>)}</select></div>
                 </div>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="address">Address</label><input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 123 Main St, Anytown" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="description">Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="A brief description of the property..."></textarea></div>
+                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="address">Address</label><input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="input-style" placeholder="e.g., 123 Main St, Anytown" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="description">Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="input-style" rows="3" placeholder="A brief description of the property..."></textarea></div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="guests">Max Guests</label><input type="number" id="guests" value={guests} min="1" onChange={(e) => setGuests(parseInt(e.target.value))} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="bedrooms">Bedrooms</label><input type="number" id="bedrooms" value={bedrooms} min="0" onChange={(e) => setBedrooms(parseInt(e.target.value))} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="bathrooms">Bathrooms</label><input type="number" id="bathrooms" value={bathrooms} min="1" step="0.5" onChange={(e) => setBathrooms(parseFloat(e.target.value))} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="guests">Max Guests</label><input type="number" id="guests" value={guests} min="1" onChange={(e) => setGuests(parseInt(e.target.value))} className="input-style" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="bedrooms">Bedrooms</label><input type="number" id="bedrooms" value={bedrooms} min="0" onChange={(e) => setBedrooms(parseInt(e.target.value))} className="input-style" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="bathrooms">Bathrooms</label><input type="number" id="bathrooms" value={bathrooms} min="1" step="0.5" onChange={(e) => setBathrooms(parseFloat(e.target.value))} className="input-style" /></div>
                 </div>
                 <AmenitiesForm amenities={amenities} setAmenities={setAmenities} />
                 <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="photo">Main Photo</label><input type="file" id="photo" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/50 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900"/><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Image uploads coming soon!</p></div>
-                <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700"><button type="button" onClick={onCancel} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold px-6 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button><button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">{existingProperty ? 'Update Property' : 'Save Property'}</button></div>
+                <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700"><button type="button" onClick={onCancel} className="button-secondary">Cancel</button><button type="submit" className="button-primary">{existingProperty ? 'Update Property' : 'Save Property'}</button></div>
             </form>
         </div>
     );
@@ -184,7 +181,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                     <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mt-1">{liveProperty.propertyName}</h2>
                     <p className="text-gray-500 dark:text-gray-400 mt-2">{liveProperty.address}</p>
                 </div>
-                <button onClick={() => setIsEditing(true)} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Edit</button>
+                <button onClick={() => setIsEditing(true)} className="button-secondary">Edit</button>
             </div>
             <p className="text-gray-600 dark:text-gray-300 mt-4">{liveProperty.description}</p>
             
@@ -240,7 +237,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     );
 };
 
-// --- NEW COMPONENT: Modal for adding a task from a template ---
 const TemplateTaskModal = ({ templates, onClose, onAddTask }) => {
     const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
@@ -304,7 +300,7 @@ const TasksView = ({ property, user }) => {
     const [tasks, setTasks] = useState([]);
     const [loadingTasks, setLoadingTasks] = useState(true);
     const [showAddTaskForm, setShowAddTaskForm] = useState(false);
-    const [showTemplateModal, setShowTemplateModal] = useState(false); // <-- NEW STATE
+    const [showTemplateModal, setShowTemplateModal] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
     const [team, setTeam] = useState([]);
     const [checklistTemplates, setChecklistTemplates] = useState([]);
@@ -312,13 +308,23 @@ const TasksView = ({ property, user }) => {
     useEffect(() => {
         const tasksQuery = query(collection(db, "tasks"), where("propertyId", "==", property.id));
         const tasksUnsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-            setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const sortedTasks = snapshot.docs
+              .map(doc => ({ id: doc.id, ...doc.data() }))
+              .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            setTasks(sortedTasks);
             setLoadingTasks(false);
         });
 
         const checklistsQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
         const checklistsUnsubscribe = onSnapshot(checklistsQuery, (snapshot) => {
-            setChecklistTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const relevantTemplates = snapshot.docs
+              .map(doc => ({ id: doc.id, ...doc.data() }))
+              .filter(template => 
+                !template.linkedProperties || 
+                template.linkedProperties.length === 0 || 
+                template.linkedProperties.includes(property.id)
+              );
+            setChecklistTemplates(relevantTemplates);
         });
 
         const teamQuery = query(collection(db, 'users'), where('ownerId', '==', user.uid));
@@ -345,6 +351,7 @@ const TasksView = ({ property, user }) => {
                 createdAt: serverTimestamp() 
             });
             setShowAddTaskForm(false);
+            setShowTemplateModal(false);
         } catch (error) { console.error("Error adding task: ", error); alert("Failed to add task."); }
     };
 
@@ -352,20 +359,18 @@ const TasksView = ({ property, user }) => {
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Tasks</h3>
-                {/* --- UPDATED BUTTON CONTAINER --- */}
                 <div className="flex items-center space-x-2">
-                    <button onClick={() => setShowTemplateModal(true)} className="button-secondary flex items-center">
+                    <button onClick={() => setShowTemplateModal(true)} className="button-secondary">
                         <ListChecks size={16} className="mr-2" />
                         Add from Template
                     </button>
-                    <button onClick={() => setShowAddTaskForm(true)} className="button-primary flex items-center">
+                    <button onClick={() => setShowAddTaskForm(true)} className="button-primary">
                         <Plus size={18} className="mr-2" />
                         Add New Task
                     </button>
                 </div>
             </div>
             
-            {/* --- UPDATED FORM RENDERING LOGIC --- */}
             {showAddTaskForm && <AddTaskForm onAddTask={handleAddTask} onCancel={() => setShowAddTaskForm(false)} checklistTemplates={checklistTemplates} team={team} />}
             {showTemplateModal && <TemplateTaskModal templates={checklistTemplates} onClose={() => setShowTemplateModal(false)} onAddTask={handleAddTask} />}
 
@@ -391,69 +396,21 @@ const TasksView = ({ property, user }) => {
 };
 
 const ChecklistsView = ({ user }) => {
-    const [checklistTemplates, setChecklistTemplates] = useState([]);
-    const [showChecklistForm, setShowChecklistForm] = useState(false);
-    const [editingTemplate, setEditingTemplate] = useState(null);
-
-    useEffect(() => {
-        const q = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setChecklistTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
-        return unsubscribe;
-    }, [user.uid]);
-
-    const handleSaveChecklist = async (templateData) => {
-        try {
-            if (editingTemplate) {
-                const templateRef = doc(db, "checklistTemplates", editingTemplate.id);
-                await updateDoc(templateRef, templateData);
-                setEditingTemplate(null);
-            } else {
-                await addDoc(collection(db, "checklistTemplates"), { ...templateData, ownerId: user.uid, createdAt: serverTimestamp() });
-            }
-            setShowChecklistForm(false);
-        } catch (error) { console.error("Error saving checklist template:", error); alert("Failed to save checklist."); }
-    };
-
-    const handleDeleteChecklist = async (templateId) => {
-        if (window.confirm("Are you sure you want to delete this template?")) {
-            try {
-                await deleteDoc(doc(db, "checklistTemplates", templateId));
-            } catch (error) {
-                console.error("Error deleting checklist template:", error);
-                alert("Failed to delete template.");
-            }
-        }
-    };
-    
+    // This component is now managed globally from the main sidebar, 
+    // so we can show a read-only view here or a link to the main manager.
+    // For now, we'll just show a message.
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
              <div className="flex justify-between items-center mb-4">
                 <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Checklist Templates</h3>
-                <button onClick={() => { setEditingTemplate(null); setShowChecklistForm(true); }} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm">
-                    <Plus size={18} className="mr-2" />
-                    Create Template
-                </button>
             </div>
-            {showChecklistForm && <ChecklistTemplateForm onSave={handleSaveChecklist} onCancel={() => setShowChecklistForm(false)} existingTemplate={editingTemplate} />}
-            <ul className="mt-4 space-y-3">
-                {checklistTemplates.map(template => (
-                    <li key={template.id} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border dark:border-gray-700 flex justify-between items-center">
-                        <div>
-                            <span className="font-semibold text-gray-800 dark:text-gray-100">{template.name}</span>
-                            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">({template.items.length} items)</span>
-                        </div>
-                        <div className="space-x-4">
-                            <button onClick={() => { setEditingTemplate(template); setShowChecklistForm(true); }} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
-                            <button onClick={() => handleDeleteChecklist(template.id)} className="font-semibold text-red-600 dark:text-red-400 hover:underline">Delete</button>
-                        </div>
-                    </li>
-                ))}
-            </ul>
+            <p className="text-gray-600 dark:text-gray-400">
+                Checklist templates are now managed globally. Please use the "Templates" tab in the main navigation sidebar to create, edit, or delete templates for all your properties.
+            </p>
         </div>
     );
 };
+
 
 const CalendarView = ({ property, user }) => {
     const [events, setEvents] = useState([]);
@@ -553,11 +510,11 @@ const CalendarView = ({ property, user }) => {
                 <div className="mb-6">
                     <AddTaskForm 
                         onAddTask={handleAddTask} 
+                        onCancel={() => setShowAddTaskForm(false)}
                         checklistTemplates={checklistTemplates} 
                         team={team}
                         preselectedDate={selectedDate}
                     />
-                     <button onClick={() => setShowAddTaskForm(false)} className="w-full mt-2 text-center text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 p-2">Cancel</button>
                      <hr className="my-6 border-gray-200 dark:border-gray-700"/>
                 </div>
             )}
@@ -572,14 +529,14 @@ const CalendarView = ({ property, user }) => {
                         setSelectedDate(null);
                         setShowAddTaskForm(true);
                     }}
-                    className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm"
+                    className="button-primary"
                 >
                     <Plus size={18} className="mr-2" />
                     New Task
                 </button>
             </div>
             
-            <div className="bg-white dark:bg-gray-800 rounded-lg">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-2 -m-2 md:p-0 md:m-0">
                 <FullCalendar
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                     initialView="dayGridMonth"
@@ -603,9 +560,9 @@ const CalendarView = ({ property, user }) => {
                         value={newCalLink}
                         onChange={e => setNewCalLink(e.target.value)}
                         placeholder="Paste iCal link..."
-                        className="flex-grow px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="input-style flex-grow"
                     />
-                    <button type="submit" className="bg-gray-700 text-white font-semibold px-4 rounded-lg hover:bg-gray-800 transition-colors text-sm">Add</button>
+                    <button type="submit" className="button-secondary">Add</button>
                 </form>
                 <ul className="mt-3 space-y-2">
                     {property.calendarLinks && property.calendarLinks.map((link, index) => (
