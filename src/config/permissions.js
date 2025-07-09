@@ -7,7 +7,7 @@ export const PERMISSION_CATEGORIES = [
         description: 'Permissions related to viewing and managing properties.',
         permissions: [
             { id: 'properties_view_all', label: 'View all properties in the account' },
-            { id: 'properties_view_assigned', label: 'Can only view properties specifically assigned to them' }, // Added for clarity
+            { id: 'properties_view_assigned', label: 'Can only view properties specifically assigned to them' },
             { id: 'properties_create_edit_delete', label: 'Create, edit, and delete properties' },
         ]
     },
@@ -17,7 +17,7 @@ export const PERMISSION_CATEGORIES = [
         description: 'Permissions for handling tasks and assignments.',
         permissions: [
             { id: 'tasks_view_all', label: 'View all tasks for all properties' },
-            { id: 'tasks_view_assigned', label: 'Can only view tasks specifically assigned to them' }, // Changed from _assigned_only for consistency
+            { id: 'tasks_view_assigned', label: 'Can only view tasks specifically assigned to them' },
             { id: 'tasks_create_edit_delete', label: 'Create, edit, and delete any task' },
             { id: 'tasks_assign_others', label: 'Assign tasks to other team members' },
             { id: 'tasks_complete', label: 'Mark tasks as complete' },
@@ -41,12 +41,12 @@ export const PERMISSION_CATEGORIES = [
         ]
     },
     {
-        id: 'inventory', // Changed from 'storage' for more general use
+        id: 'inventory',
         label: 'Inventory & Supplies',
         description: 'Permissions for viewing and managing inventory and supplies.',
         permissions: [
             { id: 'inventory_view', label: 'View storage locations and stock levels' },
-            { id: 'inventory_manage', label: 'Update stock levels and manage locations' }, // Renamed from storage_manage
+            { id: 'inventory_manage', label: 'Update stock levels and manage locations' },
         ]
     },
     {
@@ -94,8 +94,9 @@ export const STANDARD_ROLES = [
         id: 'Owner',
         label: 'Owner',
         description: 'Has full administrative control and access to all features. This role cannot be deleted.',
-        isDeletable: false,
-        isEditable: true, // Permissions can be viewed/edited by owner, but defaults are all true
+        isDeletable: false, // Owner role cannot be deleted
+        isEditable: true, // Owner's permissions can be viewed/edited (though often full access)
+        // Default permissions for Owner - typically all true
         defaultPermissions: Object.keys(INITIAL_PERMISSIONS_STATE).reduce((acc, permId) => {
             acc[permId] = true; // Owner has all permissions by default
             return acc;
@@ -104,8 +105,8 @@ export const STANDARD_ROLES = [
     {
         id: 'Admin',
         label: 'Admin',
-        description: 'Comprehensive administrative control, excluding critical owner-level actions. Can manage properties, tasks, team, and custom roles.',
-        isDeletable: false, // Standard Admin role cannot be deleted
+        description: 'Comprehensive administrative control, excluding critical owner-level actions like deleting the account or managing owner-specific settings.',
+        isDeletable: true, // Changed to true
         isEditable: true,
         defaultPermissions: {
             ...INITIAL_PERMISSIONS_STATE, // Start with all false
@@ -132,7 +133,7 @@ export const STANDARD_ROLES = [
         id: 'Manager',
         label: 'Manager',
         description: 'Manages properties, tasks, and can assign team members for assigned properties. Cannot create/delete properties globally or manage team members.',
-        isDeletable: false,
+        isDeletable: true, // Changed to true
         isEditable: true,
         defaultPermissions: {
             ...INITIAL_PERMISSIONS_STATE, // Start with all false
@@ -153,7 +154,7 @@ export const STANDARD_ROLES = [
         id: 'Cleaner',
         label: 'Cleaner',
         description: 'Primarily handles cleaning tasks and updates inventory for assigned properties. Can mark tasks and checklist items complete.',
-        isDeletable: false,
+        isDeletable: true, // Changed to true
         isEditable: true,
         defaultPermissions: {
             ...INITIAL_PERMISSIONS_STATE, // Start with all false
@@ -170,7 +171,7 @@ export const STANDARD_ROLES = [
         id: 'Maintenance',
         label: 'Maintenance',
         description: 'Handles maintenance tasks and related inventory for assigned properties. Can mark tasks and checklist items complete.',
-        isDeletable: false,
+        isDeletable: true, // Changed to true
         isEditable: true,
         defaultPermissions: {
             ...INITIAL_PERMISSIONS_STATE, // Start with all false
