@@ -1,302 +1,221 @@
 // --- src/components/TaskViews.js ---
-// Replace the entire contents of your TaskViews.js file with this code.
+// This file provides the modals needed for viewing, editing, and adding tasks.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren } from 'lucide-react';
 
-const formatDate = (timestamp) => {
-    if (timestamp && timestamp.toDate) {
-        return timestamp.toDate().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        });
-    }
-    return 'Not set';
-};
-
-// ✨ UPDATED: Add `preselectedDate` prop
-export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDate = null }) => {
+export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDate }) => {
     const [taskName, setTaskName] = useState('');
-    const [taskType, setTaskType] = useState('Cleaning');
-    const [templateId, setTemplateId] = useState('');
-    const [assignedTo, setAssignedTo] = useState('');
+    const [taskType, setTaskType] = useState('Maintenance');
+    const [description, setDescription] = useState('');
     const [priority, setPriority] = useState('Medium');
-    const [scheduledDate, setScheduledDate] = useState('');
-    const [dueDate, setDueDate] = useState('');
-    const [notes, setNotes] = useState('');
-
-    // ✨ NEW: Effect to pre-fill the date when clicking on the calendar
-    useEffect(() => {
-        if (preselectedDate) {
-            setScheduledDate(preselectedDate);
-        }
-    }, [preselectedDate]);
-
+    const [scheduledDate, setScheduledDate] = useState(preselectedDate || '');
+    const [assignedTo, setAssignedTo] = useState('');
+    const [templateId, setTemplateId] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!taskName || !scheduledDate) {
-            alert("Please provide at least a task name and a scheduled date.");
+        if (!taskName) {
+            alert("Please enter a task name.");
             return;
         }
-        const assignedToData = team.find(member => member.id === assignedTo);
-
-        onAddTask({
-            taskName,
-            taskType,
-            templateId,
-            templateName: checklistTemplates.find(t => t.id === templateId)?.name || '',
-            assignedToId: assignedToData?.id || '',
-            assignedToEmail: assignedToData?.email || '',
-            priority,
-            scheduledDate,
-            dueDate,
-            notes,
-        });
-
+        const assignedToEmail = team.find(member => member.uid === assignedTo)?.email || '';
+        const templateName = checklistTemplates.find(t => t.id === templateId)?.name || '';
+        
+        onAddTask({ taskName, taskType, description, priority, scheduledDate, assignedTo, assignedToEmail, templateId, templateName });
+        
+        // Reset form
         setTaskName('');
-        setTaskType('Cleaning');
-        setTemplateId('');
-        setAssignedTo('');
+        setTaskType('Maintenance');
+        setDescription('');
         setPriority('Medium');
         setScheduledDate('');
-        setDueDate('');
-        setNotes('');
+        setAssignedTo('');
+        setTemplateId('');
     };
 
     return (
-        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6 animate-fade-in-down">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Create a New Task</h3>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 animate-fade-in-down">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Add New Task</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="taskName">Task Name</label>
-                        <input type="text" id="taskName" value={taskName} onChange={(e) => setTaskName(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., Post-Guest Cleaning" />
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Name</label>
+                        <input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} className="mt-1 w-full input-style" required />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="taskType">Task Type</label>
-                        <select id="taskType" value={taskType} onChange={(e) => setTaskType(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option>Cleaning</option>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Type</label>
+                        <select value={taskType} onChange={e => setTaskType(e.target.value)} className="mt-1 w-full input-style">
                             <option>Maintenance</option>
-                            <option>Inventory Check</option>
-                            <option>Other</option>
+                            <option>Cleaning</option>
+                            <option>Inspection</option>
                         </select>
                     </div>
                 </div>
-
-                {taskType === 'Cleaning' && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="checklistTemplate">Checklist Template (Optional)</label>
-                        <select id="checklistTemplate" value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">None</option>
-                            {checklistTemplates.map(template => <option key={template.id} value={template.id}>{template.name}</option>)}
-                        </select>
-                    </div>
-                )}
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="scheduledDate">Scheduled Date</label>
-                        <input type="date" id="scheduledDate" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                     <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="dueDate">Due Date (Optional)</label>
-                        <input type="date" id="dueDate" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="priority">Priority</label>
-                        <select id="priority" value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option>Low</option>
-                            <option>Medium</option>
-                            <option>High</option>
-                        </select>
-                    </div>
-                </div>
-
                 <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="assignedTo">Assign To (Optional)</label>
-                    <select id="assignedTo" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Unassigned</option>
-                        {team.map(member => <option key={member.id} value={member.id}>{member.email}</option>)}
-                    </select>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                    <textarea value={description} onChange={e => setDescription(e.target.value)} className="mt-1 w-full input-style" rows="2"></textarea>
                 </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="notes">Notes (Optional)</label>
-                    <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Add any specific instructions..."></textarea>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Assign To</label>
+                        <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className="mt-1 w-full input-style">
+                            <option value="">Unassigned</option>
+                            {team.map(member => <option key={member.id} value={member.uid}>{member.email}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Priority</label>
+                        <select value={priority} onChange={e => setPriority(e.target.value)} className="mt-1 w-full input-style">
+                            <option>Low</option><option>Medium</option><option>High</option>
+                        </select>
+                    </div>
                 </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Due Date</label>
+                        <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} className="mt-1 w-full input-style" />
+                    </div>
+                    {taskType === 'Cleaning' && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Checklist Template</label>
+                            <select value={templateId} onChange={e => setTemplateId(e.target.value)} className="mt-1 w-full input-style">
+                                <option value="">None</option>
+                                {checklistTemplates.map(template => <option key={template.id} value={template.id}>{template.name}</option>)}
+                            </select>
+                        </div>
+                    )}
+                </div>
                 <div className="flex justify-end pt-2">
-                    <button type="submit" className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors">Save Task</button>
+                    <button type="submit" className="button-primary">Create Task</button>
                 </div>
             </form>
         </div>
     );
 };
 
-
-export const TaskDetailModal = ({ task, team, checklistTemplates, onClose }) => {
+export const TaskDetailModal = ({ task, team, onClose }) => {
     const [isEditing, setIsEditing] = useState(false);
-    const [editableTask, setEditableTask] = useState({ ...task });
+    const [editedTask, setEditedTask] = useState(task);
+    const [comments, setComments] = useState([]);
+    const [newComment, setNewComment] = useState('');
 
     useEffect(() => {
-        setEditableTask({ ...task });
+        setEditedTask(task);
+        // Set up a listener for comments on this task
+        const commentsQuery = query(collection(db, `tasks/${task.id}/comments`));
+        const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
+            setComments(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+        });
+        return unsubscribe;
     }, [task]);
 
     const handleUpdate = async () => {
-        const taskRef = doc(db, "tasks", task.id);
-        try {
-            const assignedToData = team.find(member => member.id === editableTask.assignedToId);
-            const updateData = {
-                ...editableTask,
-                assignedToEmail: assignedToData?.email || '', // Ensure email is updated when assignment changes
-                lastUpdated: serverTimestamp()
-            };
-            delete updateData.id;
-            delete updateData.createdAt;
-
-            await updateDoc(taskRef, updateData);
-            setIsEditing(false);
-        } catch (error) {
-            console.error("Error updating task: ", error);
-            alert("Failed to update task.");
+        const taskRef = doc(db, 'tasks', task.id);
+        const assignedToEmail = team.find(member => member.uid === editedTask.assignedTo)?.email || '';
+        await updateDoc(taskRef, { ...editedTask, assignedToEmail });
+        setIsEditing(false);
+    };
+    
+    const handleDelete = async () => {
+        if (window.confirm("Are you sure you want to delete this task?")) {
+            await deleteDoc(doc(db, 'tasks', task.id));
+            onClose();
         }
     };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setEditableTask(prev => ({ ...prev, [name]: value }));
+    const handleInputChange = (field, value) => {
+        setEditedTask(prev => ({ ...prev, [field]: value }));
     };
     
-    const getPriorityClass = (priority) => {
-        switch (priority) {
-            case 'High': return 'bg-red-100 text-red-700';
-            case 'Medium': return 'bg-yellow-100 text-yellow-700';
-            case 'Low': return 'bg-blue-100 text-blue-700';
-            default: return 'bg-gray-100 text-gray-700';
-        }
-    };
-    
-    const statusClasses = {
-        'Completed': 'bg-green-100 text-green-700',
-        'In Progress': 'bg-blue-100 text-blue-700',
-        'Pending': 'bg-yellow-100 text-yellow-700',
+    const handleAddComment = async () => {
+        if (!newComment.trim()) return;
+        await addDoc(collection(db, `tasks/${task.id}/comments`), {
+            text: newComment,
+            author: "Admin", // In a real app, get current user's name/email
+            createdAt: serverTimestamp()
+        });
+        setNewComment('');
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-                <div className="p-6 border-b">
-                    {isEditing ? (
-                        <input
-                            type="text"
-                            name="taskName"
-                            value={editableTask.taskName}
-                            onChange={handleChange}
-                            className="text-2xl font-bold text-gray-800 w-full p-2 border rounded-md"
-                        />
-                    ) : (
-                        <h2 className="text-2xl font-bold text-gray-800">{task.taskName}</h2>
-                    )}
-                     <p className="text-sm text-gray-500">For property: {task.propertyName}</p>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
+                <div className="flex justify-between items-center mb-4 pb-4 border-b dark:border-gray-700">
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{task.taskName}</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">&times;</button>
                 </div>
 
-                <div className="p-6 space-y-6 overflow-y-auto">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm">
-                        <div className="space-y-1">
-                            <label className="text-gray-500 font-medium block">Status</label>
-                            {isEditing ? (
-                                <select name="status" value={editableTask.status} onChange={handleChange} className={`w-full p-2 border rounded-md ${statusClasses[editableTask.status] || 'bg-gray-100'}`}>
-                                    <option>Pending</option>
-                                    <option>In Progress</option>
-                                    <option>Completed</option>
-                                </select>
-                            ) : (
-                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusClasses[task.status] || 'bg-gray-100'}`}>
-                                    {task.status}
-                                </span>
-                            )}
+                <div className="overflow-y-auto pr-2 flex-grow">
+                    {isEditing ? (
+                        <div className="space-y-4">
+                            <input type="text" value={editedTask.taskName} onChange={e => handleInputChange('taskName', e.target.value)} className="w-full input-style" />
+                            <textarea value={editedTask.description} onChange={e => handleInputChange('description', e.target.value)} className="w-full input-style" rows="3" />
+                            <select value={editedTask.status} onChange={e => handleInputChange('status', e.target.value)} className="w-full input-style">
+                                <option>Pending</option><option>In Progress</option><option>Completed</option>
+                            </select>
+                            <select value={editedTask.priority} onChange={e => handleInputChange('priority', e.target.value)} className="w-full input-style">
+                                <option>Low</option><option>Medium</option><option>High</option>
+                            </select>
+                            <select value={editedTask.assignedTo || ''} onChange={e => handleInputChange('assignedTo', e.target.value)} className="w-full input-style">
+                                <option value="">Unassigned</option>
+                                {team.map(member => <option key={member.id} value={member.uid}>{member.email}</option>)}
+                            </select>
+                            <input type="date" value={editedTask.scheduledDate} onChange={e => handleInputChange('scheduledDate', e.target.value)} className="w-full input-style" />
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-gray-500 font-medium block">Priority</label>
-                             {isEditing ? (
-                                <select name="priority" value={editableTask.priority} onChange={handleChange} className={`w-full p-2 border rounded-md ${getPriorityClass(editableTask.priority)}`}>
-                                    <option>Low</option>
-                                    <option>Medium</option>
-                                    <option>High</option>
-                                </select>
-                            ) : (
-                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getPriorityClass(task.priority)}`}>
-                                    {task.priority || 'Not set'}
-                                </span>
-                            )}
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-gray-500 font-medium block">Assigned To</label>
-                             {isEditing ? (
-                                <select name="assignedToId" value={editableTask.assignedToId} onChange={handleChange} className="w-full p-2 border rounded-md bg-white">
-                                     <option value="">Unassigned</option>
-                                     {team.map(member => <option key={member.id} value={member.id}>{member.email}</option>)}
-                                </select>
-                            ) : (
-                                <span className="text-gray-800">{task.assignedToEmail || 'Unassigned'}</span>
-                            )}
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-gray-500 font-medium block">Scheduled Date</label>
-                             {isEditing ? (
-                                <input type="date" name="scheduledDate" value={editableTask.scheduledDate} onChange={handleChange} className="w-full p-2 border rounded-md"/>
-                            ) : (
-                                <span className="text-gray-800">{editableTask.scheduledDate || 'Not set'}</span>
-                            )}
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-gray-500 font-medium block">Due Date</label>
-                            {isEditing ? (
-                                <input type="date" name="dueDate" value={editableTask.dueDate} onChange={handleChange} className="w-full p-2 border rounded-md"/>
-                            ) : (
-                                <span className="text-gray-800">{editableTask.dueDate || 'Not set'}</span>
-                            )}
-                        </div>
-                         <div className="space-y-1">
-                            <label className="text-gray-500 font-medium block">Created On</label>
-                            <span className="text-gray-800">{formatDate(task.createdAt)}</span>
-                        </div>
-                    </div>
-
-                    {task.templateName && (
-                        <div>
-                            <label className="text-gray-500 font-medium block mb-1">Checklist</label>
-                            <div className="bg-gray-50 border rounded-md p-3 text-gray-700">{task.templateName}</div>
+                    ) : (
+                        <div className="space-y-4">
+                            <p className="text-gray-600 dark:text-gray-300">{task.description || 'No description provided.'}</p>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <InfoItem icon={<CheckSquare size={16}/>} label="Status" value={task.status} />
+                                <InfoItem icon={<Siren size={16}/>} label="Priority" value={task.priority} />
+                                <InfoItem icon={<User size={16}/>} label="Assigned To" value={task.assignedToEmail || 'Unassigned'} />
+                                <InfoItem icon={<Calendar size={16}/>} label="Due Date" value={task.scheduledDate || 'Not set'} />
+                            </div>
                         </div>
                     )}
 
-                    <div>
-                        <label className="text-gray-500 font-medium block mb-1">Notes</label>
-                        {isEditing ? (
-                            <textarea name="notes" value={editableTask.notes} onChange={handleChange} className="w-full p-2 border rounded-md" rows="3"></textarea>
-                        ) : (
-                            <p className="text-gray-800 bg-gray-50 border rounded-md p-3 min-h-[60px]">{task.notes || 'No notes for this task.'}</p>
-                        )}
+                    <div className="mt-6 pt-4 border-t dark:border-gray-700">
+                        <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><MessageSquare size={18} className="mr-2"/>Comments</h4>
+                        <div className="space-y-3 mb-4">
+                            {comments.length > 0 ? comments.map(comment => (
+                                <div key={comment.id} className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg">
+                                    <p className="text-gray-800 dark:text-gray-200">{comment.text}</p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">- {comment.author}</p>
+                                </div>
+                            )) : <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>}
+                        </div>
+                        <div className="flex space-x-2">
+                            <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Add a comment..." className="flex-grow input-style" />
+                            <button onClick={handleAddComment} className="button-primary px-4"><Plus size={16}/></button>
+                        </div>
                     </div>
-
                 </div>
-                <div className="p-4 bg-gray-50 border-t flex justify-between items-center">
+
+                <div className="flex justify-between items-center mt-6 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                    <button onClick={handleDelete} className="text-sm font-semibold text-red-600 hover:text-red-500 flex items-center"><Trash2 size={14} className="mr-1.5"/> Delete Task</button>
                     {isEditing ? (
-                        <>
-                            <button onClick={() => setIsEditing(false)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
-                            <button onClick={handleUpdate} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Save Changes</button>
-                        </>
+                        <div className="space-x-2">
+                            <button onClick={() => setIsEditing(false)} className="button-secondary">Cancel</button>
+                            <button onClick={handleUpdate} className="button-primary">Save Changes</button>
+                        </div>
                     ) : (
-                        <>
-                            <button onClick={() => setIsEditing(true)} className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Edit Task</button>
-                            <button onClick={onClose} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Close</button>
-                        </>
+                        <button onClick={() => setIsEditing(true)} className="button-primary">Edit Task</button>
                     )}
                 </div>
             </div>
         </div>
     );
 };
+
+const InfoItem = ({ icon, label, value }) => (
+    <div className="flex items-start">
+        <div className="text-gray-400 mt-0.5">{icon}</div>
+        <div className="ml-3">
+            <p className="font-medium text-gray-500 dark:text-gray-400">{label}</p>
+            <p className="text-gray-800 dark:text-gray-100">{value}</p>
+        </div>
+    </div>
+);
