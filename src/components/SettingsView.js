@@ -155,14 +155,14 @@ const SettingsView = ({ user }) => {
         { value: 'America/Mexico_City', label: 'Mexico City (CST/CDT)' },
     ];
     const languageOptions = [
-        { value: 'en', label: '🇺🇸 English' },
-        { value: 'es', label: '🇪🇸 Spanish' },
-        { value: 'fr', label: '🇫🇷 French' },
-        { value: 'de', label: '🇩🇪 German' },
-        { value: 'it', label: '🇮🇹 Italian' },
-        { value: 'pt', label: '🇵🇹 Portuguese' },
-        { value: 'zh', label: '🇨🇳 Chinese' },
-        { value: 'ja', label: '🇯🇵 Japanese' },
+        { value: 'en', label: 'English', flagClass: 'fi fi-us' }, // Using US flag for English for now, common for 'en'
+        { value: 'es', label: 'Spanish', flagClass: 'fi fi-es' },
+        { value: 'fr', label: 'French', flagClass: 'fi fi-fr' },
+        { value: 'de', label: 'German', flagClass: 'fi fi-de' },
+        { value: 'it', label: 'Italian', flagClass: 'fi fi-it' },
+        { value: 'pt', label: 'Portuguese', flagClass: 'fi fi-pt' },
+        { value: 'zh', label: 'Chinese', flagClass: 'fi fi-cn' },
+        { value: 'ja', label: 'Japanese', flagClass: 'fi fi-jp' },
     ];
     
     return (
@@ -265,7 +265,12 @@ const SettingsView = ({ user }) => {
                                         className="mt-1 input-style"
                                     >
                                         {languageOptions.map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            <option key={opt.value} value={opt.value}>
+                                                {/* Note: Native <select> options cannot render complex HTML like <span> for flags. */}
+                                                {/* These classes are prepared here for use with a custom dropdown component if implemented. */}
+                                                {/* For native select, only the text label will be visible. */}
+                                                {opt.label}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>

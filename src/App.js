@@ -15,6 +15,7 @@ import { StorageView } from './components/StorageViews';
 import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
 import { ThemeProvider } from './contexts/ThemeContext';
+import 'flag-icons/css/flag-icons.min.css';
 
 function App() {
     const [user, setUser] = useState(null);
