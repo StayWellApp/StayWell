@@ -9,7 +9,7 @@ const defaultRoles = ['Manager', 'Cleaner', 'Maintenance', 'Admin'];
 
 const TeamView = ({ user }) => {
     const [team, setTeam] = useState([]);
-    const [customRoles, setCustomRoles] = useState([]); // <-- NEW STATE for custom roles
+    const [customRoles, setCustomRoles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showInviteForm, setShowInviteForm] = useState(false);
 
@@ -20,7 +20,6 @@ const TeamView = ({ user }) => {
         if (!user) return;
         setLoading(true);
 
-        // Fetch team members
         const teamQuery = query(collection(db, "users"), where("ownerId", "==", user.uid));
         const teamUnsubscribe = onSnapshot(teamQuery, (snapshot) => {
             const teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -29,7 +28,6 @@ const TeamView = ({ user }) => {
             setLoading(false);
         });
 
-        // --- NEW: Fetch custom roles ---
         const rolesQuery = query(collection(db, "customRoles"), where("ownerId", "==", user.uid));
         const rolesUnsubscribe = onSnapshot(rolesQuery, (snapshot) => {
             const rolesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -44,22 +42,12 @@ const TeamView = ({ user }) => {
 
     const handleRoleChange = async (memberId, newRole) => {
         const memberRef = doc(db, "users", memberId);
-        try {
-            await updateDoc(memberRef, { role: newRole });
-        } catch (error) {
-            console.error("Error updating role:", error);
-            alert("Failed to update role.");
-        }
+        await updateDoc(memberRef, { role: newRole });
     };
 
     const handleDeleteMember = async (memberId) => {
-        if (window.confirm("Are you sure you want to remove this team member? This action cannot be undone.")) {
-            try {
-                await deleteDoc(doc(db, "users", memberId));
-            } catch (error) {
-                console.error("Error deleting team member:", error);
-                alert("Failed to delete team member.");
-            }
+        if (window.confirm("Are you sure you want to remove this team member?")) {
+            await deleteDoc(doc(db, "users", memberId));
         }
     };
 
@@ -70,7 +58,7 @@ const TeamView = ({ user }) => {
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Team Management</h1>
                     <p className="text-gray-600 dark:text-gray-400 mt-1">Invite, view, and manage roles for your team members.</p>
                 </div>
-                <button onClick={() => setShowInviteForm(!showInviteForm)} className="button-primary">
+                <button onClick={() => setShowInviteForm(true)} className="button-primary">
                     <Plus size={18} className="-ml-1 mr-2" />
                     Invite Member
                 </button>
@@ -102,13 +90,9 @@ const TeamView = ({ user }) => {
                                             disabled={member.role === 'Owner'}
                                         >
                                             <option value="Owner" disabled>{member.role === 'Owner' ? 'Owner' : ''}</option>
-                                            
-                                            {/* --- UPDATED: Show all default and custom roles --- */}
                                             {allAvailableRoles.map(role => (
                                                 <option key={role} value={role}>{role}</option>
                                             ))}
-
-                                            {/* Add current role as an option if it's not in the standard list */}
                                             {!allAvailableRoles.includes(member.role) && member.role !== 'Owner' && (
                                                 <option value={member.role}>{member.role}</option>
                                             )}
@@ -142,7 +126,6 @@ const InviteForm = ({ user, availableRoles, onInviteSent }) => {
             setRole(availableRoles[0]);
         }
     }, [availableRoles, role]);
-
 
     const handleInvite = async (e) => {
         e.preventDefault();
