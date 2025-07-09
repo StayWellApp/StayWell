@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { db } from '../firebase-config';
+import { db, functions } from '../firebase-config'; // functions is imported for inviteUser callable function
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, getDocs, setDoc, serverTimestamp } from 'firebase/firestore'; // Added setDoc, serverTimestamp
-import { Plus, Trash2, Edit, UserPlus, ListTree, X } from 'lucide-react';
-
+import { httpsCallable } from 'firebase/functions'; // For Cloud Functions
+import { Plus, Trash2, Edit, UserPlus, ListTree, X, Send } from 'lucide-react';
 // import { AuthContext } from '../contexts/AuthContext'; // Commented out: AuthContext not provided
+import { PERMISSION_CATEGORIES } from '../config/permissions'; // Import PERMISSION_CATEGORIES
 
 // Reusable Modal Component (defined locally for now, can be moved to its own file)
-const TeamMemberFormModal = ({ onSave, onCancel, existingMember = null }) => {
+const TeamMemberFormModal = ({ onSave, onCancel, existingMember = null, allAvailableRoles }) => { // Added allAvailableRoles prop
     const [email, setEmail] = useState(existingMember?.email || '');
-    const [role, setRole] = useState(existingMember?.role || '');
+    const [role, setRole] = useState(existingMember?.role || (allAvailableRoles.length > 0 ? allAvailableRoles[0].id : '')); // Set initial role
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -18,9 +19,10 @@ const TeamMemberFormModal = ({ onSave, onCancel, existingMember = null }) => {
         setIsSaving(false);
     };
 
-    const roles = ['Cleaner', 'Maintenance']; // Simplified roles, assuming PERMISSION_CATEGORIES is not needed here or define it if it's available.
-    // Original line: const roles = PERMISSION_CATEGORIES.find(cat => cat.id === 'team_management')?.roles || [];
-
+    // Use the passed allAvailableRoles prop
+    // const roles = PERMISSION_CATEGORIES.find(cat => cat.id === 'team_management')?.roles || []; // Original line
+    // We already pass a combined list of roles in `allAvailableRoles`
+    
     return (
         <div className="fixed inset-0 grid place-items-center bg-black bg-opacity-50 z-50">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700 max-h-[90vh] flex flex-col">
@@ -53,8 +55,8 @@ const TeamMemberFormModal = ({ onSave, onCancel, existingMember = null }) => {
                                 required
                             >
                                 <option value="">Select Role</option>
-                                {roles.map(r => (
-                                    <option key={r} value={r}>{r}</option> // Using r directly as key and value
+                                {allAvailableRoles.map(r => ( // Use allAvailableRoles here
+                                    <option key={r.id} value={r.id}>{r.label}</option>
                                 ))}
                             </select>
                         </div>
@@ -134,6 +136,26 @@ const TeamView = ({ user }) => {
     const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
     const [selectedTeamMemberForAssignment, setSelectedTeamMemberForAssignment] = useState(null);
     // const { currentUser } = useContext(AuthContext); // Commented out: AuthContext not provided
+
+    const [customRoles, setCustomRoles] = useState([]); // State for custom roles from Firebase
+
+    // Fetch custom roles from Firebase
+    useEffect(() => {
+        if (!user) return;
+        const q = query(collection(db, "customRoles"), where("ownerId", "==", user.uid));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setCustomRoles(snapshot.docs.map(doc => ({ id: doc.id, label: doc.data().roleName, permissions: doc.data().permissions }))); // Store id and label
+        });
+        return () => unsubscribe();
+    }, [user]);
+
+    // Combine default roles from PERMISSION_CATEGORIES with custom roles
+    const allAvailableRoles = PERMISSION_CATEGORIES.flatMap(category => {
+        if (category.id === 'team') { // Assuming 'team' category contains roles like 'Manager'
+            return category.permissions.map(perm => ({ id: perm.label, label: perm.label })); // Use label as ID for default roles
+        }
+        return [];
+    }).concat(customRoles); // Concatenate custom roles
 
     // Fetch team members
     useEffect(() => {
@@ -319,6 +341,7 @@ const TeamView = ({ user }) => {
                     onSave={handleInviteOrUpdateMember}
                     onCancel={handleCloseInviteModal}
                     existingMember={editingMember}
+                    allAvailableRoles={allAvailableRoles} // Pass the combined roles to the modal
                 />
             )}
 
@@ -329,6 +352,81 @@ const TeamView = ({ user }) => {
                     onSave={handleSavePropertyAssignments}
                     onCancel={handleCloseAssignmentModal}
                 />
+            )}
+        </div>
+    );
+};
+
+const InviteForm = ({ user, allAvailableRoles, onInviteSent }) => { // Changed availableRoles to allAvailableRoles
+    const [email, setEmail] = useState('');
+    const [role, setRole] = useState(allAvailableRoles.length > 0 ? allAvailableRoles[0].id : ''); // Set initial role from allAvailableRoles
+    const [isInviting, setIsInviting] = useState(false);
+    const [feedback, setFeedback] = useState({ message: '', type: '' });
+    
+    useEffect(() => {
+        if(allAvailableRoles.length > 0 && !role) {
+            setRole(allAvailableRoles[0].id); // Use allAvailableRoles here
+        }
+    }, [allAvailableRoles, role]);
+
+    const handleInvite = async (e) => {
+        e.preventDefault();
+        setIsInviting(true);
+        setFeedback({ message: '', type: '' });
+
+        const inviteUser = httpsCallable(functions, 'inviteUser');
+        try {
+            const result = await inviteUser({ email, role, ownerId: user.uid, ownerName: user.displayName });
+            if (result.data.success) {
+                setFeedback({ message: 'Invitation sent successfully!', type: 'success' });
+                setEmail('');
+            } else {
+                throw new Error(result.data.error || 'An unknown error occurred.');
+            }
+        } catch (error) {
+            console.error("Error sending invite:", error);
+            setFeedback({ message: `Error: ${error.message}`, type: 'error' });
+        } finally {
+            setIsInviting(false);
+            setTimeout(() => onInviteSent(), 2000);
+        }
+    };
+
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm animate-fade-in-down">
+            <form onSubmit={handleInvite} className="flex flex-col md:flex-row items-end gap-4">
+                <div className="w-full">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
+                    <input
+                        type="email"
+                        id="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="mt-1 input-style"
+                        placeholder="teammate@example.com"
+                        required
+                    />
+                </div>
+                <div className="w-full md:w-auto">
+                    <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                    <select
+                        id="role"
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        className="mt-1 input-style"
+                    >
+                        {allAvailableRoles.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+                    </select>
+                </div>
+                <button type="submit" disabled={isInviting} className="button-primary w-full md:w-auto">
+                    <Send size={16} className="mr-2"/>
+                    {isInviting ? 'Sending...' : 'Send Invite'}
+                </button>
+            </form>
+            {feedback.message && (
+                <p className={`mt-2 text-sm ${feedback.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                    {feedback.message}
+                </p>
             )}
         </div>
     );
