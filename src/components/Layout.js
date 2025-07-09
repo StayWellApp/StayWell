@@ -4,24 +4,6 @@ import { signOut } from 'firebase/auth';
 import { LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings, LogOut, Sun, Moon } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 
-// --- CORRECTED: Added 'Settings' back to the ownerLinks array ---
-const ownerLinks = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'properties', label: 'Properties', icon: Building },
-    { id: 'templates', label: 'Templates', icon: ListChecks },
-    { id: 'calendar', label: 'Master Calendar', icon: Calendar },
-    { id: 'team', label: 'Team', icon: Users },
-    { id: 'storage', label: 'Storage', icon: Archive },
-    { id: 'settings', label: 'Settings', icon: Settings },
-];
-
-const staffLinks = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'properties', label: 'My Properties', icon: Building },
-    { id: 'calendar', label: 'My Calendar', icon: Calendar },
-    { id: 'storage', label: 'Storage', icon: Archive },
-];
-
 const NavItem = ({ id, label, icon: Icon, activeView, setActiveView }) => (
     <li>
         <button
@@ -52,25 +34,33 @@ const UserProfile = ({ user, userData }) => (
     </div>
 );
 
-const Layout = ({ children, user, userData, activeView, setActiveView }) => {
+const Layout = ({ children, user, userData, activeView, setActiveView, hasPermission }) => {
     const { theme, toggleTheme } = useContext(ThemeContext);
 
     const handleLogout = async () => {
-        try {
-            await signOut(auth);
-        } catch (error) {
-            console.error('Logout Error:', error);
-        }
+        await signOut(auth);
     };
     
-    const hasAdminPrivileges = () => {
-        if (!userData) return false;
-        const isOwner = userData.uid === userData.ownerId;
-        const isAdminOrManager = userData.role === 'Admin' || userData.role === 'Manager' || userData.role === 'Owner';
-        return isOwner || isAdminOrManager;
-    };
-    
-    const navLinks = hasAdminPrivileges() ? ownerLinks : staffLinks;
+    // --- Build navigation links based on permissions ---
+    const navLinks = [];
+    navLinks.push({ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard });
+    navLinks.push({ id: 'properties', label: 'Properties', icon: Building });
+
+    if (hasPermission('templates_manage')) {
+        navLinks.push({ id: 'templates', label: 'Templates', icon: ListChecks });
+    }
+    if (hasPermission('tasks_view_all')) {
+        navLinks.push({ id: 'calendar', label: 'Master Calendar', icon: Calendar });
+    }
+    if (hasPermission('team_manage')) {
+        navLinks.push({ id: 'team', label: 'Team', icon: Users });
+    }
+    if (hasPermission('storage_view')) {
+         navLinks.push({ id: 'storage', label: 'Storage', icon: Archive });
+    }
+    if (hasPermission('team_manage')) { // Typically only admins can change settings
+        navLinks.push({ id: 'settings', label: 'Settings', icon: Settings });
+    }
 
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
