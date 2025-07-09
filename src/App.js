@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { Login, SignUp } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
@@ -22,6 +22,7 @@ function App() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
+    const [properties, setProperties] = useState([]); // <-- ADD THIS STATE TO HOLD PROPERTIES
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -36,15 +37,27 @@ function App() {
 
     useEffect(() => {
         if (user) {
-            const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-                if (doc.exists()) {
-                    setUserData(doc.data());
-                } else {
-                    setUserData(null);
-                }
+            // Fetch user data
+            const userDocUnsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+                setUserData(doc.exists() ? doc.data() : null);
                 setLoading(false);
             });
-            return () => unsub();
+
+            // --- ADDED: Fetch properties data ---
+            const propertiesQuery = query(collection(db, "properties"), where("ownerId", "==", user.uid));
+            const propertiesUnsub = onSnapshot(propertiesQuery, (snapshot) => {
+                const props = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setProperties(props);
+            });
+            
+            return () => {
+                userDocUnsub();
+                propertiesUnsub();
+            };
+            // --- END OF ADDITION ---
+
+        } else {
+            setLoading(false);
         }
     }, [user]);
 
@@ -53,12 +66,9 @@ function App() {
         setActiveView('propertyDetail');
     };
 
-    // --- MORE ROBUST ACCESS CONTROL LOGIC ---
     const hasAdminPrivileges = () => {
         if (!userData) return false;
-        // The user is the Owner if their ID is the same as their ownerId.
         const isOwner = userData.uid === userData.ownerId;
-        // Other roles with admin-like access.
         const isAdminOrManager = userData.role === 'Admin' || userData.role === 'Manager' || userData.role === 'Owner';
         return isOwner || isAdminOrManager;
     };
@@ -76,7 +86,8 @@ function App() {
                     ? <ClientDashboard user={user} setActiveView={setActiveView} /> 
                     : <StaffDashboard user={user} userData={userData} />;
             case 'properties':
-                return <PropertiesView onSelectProperty={handleSelectProperty} user={user} userData={userData} />;
+                // --- Pass the 'properties' state down as a prop ---
+                return <PropertiesView properties={properties} onSelectProperty={handleSelectProperty} user={user} userData={userData} />;
             case 'team':
                 return hasFullAccess ? <TeamView user={user} /> : null;
             case 'templates':

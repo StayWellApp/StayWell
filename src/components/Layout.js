@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth';
 import { LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings, LogOut, Sun, Moon } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 
+// --- CORRECTED: Added 'Settings' back to the ownerLinks array ---
 const ownerLinks = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'properties', label: 'Properties', icon: Building },
@@ -11,6 +12,7 @@ const ownerLinks = [
     { id: 'calendar', label: 'Master Calendar', icon: Calendar },
     { id: 'team', label: 'Team', icon: Users },
     { id: 'storage', label: 'Storage', icon: Archive },
+    { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 const staffLinks = [
@@ -61,7 +63,6 @@ const Layout = ({ children, user, userData, activeView, setActiveView }) => {
         }
     };
     
-    // --- MORE ROBUST ACCESS CONTROL LOGIC ---
     const hasAdminPrivileges = () => {
         if (!userData) return false;
         const isOwner = userData.uid === userData.ownerId;
