@@ -13,14 +13,32 @@ const preGeneratedTemplates = [
         taskType: "Cleaning",
         linkedProperties: [],
         items: [
+            { text: "Check for damages and report", instructions: "Thoroughly inspect all rooms for any new damage, stains, or broken items. Take photos and report immediately.", imageUrl: "" },
+            { text: "Collect any items left by guests", instructions: "Check under beds, in drawers, and behind furniture. Bag any found items and label with the date and property name.", imageUrl: "" },
             { text: "Strip all beds and start laundry", instructions: "1. Gather all used towels, bathmats, sheets, and pillowcases.\n2. Start the first load of laundry on a warm cycle.\n3. Use one detergent pod.", imageUrl: "" },
+            { text: "Empty all trash and recycling", instructions: "Empty bins in kitchen, bathrooms, and bedrooms. Replace liners.", imageUrl: "" },
             { text: "Wash, dry, and put away all dishes", instructions: "1. Empty the dishwasher if it contains clean dishes.\n2. Load any dirty dishes from the sink or counters.\n3. Run the dishwasher on a normal cycle.\n4. Hand-wash any items that are not dishwasher-safe.", imageUrl: "" },
-            { text: "Wipe down all kitchen counters and sink", instructions: "1. Clear all items from the counters.\n2. Spray with multi-surface cleaner and wipe down with a clean cloth.\n3. Scrub the sink basin and faucet handles until they shine.", imageUrl: "" },
-            { text: "Clean and sanitize toilets, showers, and bathroom sinks", instructions: "1. Spray toilet bowl, seat, and exterior with disinfectant. Let it sit.\n2. Spray shower walls, tub, and sink.\n3. Wipe down the sink and shower, then scrub the toilet bowl and wipe the exterior.\n4. Check and clear hair from all drains.", imageUrl: "" },
+            { text: "Wipe down all kitchen surfaces", instructions: "1. Clear all items from the counters.\n2. Spray with multi-surface cleaner and wipe down with a clean cloth.\n3. Scrub the sink basin and faucet handles until they shine.", imageUrl: "" },
+            { text: "Clean and sanitize bathrooms", instructions: "1. Spray toilet bowl, seat, and exterior with disinfectant. Let it sit.\n2. Spray shower walls, tub, and sink.\n3. Wipe down the sink and shower, then scrub the toilet bowl and wipe the exterior.\n4. Check and clear hair from all drains. Polish mirrors.", imageUrl: "" },
             { text: "Dust all accessible surfaces", instructions: "Use a microfiber cloth to dust all hard surfaces, including nightstands, dressers, tables, window sills, and the tops of picture frames. Don't forget electronics like the TV.", imageUrl: "" },
             { text: "Vacuum all carpets and mop all hard floors", instructions: "1. Vacuum all rugs and carpeted areas.\n2. Sweep or vacuum all hard floors to remove debris.\n3. Mop hard floors with an appropriate cleaning solution, starting from the far corner of the room and moving toward the exit.", imageUrl: "" },
-            { text: "Restock all consumables", instructions: "1. Leave two new rolls of toilet paper in each bathroom.\n2. Ensure paper towel roll is at least half full.\n3. Refill hand soap and dish soap dispensers.\n4. Restock the coffee station with at least 10 coffee pods, sugar, and creamers.", imageUrl: "" },
             { text: "Make all beds with fresh linens", instructions: "1. Use one fitted sheet, one flat sheet, and two pillowcases per bed.\n2. Ensure the flat sheet is placed with the finished side down.\n3. Tuck sheets in tightly for a crisp look.\n4. Fluff pillows and place decorative cushions.", imageUrl: "" },
+            { text: "Restock all consumables", instructions: "1. Leave two new rolls of toilet paper in each bathroom.\n2. Ensure paper towel roll is at least half full.\n3. Refill hand soap and dish soap dispensers.\n4. Restock the coffee station with at least 10 coffee pods, sugar, and creamers.", imageUrl: "" },
+            { text: "Final staging and walkthrough", instructions: "Fluff all pillows and cushions. Straighten decor. Close blinds to a uniform level (e.g., halfway). Do a final smell check.", imageUrl: "" },
+        ]
+    },
+    {
+        name: "Guest Welcome & Staging",
+        taskType: "Inspection",
+        linkedProperties: [],
+        items: [
+            { text: "Set thermostat to a comfortable temperature", instructions: "Set to 21°C / 70°F in summer and winter. Ensure it's running correctly.", imageUrl: "" },
+            { text: "Turn on designated lights", instructions: "Turn on entryway lights and a lamp in the living room to create a welcoming ambiance.", imageUrl: "" },
+            { text: "Leave a personalized welcome note", instructions: "Use the guest's name and leave the note on the kitchen counter or dining table.", imageUrl: "" },
+            { text: "Set out welcome basket or snacks", instructions: "Ensure any snacks or drinks are fresh and neatly arranged.", imageUrl: "" },
+            { text: "Verify guest information book is visible", instructions: "Place the welcome book in a prominent location like the coffee table or entryway console.", imageUrl: "" },
+            { text: "Check Wi-Fi and share login details", instructions: "Connect to the guest Wi-Fi on your phone to ensure it's working. Double-check that the login info displayed for guests is correct.", imageUrl: "" },
+            { text: "Final walkthrough for cleanliness and presentation", instructions: "Do one last scan of the entire property to ensure everything is perfect. Check for any missed spots, stray hairs, or dust.", imageUrl: "" },
         ]
     },
     {
@@ -29,9 +47,26 @@ const preGeneratedTemplates = [
         linkedProperties: [],
         items: [
             { text: "Clean inside of oven and microwave", instructions: "For Microwave:\n1. Mix 1 cup water and juice of one lemon in a microwave-safe bowl.\n2. Microwave on high for 3-5 minutes until it boils.\n3. Let it stand for 5 minutes before opening.\n4. Wipe the inside clean with a sponge.\n\nFor Oven:\n1. Remove racks and soak in hot, soapy water.\n2. Use an oven-safe cleaner, following the product's instructions for application and ventilation.\n3. Scrub and wipe clean.", imageUrl: "" },
-            { text: "Test smoke and carbon monoxide detectors", instructions: "1. Press and hold the 'Test' button on each detector for a few seconds.\n2. A loud alarm should sound. If it's weak or doesn't sound, replace the batteries.\n3. Test again after replacing batteries. If it still fails, report the unit for immediate replacement.", imageUrl: "https://i.imgur.com/L3n4m2R.png" },
+            { text: "Clean behind and under large appliances", instructions: "Carefully pull out the refrigerator and stove. Sweep and mop the floor underneath. Wipe down the sides of the appliances.", imageUrl: "" },
+            { text: "Descale coffee maker and kettle", instructions: "Run a cycle with a descaling solution or a 1:1 mixture of white vinegar and water, followed by two cycles of fresh water.", imageUrl: "" },
             { text: "Wash all windows, inside and out", instructions: "1. Mix a few drops of dish soap in a bucket of warm water.\n2. Use a sponge to wash the window surface.\n3. Use a clean squeegee to wipe the window dry, starting from the top and pulling down in one smooth motion.\n4. Wipe the blade clean after each stroke.", imageUrl: "" },
             { text: "Dust and wipe down all baseboards and trim", instructions: "1. Use a vacuum with a brush attachment to remove loose dust from baseboards and door/window trim.\n2. Mix a mild cleaner with warm water.\n3. Use a microfiber cloth dipped in the solution to wipe down all baseboards and trim, removing scuffs and dirt.", imageUrl: "" },
+            { text: "Wash shower curtains and liners", instructions: "Wash on a gentle cycle with a small amount of detergent. Hang to dry.", imageUrl: "" },
+            { text: "Wipe down inside of all cabinets and drawers", instructions: "Empty contents, wipe shelves with a damp cloth, and organize items as you put them back.", imageUrl: "" },
+        ]
+    },
+    {
+        name: "Quarterly Maintenance Inspection",
+        taskType: "Maintenance",
+        linkedProperties: [],
+        items: [
+            { text: "Test smoke and carbon monoxide detectors", instructions: "1. Press and hold the 'Test' button on each detector for a few seconds.\n2. A loud alarm should sound. If it's weak or doesn't sound, replace the batteries.\n3. Test again after replacing batteries. If it still fails, report the unit for immediate replacement.", imageUrl: "https://i.imgur.com/L3n4m2R.png" },
+            { text: "Check for leaks under all sinks and around toilets", instructions: "Look for any signs of water damage, drips, or moisture in the cabinets under sinks and at the base of toilets.", imageUrl: "" },
+            { text: "Test all major appliances", instructions: "Briefly run the washer, dryer, oven, and dishwasher to ensure they are functioning correctly.", imageUrl: "" },
+            { text: "Inspect fire extinguishers", instructions: "Check that the pressure gauge is in the green zone, the pin is in place, and it is easily accessible.", imageUrl: "" },
+            { text: "Clean or replace HVAC filters", instructions: "Remove the filter from the HVAC unit. If disposable, replace it. If reusable, clean it according to manufacturer instructions.", imageUrl: "" },
+            { text: "Inspect grout and caulking in bathrooms/kitchen", instructions: "Look for any cracking, shrinking, or mold. Report any areas that need to be resealed.", imageUrl: "" },
+            { text: "Check all lightbulbs and replace as needed", instructions: "Turn on all light fixtures to find and replace any burnt-out bulbs.", imageUrl: "" },
         ]
     }
 ];
