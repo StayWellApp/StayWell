@@ -10,6 +10,7 @@ import { InventoryView } from './InventoryViews';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction'; // ✨ NEW: Import for click handling
 
 // --- (No changes to this section) ---
 const amenityCategories = {
@@ -202,7 +203,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                 {view === 'tasks' && <TasksView property={property} user={user} />}
                 {view === 'checklists' && <ChecklistsView property={property} user={user} />}
                 {view === 'inventory' && <InventoryView property={property} user={user} />}
-                {view === 'calendar' && <CalendarView property={property} />}
+                {view === 'calendar' && <CalendarView property={property} user={user} />}
                 {view === 'analytics' && <AnalyticsView property={property} />}
             </div>
         </div>
@@ -335,11 +336,37 @@ const ChecklistsView = ({ user }) => {
     );
 };
 
-// --- ✨ UPDATED CalendarView to use scheduledDate ---
-const CalendarView = ({ property }) => {
+// --- ✨ UPDATED CalendarView with Click-to-Create ---
+const CalendarView = ({ property, user }) => {
     const [events, setEvents] = useState([]);
     const [newCalLink, setNewCalLink] = useState("");
+    
+    // State for the "Add Task" form
+    const [showAddTaskForm, setShowAddTaskForm] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [team, setTeam] = useState([]);
+    const [checklistTemplates, setChecklistTemplates] = useState([]);
 
+    // Fetch data needed for the AddTaskForm
+    useEffect(() => {
+        if (!user) return;
+        const checklistsQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
+        const checklistsUnsubscribe = onSnapshot(checklistsQuery, (snapshot) => {
+            setChecklistTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
+        const teamQuery = query(collection(db, 'users'), where('ownerId', '==', user.uid));
+        const teamUnsubscribe = onSnapshot(teamQuery, snapshot => {
+            setTeam(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+        });
+
+        return () => {
+            checklistsUnsubscribe();
+            teamUnsubscribe();
+        };
+    }, [user]);
+
+    // Fetch and combine calendar events (bookings + tasks)
     useEffect(() => {
         const bookingEvents = [
             { id: 'booking-001', title: `Guest: John Doe`, start: '2025-07-10T14:00:00', end: '2025-07-15T11:00:00', backgroundColor: '#3b82f6', borderColor: '#2563eb' },
@@ -350,11 +377,10 @@ const CalendarView = ({ property }) => {
         const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
             const taskEvents = snapshot.docs.map(doc => {
                 const task = doc.data();
-                // ✨ USE scheduledDate for the calendar event start date
                 return {
                     id: doc.id,
                     title: `Task: ${task.taskName}`,
-                    start: task.scheduledDate, // Use the new scheduledDate field
+                    start: task.scheduledDate,
                     allDay: true,
                     backgroundColor: '#10b981',
                     borderColor: '#059669'
@@ -366,6 +392,31 @@ const CalendarView = ({ property }) => {
 
         return () => unsubscribe();
     }, [property.id]);
+
+    // ✨ NEW: Handler for clicking a date on the calendar
+    const handleDateClick = (arg) => {
+        setSelectedDate(arg.dateStr); // e.g., "2025-07-10"
+        setShowAddTaskForm(true);
+    };
+
+    // Handler for adding the task (moved from TasksView)
+    const handleAddTask = async (taskData) => {
+        try {
+            await addDoc(collection(db, "tasks"), { 
+                ...taskData, 
+                propertyId: property.id, 
+                propertyName: property.propertyName, 
+                propertyAddress: property.address, 
+                ownerId: user.uid, 
+                status: 'Pending', 
+                createdAt: serverTimestamp() 
+            });
+            setShowAddTaskForm(false); // Close form on success
+        } catch (error) { 
+            console.error("Error adding task: ", error); 
+            alert("Failed to add task."); 
+        }
+    };
 
     const handleAddCalendarLink = async (e) => {
         e.preventDefault();
@@ -385,10 +436,24 @@ const CalendarView = ({ property }) => {
 
     return (
         <div className="bg-gray-50 p-6 rounded-lg border">
+            {showAddTaskForm && (
+                <div className="mb-6">
+                    <AddTaskForm 
+                        onAddTask={handleAddTask} 
+                        checklistTemplates={checklistTemplates} 
+                        team={team}
+                        preselectedDate={selectedDate} // Pass the clicked date to the form
+                    />
+                     <button onClick={() => setShowAddTaskForm(false)} className="w-full mt-2 text-center text-gray-600 hover:text-gray-800 p-2">Cancel</button>
+                     <hr className="my-6"/>
+                </div>
+            )}
+
             <h3 className="text-2xl font-semibold text-gray-700 mb-4">Unified Calendar</h3>
+            <p className="text-sm text-gray-500 mb-4 -mt-3">Click on any date to quickly add a new task.</p>
             <div className="bg-white p-4 rounded-lg border shadow-sm">
                 <FullCalendar
-                    plugins={[dayGridPlugin, timeGridPlugin]}
+                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} // Add interaction plugin
                     initialView="dayGridMonth"
                     headerToolbar={{
                         left: 'prev,next today',
@@ -399,6 +464,7 @@ const CalendarView = ({ property }) => {
                     editable={false}
                     dayMaxEvents={true}
                     weekends={true}
+                    dateClick={handleDateClick} // ✨ NEW: Attach the click handler
                 />
             </div>
             <div className="mt-6 pt-6 border-t">

@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
-// --- ✨ NEW: Helper for formatting dates ---
 const formatDate = (timestamp) => {
     if (timestamp && timestamp.toDate) {
         return timestamp.toDate().toLocaleDateString('en-US', {
@@ -17,17 +16,23 @@ const formatDate = (timestamp) => {
     return 'Not set';
 };
 
-export const AddTaskForm = ({ onAddTask, checklistTemplates, team }) => {
+// ✨ UPDATED: Add `preselectedDate` prop
+export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDate = null }) => {
     const [taskName, setTaskName] = useState('');
     const [taskType, setTaskType] = useState('Cleaning');
     const [templateId, setTemplateId] = useState('');
     const [assignedTo, setAssignedTo] = useState('');
-    
-    // --- ✨ NEW: State for new fields ---
     const [priority, setPriority] = useState('Medium');
     const [scheduledDate, setScheduledDate] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [notes, setNotes] = useState('');
+
+    // ✨ NEW: Effect to pre-fill the date when clicking on the calendar
+    useEffect(() => {
+        if (preselectedDate) {
+            setScheduledDate(preselectedDate);
+        }
+    }, [preselectedDate]);
 
 
     const handleSubmit = (e) => {
@@ -45,14 +50,12 @@ export const AddTaskForm = ({ onAddTask, checklistTemplates, team }) => {
             templateName: checklistTemplates.find(t => t.id === templateId)?.name || '',
             assignedToId: assignedToData?.id || '',
             assignedToEmail: assignedToData?.email || '',
-            // --- ✨ NEW: Pass new fields to the save function ---
             priority,
             scheduledDate,
             dueDate,
             notes,
         });
 
-        // Reset form
         setTaskName('');
         setTaskType('Cleaning');
         setTemplateId('');
@@ -93,7 +96,6 @@ export const AddTaskForm = ({ onAddTask, checklistTemplates, team }) => {
                     </div>
                 )}
                 
-                {/* --- ✨ NEW: Inputs for Dates and Priority --- */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="scheduledDate">Scheduled Date</label>
@@ -140,19 +142,18 @@ export const TaskDetailModal = ({ task, team, checklistTemplates, onClose }) => 
     const [editableTask, setEditableTask] = useState({ ...task });
 
     useEffect(() => {
-        // Ensure editableTask is in sync with the selected task prop
         setEditableTask({ ...task });
     }, [task]);
 
     const handleUpdate = async () => {
         const taskRef = doc(db, "tasks", task.id);
         try {
-            // Create a new object for updating, don't include the full 'createdAt' object
+            const assignedToData = team.find(member => member.id === editableTask.assignedToId);
             const updateData = {
                 ...editableTask,
+                assignedToEmail: assignedToData?.email || '', // Ensure email is updated when assignment changes
                 lastUpdated: serverTimestamp()
             };
-            // Remove fields that shouldn't be directly written
             delete updateData.id;
             delete updateData.createdAt;
 
@@ -169,7 +170,6 @@ export const TaskDetailModal = ({ task, team, checklistTemplates, onClose }) => 
         setEditableTask(prev => ({ ...prev, [name]: value }));
     };
     
-    // --- ✨ NEW: Priority Color Logic ---
     const getPriorityClass = (priority) => {
         switch (priority) {
             case 'High': return 'bg-red-100 text-red-700';
@@ -204,7 +204,6 @@ export const TaskDetailModal = ({ task, team, checklistTemplates, onClose }) => 
                 </div>
 
                 <div className="p-6 space-y-6 overflow-y-auto">
-                    {/* --- ✨ NEW: Enhanced Details Grid --- */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm">
                         <div className="space-y-1">
                             <label className="text-gray-500 font-medium block">Status</label>
