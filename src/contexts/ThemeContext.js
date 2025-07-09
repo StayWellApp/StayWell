@@ -1,33 +1,51 @@
 // --- src/contexts/ThemeContext.js ---
-// Create this new file in a new 'src/contexts' folder.
+// Replace the entire contents of this file with the updated logic.
 
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 
 export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-    const [theme, setTheme] = useState(() => {
-        // Check for saved theme in localStorage or default to 'light'
-        const savedTheme = localStorage.getItem('theme');
-        return savedTheme || 'light';
+    // The user's explicit setting: 'light', 'dark', or 'auto'
+    const [themeSetting, setThemeSetting] = useState(() => {
+        return localStorage.getItem('themeSetting') || 'auto';
     });
 
-    useEffect(() => {
+    const applyTheme = useCallback(() => {
         const root = window.document.documentElement;
         
+        // Determine the actual theme to apply
+        let currentTheme = themeSetting;
+        if (themeSetting === 'auto') {
+            currentTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
         root.classList.remove('light', 'dark');
-        root.classList.add(theme);
+        root.classList.add(currentTheme);
+    }, [themeSetting]);
 
-        // Save theme preference to localStorage
-        localStorage.setItem('theme', theme);
-    }, [theme]);
 
-    const toggleTheme = () => {
-        setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
-    };
+    useEffect(() => {
+        applyTheme();
+        
+        // Save the user's preference to localStorage
+        localStorage.setItem('themeSetting', themeSetting);
+
+        // Listen for changes in the OS theme preference
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleChange = () => {
+            if (themeSetting === 'auto') {
+                applyTheme();
+            }
+        };
+
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+
+    }, [themeSetting, applyTheme]);
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme }}>
+        <ThemeContext.Provider value={{ themeSetting, setThemeSetting }}>
             {children}
         </ThemeContext.Provider>
     );
