@@ -13,14 +13,14 @@ const preGeneratedTemplates = [
         taskType: "Cleaning",
         linkedProperties: [],
         items: [
-            { text: "Strip all beds and start laundry", instructions: "1. Gather all used towels, bathmats, sheets, and pillowcases. 2. Start the first load of laundry on a warm cycle. 3. Use one detergent pod.", imageUrl: "" },
-            { text: "Wash, dry, and put away all dishes", instructions: "1. Empty the dishwasher if it contains clean dishes. 2. Load any dirty dishes from the sink or counters. 3. Run the dishwasher on a normal cycle. 4. Hand-wash any items that are not dishwasher-safe.", imageUrl: "" },
-            { text: "Wipe down all kitchen counters and sink", instructions: "1. Clear all items from the counters. 2. Spray with multi-surface cleaner and wipe down with a clean cloth. 3. Scrub the sink basin and faucet handles until they shine.", imageUrl: "" },
-            { text: "Clean and sanitize toilets, showers, and bathroom sinks", instructions: "1. Spray toilet bowl, seat, and exterior with disinfectant. Let it sit. 2. Spray shower walls, tub, and sink. 3. Wipe down the sink and shower, then scrub the toilet bowl and wipe the exterior. 4. Check and clear hair from all drains.", imageUrl: "" },
+            { text: "Strip all beds and start laundry", instructions: "1. Gather all used towels, bathmats, sheets, and pillowcases.\n2. Start the first load of laundry on a warm cycle.\n3. Use one detergent pod.", imageUrl: "" },
+            { text: "Wash, dry, and put away all dishes", instructions: "1. Empty the dishwasher if it contains clean dishes.\n2. Load any dirty dishes from the sink or counters.\n3. Run the dishwasher on a normal cycle.\n4. Hand-wash any items that are not dishwasher-safe.", imageUrl: "" },
+            { text: "Wipe down all kitchen counters and sink", instructions: "1. Clear all items from the counters.\n2. Spray with multi-surface cleaner and wipe down with a clean cloth.\n3. Scrub the sink basin and faucet handles until they shine.", imageUrl: "" },
+            { text: "Clean and sanitize toilets, showers, and bathroom sinks", instructions: "1. Spray toilet bowl, seat, and exterior with disinfectant. Let it sit.\n2. Spray shower walls, tub, and sink.\n3. Wipe down the sink and shower, then scrub the toilet bowl and wipe the exterior.\n4. Check and clear hair from all drains.", imageUrl: "" },
             { text: "Dust all accessible surfaces", instructions: "Use a microfiber cloth to dust all hard surfaces, including nightstands, dressers, tables, window sills, and the tops of picture frames. Don't forget electronics like the TV.", imageUrl: "" },
-            { text: "Vacuum all carpets and mop all hard floors", instructions: "1. Vacuum all rugs and carpeted areas. 2. Sweep or vacuum all hard floors to remove debris. 3. Mop hard floors with an appropriate cleaning solution, starting from the far corner of the room and moving toward the exit.", imageUrl: "" },
-            { text: "Restock all consumables", instructions: "1. Leave two new rolls of toilet paper in each bathroom. 2. Ensure paper towel roll is at least half full. 3. Refill hand soap and dish soap dispensers. 4. Restock the coffee station with at least 10 coffee pods, sugar, and creamers.", imageUrl: "" },
-            { text: "Make all beds with fresh linens", instructions: "1. Use one fitted sheet, one flat sheet, and two pillowcases per bed. 2. Ensure the flat sheet is placed with the finished side down. 3. Tuck sheets in tightly for a crisp look. 4. Fluff pillows and place decorative cushions.", imageUrl: "" },
+            { text: "Vacuum all carpets and mop all hard floors", instructions: "1. Vacuum all rugs and carpeted areas.\n2. Sweep or vacuum all hard floors to remove debris.\n3. Mop hard floors with an appropriate cleaning solution, starting from the far corner of the room and moving toward the exit.", imageUrl: "" },
+            { text: "Restock all consumables", instructions: "1. Leave two new rolls of toilet paper in each bathroom.\n2. Ensure paper towel roll is at least half full.\n3. Refill hand soap and dish soap dispensers.\n4. Restock the coffee station with at least 10 coffee pods, sugar, and creamers.", imageUrl: "" },
+            { text: "Make all beds with fresh linens", instructions: "1. Use one fitted sheet, one flat sheet, and two pillowcases per bed.\n2. Ensure the flat sheet is placed with the finished side down.\n3. Tuck sheets in tightly for a crisp look.\n4. Fluff pillows and place decorative cushions.", imageUrl: "" },
         ]
     },
     {
@@ -28,10 +28,10 @@ const preGeneratedTemplates = [
         taskType: "Maintenance",
         linkedProperties: [],
         items: [
-            { text: "Clean inside of oven and microwave", instructions: "For Microwave: 1. Mix 1 cup water and juice of one lemon in a microwave-safe bowl. 2. Microwave on high for 3-5 minutes until it boils. 3. Let it stand for 5 minutes before opening. 4. Wipe the inside clean with a sponge. For Oven: 1. Remove racks and soak in hot, soapy water. 2. Use an oven-safe cleaner, following the product's instructions for application and ventilation. 3. Scrub and wipe clean.", imageUrl: "" },
-            { text: "Test smoke and carbon monoxide detectors", instructions: "1. Press and hold the 'Test' button on each detector for a few seconds. 2. A loud alarm should sound. If it's weak or doesn't sound, replace the batteries. 3. Test again after replacing batteries. If it still fails, report the unit for immediate replacement.", imageUrl: "https://i.imgur.com/L3n4m2R.png" },
-            { text: "Wash all windows, inside and out", instructions: "1. Mix a few drops of dish soap in a bucket of warm water. 2. Use a sponge to wash the window surface. 3. Use a clean squeegee to wipe the window dry, starting from the top and pulling down in one smooth motion. 4. Wipe the blade clean after each stroke.", imageUrl: "" },
-            { text: "Dust and wipe down all baseboards and trim", instructions: "1. Use a vacuum with a brush attachment to remove loose dust from baseboards and door/window trim. 2. Mix a mild cleaner with warm water. 3. Use a microfiber cloth dipped in the solution to wipe down all baseboards and trim, removing scuffs and dirt.", imageUrl: "" },
+            { text: "Clean inside of oven and microwave", instructions: "For Microwave:\n1. Mix 1 cup water and juice of one lemon in a microwave-safe bowl.\n2. Microwave on high for 3-5 minutes until it boils.\n3. Let it stand for 5 minutes before opening.\n4. Wipe the inside clean with a sponge.\n\nFor Oven:\n1. Remove racks and soak in hot, soapy water.\n2. Use an oven-safe cleaner, following the product's instructions for application and ventilation.\n3. Scrub and wipe clean.", imageUrl: "" },
+            { text: "Test smoke and carbon monoxide detectors", instructions: "1. Press and hold the 'Test' button on each detector for a few seconds.\n2. A loud alarm should sound. If it's weak or doesn't sound, replace the batteries.\n3. Test again after replacing batteries. If it still fails, report the unit for immediate replacement.", imageUrl: "https://i.imgur.com/L3n4m2R.png" },
+            { text: "Wash all windows, inside and out", instructions: "1. Mix a few drops of dish soap in a bucket of warm water.\n2. Use a sponge to wash the window surface.\n3. Use a clean squeegee to wipe the window dry, starting from the top and pulling down in one smooth motion.\n4. Wipe the blade clean after each stroke.", imageUrl: "" },
+            { text: "Dust and wipe down all baseboards and trim", instructions: "1. Use a vacuum with a brush attachment to remove loose dust from baseboards and door/window trim.\n2. Mix a mild cleaner with warm water.\n3. Use a microfiber cloth dipped in the solution to wipe down all baseboards and trim, removing scuffs and dirt.", imageUrl: "" },
         ]
     }
 ];
@@ -137,10 +137,19 @@ export const ChecklistsView = ({ user }) => {
                     )}
                 </div>
                 {isExpanded && hasDetails && (
-                    <div className="mt-3 ml-3 pl-4 border-l-2 border-blue-500 animate-fade-in-down">
-                        {itemObject.instructions && <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start"><Info size={14} className="mr-2 mt-0.5 flex-shrink-0 text-blue-500"/>{itemObject.instructions}</p>}
+                    <div className="mt-3 ml-3 pl-4 border-l-2 border-blue-500 animate-fade-in-down space-y-2">
+                        {itemObject.instructions && (
+                            <div className="flex items-start">
+                                <Info size={14} className="mr-2 mt-1 flex-shrink-0 text-blue-500"/>
+                                <div className="text-sm text-gray-600 dark:text-gray-300">
+                                    {itemObject.instructions.split('\n').map((line, i) => (
+                                        <span key={i} className="block">{line}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         {itemObject.imageUrl && (
-                            <div className="mt-2">
+                            <div className="pl-6">
                                 <img src={itemObject.imageUrl} alt="Instructional" className="rounded-lg max-w-xs max-h-48 border dark:border-gray-600 shadow-sm" />
                             </div>
                         )}
@@ -301,7 +310,7 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
                             <div key={index} className={itemContainerStyles}>
                                 <div className="flex items-center space-x-3"><input type="text" value={item.text} onChange={e => handleItemChange(index, 'text', e.target.value)} className={inputStyles} placeholder={`Item ${index + 1} Title`} /><button type="button" onClick={() => handleRemoveItem(index)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><Trash2 size={16} /></button></div>
                                 <div className="mt-4 space-y-3 pl-1">
-                                    <div className="flex items-start space-x-3"><Info size={16} className="text-gray-400 mt-2 flex-shrink-0" /><textarea value={item.instructions} onChange={e => handleItemChange(index, 'instructions', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Add detailed step-by-step instructions..." rows="2" /></div>
+                                    <div className="flex items-start space-x-3"><Info size={16} className="text-gray-400 mt-2 flex-shrink-0" /><textarea value={item.instructions} onChange={e => handleItemChange(index, 'instructions', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Add detailed step-by-step instructions..." rows="3" /></div>
                                     <div className="flex items-center space-x-3"><Image size={16} className="text-gray-400 flex-shrink-0" /><input type="text" value={item.imageUrl} onChange={e => handleItemChange(index, 'imageUrl', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Optional: Paste image URL here..." /></div>
                                 </div>
                             </div>
