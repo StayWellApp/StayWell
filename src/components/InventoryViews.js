@@ -1,11 +1,12 @@
-// --- src/components/InventoryViews.js (Part 1 of 2) ---
-// Combine this with Part 2 to create the full file.
+// --- src/components/InventoryViews.js ---
+// Replace the entire contents of your file with this code.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment } from 'firebase/firestore';
 import { Plus, Trash2, Edit, AlertTriangle } from 'lucide-react';
 
+// Sample data for initial setup
 const sampleData = {
     fittings: [
         { name: 'Kettle', notes: 'Brand: Russell Hobbs' },
@@ -18,7 +19,7 @@ const sampleData = {
         { name: 'Coffee Pods', parLevel: 20, currentStock: 20, purchasePrice: 0.50 },
         { name: 'Toilet Paper Roll', parLevel: 4, currentStock: 4, purchasePrice: 0.75 },
         { name: 'Shampoo', parLevel: 2, currentStock: 2, purchasePrice: 1.20 },
-        { name: 'Hand Soap', parLevel: 2, currentStock: 1.50 },
+        { name: 'Hand Soap', parLevel: 2, currentStock: 2, purchasePrice: 1.50 },
     ],
     linens: [
         { name: 'King Sheet Set', total: 8, inUnit: 2, inLaundry: 2, washCount: 10, retireAfter: 50 },
@@ -32,6 +33,10 @@ const sampleData = {
     ]
 };
 
+/**
+ * Main Inventory View Container
+ * This is the parent component that renders all four inventory sections.
+ */
 export const InventoryView = ({ property, user }) => {
     
     const [reportingIssue, setReportingIssue] = useState(null);
@@ -54,6 +59,7 @@ export const InventoryView = ({ property, user }) => {
 
     return (
         <div className="space-y-8">
+            {/* Section 1: Permanent Fittings */}
             <InventorySection 
                 title="Permanent Fittings"
                 collectionName="fittings"
@@ -64,6 +70,7 @@ export const InventoryView = ({ property, user }) => {
                 placeholders={{name: "Item Name (e.g., Kettle)", notes: "Notes (e.g., Brand, model, condition)"}}
                 onReportIssue={(item) => setReportingIssue(item)}
             />
+            {/* Section 2: Guest Consumables */}
             <InventorySection 
                 title="Guest Consumables"
                 collectionName="consumables"
@@ -80,6 +87,7 @@ export const InventoryView = ({ property, user }) => {
                     </div>
                 )}
             />
+            {/* Section 3: Linens */}
             <InventorySection 
                 title="Linens"
                 collectionName="linens"
@@ -90,6 +98,7 @@ export const InventoryView = ({ property, user }) => {
                 placeholders={{name: "Linen Type (e.g., King Sheet Set)", total: "Total in Circulation", inUnit: "In Unit (Par)", inLaundry: "In Laundry", washCount: "Total Washes", retireAfter: "Retire After # Washes"}}
                 isLinen={true}
             />
+            {/* Section 4: Stored Supplies (This is the 'Storage' section) */}
             <InventorySection 
                 title="Stored Supplies"
                 collectionName="supplies"
@@ -105,11 +114,16 @@ export const InventoryView = ({ property, user }) => {
                     </div>
                 )}
             />
+            {/* Modal for Reporting Issues */}
             {reportingIssue && <ReportIssueModal item={reportingIssue} onSave={handleReportIssue} onClose={() => setReportingIssue(null)} />}
         </div>
     );
 };
 
+/**
+ * Generic Inventory Section Component
+ * This is used to render each of the four sections with different configurations.
+ */
 const InventorySection = ({ title, collectionName, property, user, fields, placeholders, displayLogic, sampleItems, onReportIssue, isLinen = false }) => {
     const [items, setItems] = useState([]);
     const [showForm, setShowForm] = useState(false);
@@ -209,9 +223,12 @@ const InventorySection = ({ title, collectionName, property, user, fields, place
             {showLinenModal && <LinenStatusModal item={showLinenModal} property={property} onClose={() => setShowLinenModal(null)} />}
         </div>
     );
-};// --- src/components/InventoryViews.js (Part 2 of 2) ---
-// Append this code to the end of Part 1.
+};
 
+
+/**
+ * Generic Form for adding or editing an inventory item
+ */
 const InventoryItemForm = ({ onSave, onCancel, fields, placeholders, existingItem, title }) => {
     const [itemData, setItemData] = useState({});
 
@@ -249,21 +266,13 @@ const InventoryItemForm = ({ onSave, onCancel, fields, placeholders, existingIte
                     {Object.keys(fields).map(field => (
                         <div key={field}>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{field.replace(/([A-Z])/g, ' $1')}</label>
-                            {Array.isArray(fields[field]) ? (
-                                <select value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    {fields[field].map(option => <option key={option} value={option}>{option}</option>)}
-                                </select>
-                            ) : fields[field] === 'textarea' ? (
-                                <textarea value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} placeholder={placeholders[field]} rows="2" className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            ) : (
-                                <input 
-                                    value={itemData[field] || ''} 
-                                    onChange={e => handleInputChange(field, e.target.value)} 
-                                    placeholder={placeholders[field]}
-                                    type={fields[field]}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                                />
-                            )}
+                            <input 
+                                value={itemData[field] || ''} 
+                                onChange={e => handleInputChange(field, e.target.value)} 
+                                placeholder={placeholders[field]}
+                                type={fields[field]}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                            />
                         </div>
                     ))}
                     <div className="flex justify-end space-x-2 pt-4">
@@ -276,6 +285,9 @@ const InventoryItemForm = ({ onSave, onCancel, fields, placeholders, existingIte
     );
 };
 
+/**
+ * Modal for reporting an issue with a fitting
+ */
 const ReportIssueModal = ({ item, onSave, onClose }) => {
     const [title, setTitle] = useState(`FIX: ${item.name}`);
     const [description, setDescription] = useState('');
@@ -307,12 +319,6 @@ const ReportIssueModal = ({ item, onSave, onClose }) => {
                             <option>High</option>
                         </select>
                     </div>
-                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Photo of Issue</label>
-                        <button type="button" disabled className="mt-1 w-full flex justify-center py-2 px-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 cursor-not-allowed">
-                            Upload Photo (Coming Soon)
-                        </button>
-                    </div>
                     <div className="flex justify-end space-x-4 pt-4">
                         <button type="button" onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
                         <button type="submit" className="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600">Create Task</button>
@@ -323,6 +329,9 @@ const ReportIssueModal = ({ item, onSave, onClose }) => {
     );
 };
 
+/**
+ * Display logic specific to Linens
+ */
 const LinenDisplay = ({ item }) => {
     const inStorage = (item.total || 0) - (item.inUnit || 0) - (item.inLaundry || 0);
     const avgWashCount = item.total > 0 ? ((item.washCount || 0) / item.total).toFixed(1) : 0;
@@ -339,6 +348,9 @@ const LinenDisplay = ({ item }) => {
     );
 };
 
+/**
+ * Modal for updating the status of a Linen set
+ */
 const LinenStatusModal = ({ item, property, onClose }) => {
     const [inUnit, setInUnit] = useState(item.inUnit || 0);
     const [inLaundry, setInLaundry] = useState(item.inLaundry || 0);

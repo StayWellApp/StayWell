@@ -146,8 +146,10 @@ const AmenitiesForm = ({ amenities, setAmenities }) => {
     );
 };
 
+// REPLACE your existing PropertyDetailView function with this entire block
+
 export const PropertyDetailView = ({ property, onBack, user }) => {
-    const [view, setView] = useState('tasks');
+    const [activeTab, setActiveTab] = useState('overview'); // Changed default to 'overview'
     const [isEditing, setIsEditing] = useState(false);
     const [liveProperty, setLiveProperty] = useState(property);
 
@@ -170,63 +172,72 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     };
 
     const TabButton = ({ tabName, label, icon }) => (
-        <button onClick={() => setView(tabName)} className={`flex items-center space-x-2 px-4 py-3 text-base font-semibold rounded-t-lg border-b-2 transition-colors ${view === tabName ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-blue-600 dark:hover:text-blue-400 hover:border-gray-300 dark:hover:border-gray-600'}`}>
+        <button onClick={() => setActiveTab(tabName)} className={`whitespace-nowrap flex items-center space-x-2 px-3 py-3 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${activeTab === tabName ? 'border-blue-500 text-blue-600 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-500'}`}>
             {icon}
             <span>{label}</span>
         </button>
     );
+    
+    // This is the new Overview component, right inside the main view
+    const Overview = () => (
+         <div className="bg-white dark:bg-gray-800 p-8 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="flex justify-between items-start">
+                <div>
+                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{liveProperty.propertyType}</p>
+                    <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mt-1">{liveProperty.propertyName}</h2>
+                    <p className="text-gray-500 dark:text-gray-400 mt-2">{liveProperty.address}</p>
+                </div>
+                <button onClick={() => setIsEditing(true)} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Edit</button>
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 mt-4">{liveProperty.description}</p>
+            
+            <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">What this place offers</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
+                    {liveProperty.amenities && Object.entries(allAmenities).map(([key, { label, icon }]) => liveProperty.amenities[key] && (
+                        <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3">
+                            <div className="text-blue-600 dark:text-blue-400">{icon}</div>
+                            <span>{label}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-full">
+        <div className="p-4 sm:p-6 md:p-8"> {/* Changed padding and removed background color for consistency */}
             <div className="max-w-7xl mx-auto">
                 <button onClick={onBack} className="mb-6 text-blue-600 dark:text-blue-400 font-semibold hover:underline">← Back to Properties</button>
                 
-                {isEditing ? (
-                    <PropertyForm existingProperty={liveProperty} onSave={handleUpdateProperty} onCancel={() => setIsEditing(false)} />
-                ) : (
-                    <div className="bg-white dark:bg-gray-800 p-8 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-8">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{liveProperty.propertyType}</p>
-                                <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mt-1">{liveProperty.propertyName}</h2>
-                                <p className="text-gray-500 dark:text-gray-400 mt-2">{liveProperty.address}</p>
-                            </div>
-                            <button onClick={() => setIsEditing(true)} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Edit</button>
-                        </div>
-                        <p className="text-gray-600 dark:text-gray-300 mt-4">{liveProperty.description}</p>
-                        
-                        <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">What this place offers</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
-                                {liveProperty.amenities && Object.entries(allAmenities).map(([key, { label, icon }]) => liveProperty.amenities[key] && (
-                                    <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3">
-                                        <div className="text-blue-600 dark:text-blue-400">{icon}</div>
-                                        <span>{label}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                {isEditing && ( // Changed this: if editing, show ONLY the form
+                     <PropertyForm existingProperty={liveProperty} onSave={handleUpdateProperty} onCancel={() => setIsEditing(false)} />
                 )}
 
-                <div className="border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex space-x-4 overflow-x-auto">
-                        <TabButton tabName="tasks" label="Tasks" icon={<CheckSquare size={18}/>} />
-                        <TabButton tabName="checklists" label="Templates" icon={<CheckSquare size={18}/>} />
-                        <TabButton tabName="inventory" label="Inventory" icon={<Archive size={18}/>} />
-                        <TabButton tabName="calendar" label="Calendar" icon={<Calendar size={18}/>} />
-                        <TabButton tabName="analytics" label="Analytics" icon={<BarChart2 size={18}/>} />
-                        <TabButton tabName="settings" label="Settings" icon={<Settings size={18}/>} />
-                    </div>
-                </div>
-                <div className="mt-6">
-                    {view === 'tasks' && <TasksView property={liveProperty} user={user} />}
-                    {view === 'checklists' && <ChecklistsView property={liveProperty} user={user} />}
-                    {view === 'inventory' && <InventoryView property={liveProperty} user={user} />}
-                    {view === 'calendar' && <CalendarView property={liveProperty} user={user} />}
-                    {view === 'analytics' && <AnalyticsView property={liveProperty} />}
-                    {view === 'settings' && <SettingsView property={liveProperty} />}
-                </div>
+                {!isEditing && ( // If NOT editing, show the tabs and content
+                    <>
+                        <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+                            <div className="flex space-x-2 sm:space-x-4 overflow-x-auto">
+                                <TabButton tabName="overview" label="Overview" icon={<Home size={18}/>} />
+                                <TabButton tabName="tasks" label="Tasks" icon={<CheckSquare size={18}/>} />
+                                <TabButton tabName="checklists" label="Templates" icon={<CheckSquare size={18}/>} />
+                                <TabButton tabName="inventory" label="Inventory" icon={<Archive size={18}/>} />
+                                <TabButton tabName="calendar" label="Calendar" icon={<Calendar size={18}/>} />
+                                <TabButton tabName="analytics" label="Analytics" icon={<BarChart2 size={18}/>} />
+                                <TabButton tabName="settings" label="Settings" icon={<Settings size={18}/>} />
+                            </div>
+                        </div>
+                        <div>
+                            {activeTab === 'overview' && <Overview />}
+                            {activeTab === 'tasks' && <TasksView property={liveProperty} user={user} />}
+                            {activeTab === 'checklists' && <ChecklistsView property={liveProperty} user={user} />}
+                            {activeTab === 'inventory' && <InventoryView property={liveProperty} user={user} />}
+                            {activeTab === 'calendar' && <CalendarView property={liveProperty} user={user} />}
+                            {activeTab === 'analytics' && <AnalyticsView property={liveProperty} />}
+                            {activeTab === 'settings' && <SettingsView property={liveProperty} />}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
