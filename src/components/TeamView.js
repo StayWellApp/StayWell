@@ -6,10 +6,19 @@ import { Plus, Trash2, Edit, UserPlus, ListTree, X, Send } from 'lucide-react';
 // import { AuthContext } from '../contexts/AuthContext'; // Commented out: AuthContext not provided
 import { PERMISSION_CATEGORIES } from '../config/permissions'; // Import PERMISSION_CATEGORIES
 
+// Define the standard, built-in roles as objects with id and label
+const STANDARD_ROLES = [
+    { id: 'Admin', label: 'Admin' },
+    { id: 'Manager', label: 'Manager' },
+    { id: 'Cleaner', label: 'Cleaner' },
+    { id: 'Maintenance', label: 'Maintenance' },
+];
+
 // Reusable Modal Component (defined locally for now, can be moved to its own file)
 const TeamMemberFormModal = ({ onSave, onCancel, existingMember = null, allAvailableRoles }) => { // Added allAvailableRoles prop
     const [email, setEmail] = useState(existingMember?.email || '');
-    const [role, setRole] = useState(existingMember?.role || (allAvailableRoles.length > 0 ? allAvailableRoles[0].id : '')); // Set initial role
+    // Initialize role: use existing role, or first available role, or empty if none
+    const [role, setRole] = useState(existingMember?.role || (allAvailableRoles.length > 0 ? allAvailableRoles[0].id : ''));
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -18,10 +27,6 @@ const TeamMemberFormModal = ({ onSave, onCancel, existingMember = null, allAvail
         await onSave({ email, role });
         setIsSaving(false);
     };
-
-    // Use the passed allAvailableRoles prop
-    // const roles = PERMISSION_CATEGORIES.find(cat => cat.id === 'team_management')?.roles || []; // Original line
-    // We already pass a combined list of roles in `allAvailableRoles`
     
     return (
         <div className="fixed inset-0 grid place-items-center bg-black bg-opacity-50 z-50">
@@ -144,18 +149,21 @@ const TeamView = ({ user }) => {
         if (!user) return;
         const q = query(collection(db, "customRoles"), where("ownerId", "==", user.uid));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            setCustomRoles(snapshot.docs.map(doc => ({ id: doc.id, label: doc.data().roleName, permissions: doc.data().permissions }))); // Store id and label
+            // Map custom roles to { id: roleName, label: roleName }
+            const mappedCustomRoles = snapshot.docs.map(doc => ({ id: doc.data().roleName, label: doc.data().roleName }));
+            setCustomRoles(mappedCustomRoles);
         });
         return () => unsubscribe();
     }, [user]);
 
-    // Combine default roles from PERMISSION_CATEGORIES with custom roles
-    const allAvailableRoles = PERMISSION_CATEGORIES.flatMap(category => {
-        if (category.id === 'team') { // Assuming 'team' category contains roles like 'Manager'
-            return category.permissions.map(perm => ({ id: perm.label, label: perm.label })); // Use label as ID for default roles
-        }
-        return [];
-    }).concat(customRoles); // Concatenate custom roles
+    // Combine standard roles with custom roles, ensuring no duplicates based on ID
+    const allAvailableRoles = Array.from(new Map(
+        [...STANDARD_ROLES, ...customRoles].map(item => [item.id, item])
+    ).values());
+
+    // Sort roles alphabetically by label
+    allAvailableRoles.sort((a, b) => a.label.localeCompare(b.label));
+
 
     // Fetch team members
     useEffect(() => {
@@ -168,7 +176,14 @@ const TeamView = ({ user }) => {
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            setTeamMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const teamMembersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Ensure 'Owner' role is always at the top if present
+            teamMembersData.sort((a, b) => {
+                if (a.role === 'Owner') return -1;
+                if (b.role === 'Owner') return 1;
+                return 0;
+            });
+            setTeamMembers(teamMembersData);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching team members:", error);
@@ -364,7 +379,7 @@ const InviteForm = ({ user, allAvailableRoles, onInviteSent }) => { // Changed a
     const [feedback, setFeedback] = useState({ message: '', type: '' });
     
     useEffect(() => {
-        if(allAvailableRoles.length > 0 && !role) {
+        if(allAvailableRoles.length > 0 && (!role || !allAvailableRoles.some(r => r.id === role))) { // Check if current role is still valid
             setRole(allAvailableRoles[0].id); // Use allAvailableRoles here
         }
     }, [allAvailableRoles, role]);
@@ -393,7 +408,7 @@ const InviteForm = ({ user, allAvailableRoles, onInviteSent }) => { // Changed a
     };
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm animate-fade-in-down">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 animate-fade-in-down">
             <form onSubmit={handleInvite} className="flex flex-col md:flex-row items-end gap-4">
                 <div className="w-full">
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
