@@ -11,6 +11,7 @@ import { TaskDetailModal } from './TaskViews';
 const ClientDashboard = ({ user, setActiveView }) => {
     const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
     const [urgentTasks, setUrgentTasks] = useState([]);
+    const [unassignedTasks, setUnassignedTasks] = useState([]);
     const [allOpenTasks, setAllOpenTasks] = useState([]);
     const [lowStockItems, setLowStockItems] = useState([]);
     const [taskStatusData, setTaskStatusData] = useState([]);
@@ -39,6 +40,7 @@ const ClientDashboard = ({ user, setActiveView }) => {
             const openTasks = allTasks.filter(task => task.status !== 'Completed');
             setAllOpenTasks(openTasks);
             setUrgentTasks(openTasks.filter(task => task.priority === 'High').slice(0, 5));
+            setUnassignedTasks(openTasks.filter(task => !task.assignedTo));
             
             const statusCounts = allTasks.reduce((acc, task) => {
                 acc[task.status] = (acc[task.status] || 0) + 1;
@@ -103,20 +105,19 @@ const ClientDashboard = ({ user, setActiveView }) => {
                     </div>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                        <DashboardCard icon={<Siren size={22} />} title="Urgent Issues" className="lg:col-span-2">
-                            {urgentTasks.length > 0 ? (
+                        <DashboardCard icon={<Siren size={22} />} title="Unassigned Tasks" className="lg:col-span-1">
+                            {unassignedTasks.length > 0 ? (
                                 <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {urgentTasks.map(task => (
+                                    {unassignedTasks.map(task => (
                                         <li key={task.id} className="py-3 px-2 -mx-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex justify-between items-center" onClick={() => handleOpenTask(task)}>
                                             <div>
                                                 <p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p>
                                             </div>
-                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${task.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'}`}>{task.status}</span>
                                         </li>
                                     ))}
                                 </ul>
-                            ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No high-priority tasks. Well done!</p>}
+                            ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No unassigned tasks.</p>}
                         </DashboardCard>
                         <DashboardCard icon={<PieChartIcon size={22} />} title="Task Status"><TaskStatusChart data={taskStatusData} /></DashboardCard>
                     </div>

@@ -269,13 +269,54 @@ const TasksView = ({ property, user }) => {
         const teamUnsubscribe = onSnapshot(teamQuery, snapshot => {
             setTeam(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
         });
+
+        // Automation logic
+        const lastRun = localStorage.getItem(`lastRun_${property.id}`);
+        const today = new Date().toDateString();
+
+        if (lastRun !== today) {
+            // Monthly deep clean on the 1st of the month
+            const dayOfMonth = new Date().getDate();
+            if (dayOfMonth === 1) {
+                const task = {
+                    taskName: 'Monthly Deep Clean',
+                    taskType: 'Cleaning',
+                    priority: 'Medium',
+                    status: 'Pending',
+                    ownerId: user.uid,
+                    propertyId: property.id,
+                    propertyName: property.propertyName,
+                    propertyAddress: property.address,
+                    createdAt: serverTimestamp(),
+                };
+                addDoc(collection(db, 'tasks'), task);
+            }
+
+            // Quarterly maintenance inspection on the 1st of Jan, Apr, Jul, Oct
+            const month = new Date().getMonth();
+            if (dayOfMonth === 1 && [0, 3, 6, 9].includes(month)) {
+                const task = {
+                    taskName: 'Quarterly Maintenance Inspection',
+                    taskType: 'Inspection',
+                    priority: 'High',
+                    status: 'Pending',
+                    ownerId: user.uid,
+                    propertyId: property.id,
+                    propertyName: property.propertyName,
+                    propertyAddress: property.address,
+                    createdAt: serverTimestamp(),
+                };
+                addDoc(collection(db, 'tasks'), task);
+            }
+            localStorage.setItem(`lastRun_${property.id}`, today);
+        }
         
         return () => {
             tasksUnsubscribe();
             checklistsUnsubscribe();
             teamUnsubscribe();
         };
-    }, [property.id, user.uid]);
+    }, [property.id, user.uid, property.propertyName, property.address]);
 
     const handleAddTask = async (taskData) => {
         try {

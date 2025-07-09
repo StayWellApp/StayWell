@@ -28,22 +28,8 @@ const preGeneratedTemplates = [
         ]
     },
     {
-        name: "Guest Welcome & Staging",
-        taskType: "Inspection",
-        linkedProperties: [],
-        items: [
-            { text: "Set thermostat to a comfortable temperature", instructions: "Set to 21°C / 70°F in summer and winter. Ensure it's running correctly.", imageUrl: "" },
-            { text: "Turn on designated lights", instructions: "Turn on entryway lights and a lamp in the living room to create a welcoming ambiance.", imageUrl: "" },
-            { text: "Leave a personalized welcome note", instructions: "Use the guest's name and leave the note on the kitchen counter or dining table.", imageUrl: "" },
-            { text: "Set out welcome basket or snacks", instructions: "Ensure any snacks or drinks are fresh and neatly arranged.", imageUrl: "" },
-            { text: "Verify guest information book is visible", instructions: "Place the welcome book in a prominent location like the coffee table or entryway console.", imageUrl: "" },
-            { text: "Check Wi-Fi and share login details", instructions: "Connect to the guest Wi-Fi on your phone to ensure it's working. Double-check that the login info displayed for guests is correct.", imageUrl: "" },
-            { text: "Final walkthrough for cleanliness and presentation", instructions: "Do one last scan of the entire property to ensure everything is perfect. Check for any missed spots, stray hairs, or dust.", imageUrl: "" },
-        ]
-    },
-    {
         name: "Monthly Deep Clean",
-        taskType: "Maintenance",
+        taskType: "Cleaning",
         linkedProperties: [],
         items: [
             { text: "Clean inside of oven and microwave", instructions: "For Microwave:\n1. Mix 1 cup water and juice of one lemon in a microwave-safe bowl.\n2. Microwave on high for 3-5 minutes until it boils.\n3. Let it stand for 5 minutes before opening.\n4. Wipe the inside clean with a sponge.\n\nFor Oven:\n1. Remove racks and soak in hot, soapy water.\n2. Use an oven-safe cleaner, following the product's instructions for application and ventilation.\n3. Scrub and wipe clean.", imageUrl: "" },
@@ -57,7 +43,7 @@ const preGeneratedTemplates = [
     },
     {
         name: "Quarterly Maintenance Inspection",
-        taskType: "Maintenance",
+        taskType: "Inspection",
         linkedProperties: [],
         items: [
             { text: "Test smoke and carbon monoxide detectors", instructions: "1. Press and hold the 'Test' button on each detector for a few seconds.\n2. A loud alarm should sound. If it's weak or doesn't sound, replace the batteries.\n3. Test again after replacing batteries. If it still fails, report the unit for immediate replacement.", imageUrl: "https://i.imgur.com/L3n4m2R.png" },
