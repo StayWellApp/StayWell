@@ -2,7 +2,7 @@
 // This is the complete, updated code for your main Layout component.
 
 import React, { useState } from 'react';
-import { Home, Building, Calendar, Users, Settings, Package, LogOut, Menu, X } from 'lucide-react'; // <-- 1. IMPORT Package icon
+import { Home, Building, Calendar, Users, Settings, Package, LogOut, Menu, X, ListChecks } from 'lucide-react'; // <-- 1. IMPORT ListChecks icon
 
 const Layout = ({ user, userRole, activeView, setActiveView, onLogout, children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,9 +20,10 @@ const Layout = ({ user, userRole, activeView, setActiveView, onLogout, children 
                 <nav className="flex-1 px-2 py-4 space-y-2">
                     <NavItem icon={<Home size={20} />} text="Dashboard" active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
                     <NavItem icon={<Building size={20} />} text="Properties" active={activeView === 'properties'} onClick={() => setActiveView('properties')} />
+                    <NavItem icon={<ListChecks size={20} />} text="Templates" active={activeView === 'templates'} onClick={() => setActiveView('templates')} /> {/* <-- 2. ADD Templates NavItem */}
                     <NavItem icon={<Calendar size={20} />} text="Master Calendar" active={activeView === 'calendar'} onClick={() => setActiveView('calendar')} />
                     <NavItem icon={<Users size={20} />} text="Team" active={activeView === 'team'} onClick={() => setActiveView('team')} />
-                    <NavItem icon={<Package size={20} />} text="Storage" active={activeView === 'storage'} onClick={() => setActiveView('storage')} /> {/* <-- 2. ADD Storage NavItem */}
+                    <NavItem icon={<Package size={20} />} text="Storage" active={activeView === 'storage'} onClick={() => setActiveView('storage')} />
                 </nav>
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                     <NavItem icon={<Settings size={20} />} text="Settings" active={activeView === 'settings'} onClick={() => setActiveView('settings')} />

@@ -1,5 +1,5 @@
 // --- src/App.js ---
-// This is the complete, updated code for your main App component.
+// This is the complete, updated code.
 
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase-config';
@@ -16,6 +16,7 @@ import TeamView from './components/TeamView';
 import MasterCalendarView from './components/MasterCalendarView';
 import { StorageView } from './components/StorageViews';
 import SettingsView from './components/SettingsView';
+import { ChecklistsView } from './components/ChecklistViews'; // <-- 1. IMPORT the new ChecklistsView
 
 const AuthScreen = () => {
     const [showLogin, setShowLogin] = useState(true);
@@ -106,14 +107,15 @@ function App() {
 
         switch (activeView) {
             case 'dashboard':
-                // --- FIX: Pass setActiveView and onSelectProperty to the dashboard ---
-                return <ClientDashboard user={user} setActiveView={handleNavClick} onSelectProperty={setSelectedProperty} />;
+                return <ClientDashboard user={user} setActiveView={handleNavClick} />;
             case 'properties':
                 return <PropertiesView 
                             properties={properties}
                             onAddProperty={handleAddProperty}
                             onSelectProperty={setSelectedProperty}
                         />;
+            case 'templates': // <-- 2. ADD CASE to render ChecklistsView
+                return <ChecklistsView user={user} />;
             case 'calendar':
                 return <MasterCalendarView user={user} />;
             case 'team':
@@ -123,7 +125,7 @@ function App() {
             case 'settings':
                 return <SettingsView user={user} />;
             default:
-                return <ClientDashboard user={user} setActiveView={handleNavClick} onSelectProperty={setSelectedProperty} />;
+                return <ClientDashboard user={user} setActiveView={handleNavClick} />;
         }
     };
 
