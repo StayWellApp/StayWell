@@ -273,20 +273,24 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
         onSave({ name, taskType, linkedProperties, items: filteredItems });
     };
 
+    const inputStyles = "mt-1 w-full input-style dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 rounded-lg px-4";
+    const itemContainerStyles = "bg-gray-50 dark:bg-gray-700/50 p-5 rounded-xl border dark:border-gray-600";
+
+
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
-            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{existingTemplate ? 'Edit Template' : 'Create New Template'}</h4>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Template Name</label><input type="text" value={name} onChange={e => setName(e.target.value)} className="mt-1 w-full input-style dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200" placeholder="e.g., Post-Guest Cleaning" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Type</label><select value={taskType} onChange={e => setTaskType(e.target.value)} className="mt-1 w-full input-style dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200"><option>Cleaning</option><option>Maintenance</option><option>Inspection</option></select></div>
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-lg mb-6 animate-fade-in-down">
+            <h4 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-6">{existingTemplate ? 'Edit Template' : 'Create New Template'}</h4>
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Template Name</label><input type="text" value={name} onChange={e => setName(e.target.value)} className={inputStyles} placeholder="e.g., Post-Guest Cleaning" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Task Type</label><select value={taskType} onChange={e => setTaskType(e.target.value)} className={inputStyles}><option>Cleaning</option><option>Maintenance</option><option>Inspection</option></select></div>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Link to Properties (Optional)</label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">If none are selected, this template will be available for all properties.</p>
-                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">If none are selected, this template will be available for all properties.</p>
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                         {properties.map(prop => (
-                            <button type="button" key={prop.id} onClick={() => handlePropertyLink(prop.id)} className={`px-3 py-2 text-sm rounded-lg border transition-colors ${linkedProperties.includes(prop.id) ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-blue-400'}`}>{prop.name}</button>
+                            <button type="button" key={prop.id} onClick={() => handlePropertyLink(prop.id)} className={`px-3 py-2 text-sm rounded-lg border transition-colors ${linkedProperties.includes(prop.id) ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-600 hover:border-blue-400 dark:hover:bg-slate-600'}`}>{prop.name}</button>
                         ))}
                     </div>
                 </div>
@@ -294,18 +298,18 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Checklist Items</label>
                     <div className="space-y-4">
                         {items.map((item, index) => (
-                            <div key={index} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border dark:border-gray-600">
-                                <div className="flex items-center space-x-2"><input type="text" value={item.text} onChange={e => handleItemChange(index, 'text', e.target.value)} className="w-full input-style dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200" placeholder={`Item ${index + 1} Title`} /><button type="button" onClick={() => handleRemoveItem(index)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><Trash2 size={16} /></button></div>
-                                <div className="mt-3 space-y-3">
-                                    <div className="flex items-start space-x-2"><Info size={16} className="text-gray-400 mt-1 flex-shrink-0" /><textarea value={item.instructions} onChange={e => handleItemChange(index, 'instructions', e.target.value)} className="w-full input-style text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200" placeholder="Add detailed step-by-step instructions..." rows="2" /></div>
-                                    <div className="flex items-center space-x-2"><Image size={16} className="text-gray-400 flex-shrink-0" /><input type="text" value={item.imageUrl} onChange={e => handleItemChange(index, 'imageUrl', e.target.value)} className="w-full input-style text-sm dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200" placeholder="Optional: Paste image URL here..." /></div>
+                            <div key={index} className={itemContainerStyles}>
+                                <div className="flex items-center space-x-3"><input type="text" value={item.text} onChange={e => handleItemChange(index, 'text', e.target.value)} className={inputStyles} placeholder={`Item ${index + 1} Title`} /><button type="button" onClick={() => handleRemoveItem(index)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><Trash2 size={16} /></button></div>
+                                <div className="mt-4 space-y-3 pl-1">
+                                    <div className="flex items-start space-x-3"><Info size={16} className="text-gray-400 mt-2 flex-shrink-0" /><textarea value={item.instructions} onChange={e => handleItemChange(index, 'instructions', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Add detailed step-by-step instructions..." rows="2" /></div>
+                                    <div className="flex items-center space-x-3"><Image size={16} className="text-gray-400 flex-shrink-0" /><input type="text" value={item.imageUrl} onChange={e => handleItemChange(index, 'imageUrl', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Optional: Paste image URL here..." /></div>
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <button type="button" onClick={handleAddItem} className="mt-3 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center"><Plus size={16} className="mr-1" /> Add Item</button>
+                    <button type="button" onClick={handleAddItem} className="mt-4 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center"><Plus size={16} className="mr-1" /> Add Item</button>
                 </div>
-                <div className="flex justify-end space-x-2 pt-4 border-t dark:border-gray-600"><button type="button" onClick={onCancel} className="button-secondary">Cancel</button><button type="submit" className="button-primary">Save Template</button></div>
+                <div className="flex justify-end space-x-3 pt-5 border-t border-gray-200 dark:border-slate-700"><button type="button" onClick={onCancel} className="button-secondary">Cancel</button><button type="submit" className="button-primary">Save Template</button></div>
             </form>
         </div>
     );
