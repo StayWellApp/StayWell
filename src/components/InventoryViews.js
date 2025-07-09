@@ -1,12 +1,11 @@
-// --- src/components/InventoryViews.js ---
-// Replace the entire contents of your InventoryViews.js file with this code.
+// --- src/components/InventoryViews.js (Part 1 of 2) ---
+// Combine this with Part 2 to create the full file.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment } from 'firebase/firestore';
 import { Plus, Trash2, Edit, AlertTriangle } from 'lucide-react';
 
-// --- Sample Data for Pre-generation ---
 const sampleData = {
     fittings: [
         { name: 'Kettle', notes: 'Brand: Russell Hobbs' },
@@ -211,6 +210,8 @@ const InventorySection = ({ title, collectionName, property, user, fields, place
         </div>
     );
 };
+// --- src/components/InventoryViews.js (Part 2 of 2) ---
+// Append this code to the end of Part 1.
 
 const InventoryItemForm = ({ onSave, onCancel, fields, placeholders, existingItem, title }) => {
     const [itemData, setItemData] = useState({});
@@ -242,36 +243,36 @@ const InventoryItemForm = ({ onSave, onCancel, fields, placeholders, existingIte
     };
 
     return (
-        <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg border border-gray-200 dark:border-gray-600 my-4">
-             <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-100">{existingItem ? `Edit ${title.slice(0, -1)}` : `Add New ${title.slice(0, -1)}`}</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.keys(fields).map(field => (
-                    <div key={field} className={fields[field] === 'textarea' ? 'md:col-span-2' : ''}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 capitalize mb-1">{field.replace(/([A-Z])/g, ' $1')}</label>
-                        {Array.isArray(fields[field]) ? (
-                            <select value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                {fields[field].map(option => <option key={option} value={option}>{option}</option>)}
-                            </select>
-                        ) : fields[field] === 'textarea' ? (
-                            <textarea value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} placeholder={placeholders[field]} rows="2" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        ) : (
-                            <input 
-                                value={itemData[field] || ''} 
-                                onChange={e => handleInputChange(field, e.target.value)} 
-                                placeholder={placeholders[field]}
-                                type={fields[field]}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        )}
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700">
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">{existingItem ? `Edit ${title.slice(0, -1)}` : `Add New ${title.slice(0, -1)}`}</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {Object.keys(fields).map(field => (
+                        <div key={field}>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{field.replace(/([A-Z])/g, ' $1')}</label>
+                            {Array.isArray(fields[field]) ? (
+                                <select value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    {fields[field].map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            ) : fields[field] === 'textarea' ? (
+                                <textarea value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} placeholder={placeholders[field]} rows="2" className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            ) : (
+                                <input 
+                                    value={itemData[field] || ''} 
+                                    onChange={e => handleInputChange(field, e.target.value)} 
+                                    placeholder={placeholders[field]}
+                                    type={fields[field]}
+                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                />
+                            )}
+                        </div>
+                    ))}
+                    <div className="flex justify-end space-x-2 pt-4">
+                        <button type="button" onClick={onCancel} className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
+                        <button type="submit" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save</button>
                     </div>
-                ))}
-                </div>
-                <div className="flex justify-end space-x-2 pt-4">
-                    <button type="button" onClick={onCancel} className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
-                    <button type="submit" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     );
 };
