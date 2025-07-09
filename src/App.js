@@ -11,8 +11,10 @@ import TeamView from './components/TeamView';
 import { PropertyDetailView } from './components/PropertyViews';
 import { ChecklistsView } from './components/ChecklistViews';
 import { StorageView } from './components/StorageViews';
-import { MasterCalendarView } from './components/MasterCalendarView';
-import { SettingsView } from './components/SettingsView';
+// --- CORRECTED IMPORTS ---
+import MasterCalendarView from './components/MasterCalendarView';
+import SettingsView from './components/SettingsView';
+// --- END CORRECTIONS ---
 import { ThemeProvider } from './contexts/ThemeContext';
 
 function App() {
@@ -22,7 +24,6 @@ function App() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
-    const [properties, setProperties] = useState([]);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -59,13 +60,11 @@ function App() {
             return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={user} />;
         }
         
-        // --- ROLE-BASED VIEW RENDERING ---
         const userRole = userData?.role;
         const isOwnerOrManager = userRole === 'Owner' || userRole === 'Manager' || userRole === 'Admin';
         
         switch (activeView) {
             case 'dashboard':
-                // Show different dashboards based on role
                 return isOwnerOrManager 
                     ? <ClientDashboard user={user} setActiveView={setActiveView} /> 
                     : <StaffDashboard user={user} userData={userData} />;
@@ -76,7 +75,6 @@ function App() {
             case 'templates':
                 return isOwnerOrManager ? <ChecklistsView user={user} /> : null;
             case 'storage':
-                // Cleaners and Maintenance can access Storage as requested
                 return <StorageView user={user} ownerId={userData?.ownerId || user.uid} />;
             case 'calendar':
                 return <MasterCalendarView user={user} userData={userData} />;
