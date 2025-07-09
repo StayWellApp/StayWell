@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, functions } from '../firebase-config';
+import { db, functions } from '../firebase-config'; // This import will now work correctly
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { Plus, Trash2, Send } from 'lucide-react';
@@ -82,19 +82,13 @@ const TeamView = ({ user }) => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{member.displayName}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{member.email}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {/* --- Role Change Dropdown --- */}
                                         <select
                                             value={member.role}
                                             onChange={(e) => handleRoleChange(member.id, e.target.value)}
                                             className="input-style py-1.5 text-sm"
-                                            disabled={member.role === 'Owner'} // The owner cannot change their own role here
+                                            disabled={member.role === 'Owner'}
                                         >
-                                            {/* Ensure the current role is always an option, even if it's custom */}
-                                            {![...availableRoles, 'Owner'].includes(member.role) && <option value={member.role}>{member.role}</option>}
-                                            
-                                            {/* The owner's role is fixed */}
                                             <option value="Owner" disabled>{member.role === 'Owner' ? 'Owner' : ''}</option>
-
                                             {availableRoles.map(role => (
                                                 <option key={role} value={role}>{role}</option>
                                             ))}
@@ -119,7 +113,7 @@ const TeamView = ({ user }) => {
 
 const InviteForm = ({ user, onInviteSent }) => {
     const [email, setEmail] = useState('');
-    const [role, setRole] = useState(availableRoles[0]); // Default to the first role in the list
+    const [role, setRole] = useState(availableRoles[0]);
     const [isInviting, setIsInviting] = useState(false);
     const [feedback, setFeedback] = useState({ message: '', type: '' });
 
@@ -142,7 +136,7 @@ const InviteForm = ({ user, onInviteSent }) => {
             setFeedback({ message: `Error: ${error.message}`, type: 'error' });
         } finally {
             setIsInviting(false);
-            setTimeout(() => onInviteSent(), 2000); // Close form after a delay
+            setTimeout(() => onInviteSent(), 2000);
         }
     };
 
