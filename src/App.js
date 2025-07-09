@@ -12,7 +12,8 @@ import ClientDashboard from './components/ClientDashboard';
 import PropertiesView from './components/PropertiesView';
 import { PropertyDetailView } from './components/PropertyViews';
 import TeamView from './components/TeamView';
-import MasterCalendarView from './components/MasterCalendarView'; // ✨ NEW: Import MasterCalendarView
+import MasterCalendarView from './components/MasterCalendarView';
+import SettingsView from './components/SettingsView'; // ✨ NEW: Import SettingsView
 
 const AuthScreen = () => {
     const [showLogin, setShowLogin] = useState(true);
@@ -108,12 +109,12 @@ function App() {
                             onSelectProperty={setSelectedProperty}
                         />;
             case 'calendar':
-                // ✨ NEW: Render the MasterCalendarView component
                 return <MasterCalendarView user={user} />;
             case 'team':
                 return <TeamView user={user} />;
             case 'settings':
-                return <div className="p-8"><h1 className="text-3xl font-bold">Settings (Coming Soon)</h1></div>;
+                // ✨ NEW: Render the SettingsView component
+                return <SettingsView user={user} />;
             default:
                 return <ClientDashboard user={user} />;
         }
