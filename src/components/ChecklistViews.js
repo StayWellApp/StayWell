@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Plus, Trash2, Edit, ListPlus, X } from 'lucide-react';
+import { Plus, Trash2, ListPlus } from 'lucide-react'; // FIX: Removed unused 'Edit' and 'X' icons
 
 // --- Pre-generated templates for easy onboarding ---
 const preGeneratedTemplates = [
@@ -48,7 +48,6 @@ const preGeneratedTemplates = [
             "Provide fresh towels and bathmats",
             "Take out accumulated trash and recycling",
             "Wipe down bathroom counters and sinks",
-
             "Quickly wipe down kitchen counters",
             "Restock toilet paper and other key consumables if needed",
             "Quickly make the bed (if requested by guest)",
@@ -70,7 +69,7 @@ export const ChecklistsView = ({ user }) => {
             setLoading(false);
         });
         return unsubscribe;
-    }, [user.uid]);
+    }, [user]); // FIX: Added 'user' to the dependency array
 
     const handleSave = async (templateData) => {
         try {
@@ -94,13 +93,12 @@ export const ChecklistsView = ({ user }) => {
         }
     };
 
-    // --- NEW: Function to generate sample templates ---
     const handleGenerateSamples = async () => {
         const batch = writeBatch(db);
         const templatesRef = collection(db, "checklistTemplates");
         
         preGeneratedTemplates.forEach(template => {
-            const newTemplateRef = doc(templatesRef); // Create a new doc reference
+            const newTemplateRef = doc(templatesRef);
             batch.set(newTemplateRef, {
                 ...template,
                 ownerId: user.uid,
@@ -177,7 +175,7 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate }) =>
     };
 
     const handleRemoveItem = (index) => {
-        if (items.length <= 1) return; // Don't remove the last item
+        if (items.length <= 1) return;
         const newItems = items.filter((_, i) => i !== index);
         setItems(newItems);
     };
