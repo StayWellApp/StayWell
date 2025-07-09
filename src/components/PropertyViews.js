@@ -1,5 +1,5 @@
 // --- src/components/PropertyViews.js ---
-// Final Corrected Code with Day/Week Views
+// Final Corrected Code with Tasks on Calendar
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
@@ -9,7 +9,7 @@ import { ChecklistTemplateForm } from './ChecklistViews';
 import { InventoryView } from './InventoryViews';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid'; // ✨ 1. IMPORT TIMEGRID PLUGIN
+import timeGridPlugin from '@fullcalendar/timegrid';
 
 const amenityCategories = {
     essentials: {
@@ -326,34 +326,44 @@ const ChecklistsView = ({ user }) => {
     );
 };
 
+// --- ✨ UPDATED CalendarView with real Task data ---
 const CalendarView = ({ property }) => {
+    const [events, setEvents] = useState([]);
     const [newCalLink, setNewCalLink] = useState("");
-    const bookings = [
-        {
-            id: 'booking-001',
-            title: `Guest: John Doe`,
-            start: '2025-07-10T14:00:00', // Added time for week/day view
-            end: '2025-07-15T11:00:00',
-            backgroundColor: '#3b82f6',
-            borderColor: '#2563eb'
-        },
-        {
-            id: 'booking-002',
-            title: `Guest: Jane Smith`,
-            start: '2025-07-22', // All-day event
-            end: '2025-07-28',
-            backgroundColor: '#3b82f6',
-            borderColor: '#2563eb'
-        },
-        {
-            id: 'booking-003',
-            title: `Guest: Sam Wilson`,
-            start: '2025-08-01T16:00:00',
-            end: '2025-08-04T10:00:00',
-            backgroundColor: '#3b82f6',
-            borderColor: '#2563eb'
-        }
-    ];
+
+    // Effect to fetch tasks and combine all events for the calendar
+    useEffect(() => {
+        // --- Mock Bookings (will be replaced by iCal parsing later) ---
+        const bookingEvents = [
+            { id: 'booking-001', title: `Guest: John Doe`, start: '2025-07-10T14:00:00', end: '2025-07-15T11:00:00', backgroundColor: '#3b82f6', borderColor: '#2563eb' },
+            { id: 'booking-002', title: `Guest: Jane Smith`, start: '2025-07-22', end: '2025-07-28', backgroundColor: '#3b82f6', borderColor: '#2563eb' },
+            { id: 'booking-003', title: `Guest: Sam Wilson`, start: '2025-08-01T16:00:00', end: '2025-08-04T10:00:00', backgroundColor: '#3b82f6', borderColor: '#2563eb' }
+        ];
+
+        // --- Fetch Real Tasks from Firestore ---
+        const tasksQuery = query(collection(db, "tasks"), where("propertyId", "==", property.id));
+        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+            const taskEvents = snapshot.docs.map(doc => {
+                const task = doc.data();
+                // Note: We're using 'createdAt' for the date. A 'dueDate' field would be ideal.
+                const taskDate = task.createdAt?.toDate(); 
+                
+                return {
+                    id: doc.id,
+                    title: `Task: ${task.taskName}`,
+                    start: taskDate,
+                    allDay: true, // Display tasks as all-day events for now
+                    backgroundColor: '#10b981', // Green for tasks
+                    borderColor: '#059669'
+                };
+            }).filter(event => event.start); // Filter out any tasks that might not have a date yet
+
+            // Combine bookings and tasks into one array for the calendar
+            setEvents([...bookingEvents, ...taskEvents]);
+        });
+
+        return () => unsubscribe(); // Cleanup subscription on component unmount
+    }, [property.id]); // Rerun effect if the property changes
 
     const handleAddCalendarLink = async (e) => {
         e.preventDefault();
@@ -363,9 +373,7 @@ const CalendarView = ({ property }) => {
         }
         try {
             const propertyRef = doc(db, "properties", property.id);
-            await updateDoc(propertyRef, {
-                calendarLinks: arrayUnion(newCalLink)
-            });
+            await updateDoc(propertyRef, { calendarLinks: arrayUnion(newCalLink) });
             setNewCalLink("");
         } catch (error) {
             console.error("Error adding calendar link:", error);
@@ -375,17 +383,17 @@ const CalendarView = ({ property }) => {
 
     return (
         <div className="bg-gray-50 p-6 rounded-lg border">
-            <h3 className="text-2xl font-semibold text-gray-700 mb-4">Booking Calendar</h3>
+            <h3 className="text-2xl font-semibold text-gray-700 mb-4">Unified Calendar</h3>
             <div className="bg-white p-4 rounded-lg border shadow-sm">
                 <FullCalendar
-                    plugins={[dayGridPlugin, timeGridPlugin]} // ✨ 2. ADD TIMEGRID PLUGIN
+                    plugins={[dayGridPlugin, timeGridPlugin]}
                     initialView="dayGridMonth"
                     headerToolbar={{
                         left: 'prev,next today',
                         center: 'title',
-                        right: 'dayGridMonth,timeGridWeek,timeGridDay' // ✨ 3. ADD WEEK/DAY BUTTONS
+                        right: 'dayGridMonth,timeGridWeek,timeGridDay'
                     }}
-                    events={bookings}
+                    events={events} // Use the combined events state
                     editable={false}
                     dayMaxEvents={true}
                     weekends={true}
