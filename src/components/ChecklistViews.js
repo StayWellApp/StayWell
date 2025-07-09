@@ -249,8 +249,8 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
         return [{ text: '', instructions: '', imageUrl: '' }];
     });
 
-    // NOTE: The useEffect hook has been removed. It's no longer needed because the `key`
-    // prop strategy is cleaner and more reliable for resetting form state.
+    // NOTE: The useEffect hook has been removed. The `key` prop strategy is cleaner
+    // and more reliable for resetting form state in this scenario.
 
     const handleItemChange = (index, field, value) => {
         setItems(currentItems => 
