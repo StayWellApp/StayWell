@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
-import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren } from 'lucide-react';
+import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks } from 'lucide-react';
 
 export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDate }) => {
     const [taskName, setTaskName] = useState('');
@@ -22,9 +22,23 @@ export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDa
             return;
         }
         const assignedToEmail = team.find(member => member.uid === assignedTo)?.email || '';
-        const templateName = checklistTemplates.find(t => t.id === templateId)?.name || '';
+        const selectedTemplate = checklistTemplates.find(t => t.id === templateId);
         
-        onAddTask({ taskName, taskType, description, priority, scheduledDate, assignedTo, assignedToEmail, templateId, templateName });
+        const taskData = {
+            taskName,
+            taskType,
+            description,
+            priority,
+            scheduledDate,
+            assignedTo,
+            assignedToEmail,
+            templateId: selectedTemplate?.id || '',
+            templateName: selectedTemplate?.name || '',
+            // --- NEW: Copy checklist items into the task ---
+            checklistItems: selectedTemplate ? selectedTemplate.items.map(itemText => ({ text: itemText, completed: false })) : [],
+        };
+
+        onAddTask(taskData);
         
         // Reset form
         setTaskName('');
@@ -101,10 +115,12 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
     const [editedTask, setEditedTask] = useState(task);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
+    const [checklist, setChecklist] = useState([]);
 
     useEffect(() => {
         setEditedTask(task);
-        // Set up a listener for comments on this task
+        setChecklist(task.checklistItems || []);
+
         const commentsQuery = query(collection(db, `tasks/${task.id}/comments`));
         const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
             setComments(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
@@ -134,10 +150,20 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
         if (!newComment.trim()) return;
         await addDoc(collection(db, `tasks/${task.id}/comments`), {
             text: newComment,
-            author: "Admin", // In a real app, get current user's name/email
+            author: "Admin",
             createdAt: serverTimestamp()
         });
         setNewComment('');
+    };
+
+    // --- NEW: Function to handle checklist item toggling ---
+    const handleToggleChecklistItem = async (index) => {
+        const newChecklist = [...checklist];
+        newChecklist[index].completed = !newChecklist[index].completed;
+        setChecklist(newChecklist);
+        
+        const taskRef = doc(db, 'tasks', task.id);
+        await updateDoc(taskRef, { checklistItems: newChecklist });
     };
 
     return (
@@ -176,6 +202,13 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
                             </div>
                         </div>
                     )}
+                    
+                    {/* --- NEW: Interactive Checklist Section --- */}
+                    {checklist && checklist.length > 0 && (
+                        <div className="mt-6 pt-4 border-t dark:border-gray-700">
+                            <TaskChecklist items={checklist} onToggle={handleToggleChecklistItem} />
+                        </div>
+                    )}
 
                     <div className="mt-6 pt-4 border-t dark:border-gray-700">
                         <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><MessageSquare size={18} className="mr-2"/>Comments</h4>
@@ -206,6 +239,39 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
                     )}
                 </div>
             </div>
+        </div>
+    );
+};
+
+// --- NEW: Checklist Component ---
+const TaskChecklist = ({ items, onToggle }) => {
+    const completedCount = items.filter(item => item.completed).length;
+    const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
+
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-2">
+                <h4 className="font-semibold text-gray-800 dark:text-gray-200 flex items-center"><ListChecks size={18} className="mr-2"/>Checklist</h4>
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{completedCount} / {items.length} Complete</span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-4">
+                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+            </div>
+            <ul className="space-y-2">
+                {items.map((item, index) => (
+                    <li key={index} onClick={() => onToggle(index)} className="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={item.completed} 
+                            readOnly
+                            className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                        <span className={`ml-3 text-sm font-medium ${item.completed ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
+                            {item.text}
+                        </span>
+                    </li>
+                ))}
+            </ul>
         </div>
     );
 };
