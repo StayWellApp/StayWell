@@ -1,5 +1,5 @@
 // --- src/components/PropertyViews.js ---
-// Final Corrected Code with Tasks on Calendar
+// Replace the entire contents of your PropertyViews.js file with this code.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
@@ -11,6 +11,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 
+// --- (No changes to this section) ---
 const amenityCategories = {
     essentials: {
         title: "Essentials",
@@ -242,7 +243,15 @@ const TasksView = ({ property, user }) => {
 
     const handleAddTask = async (taskData) => {
         try {
-            await addDoc(collection(db, "tasks"), { ...taskData, propertyId: property.id, propertyName: property.propertyName, propertyAddress: property.address, ownerId: user.uid, status: 'Pending', createdAt: serverTimestamp() });
+            await addDoc(collection(db, "tasks"), { 
+                ...taskData, 
+                propertyId: property.id, 
+                propertyName: property.propertyName, 
+                propertyAddress: property.address, 
+                ownerId: user.uid, 
+                status: 'Pending', 
+                createdAt: serverTimestamp() 
+            });
             setShowAddTaskForm(false);
         } catch (error) { console.error("Error adding task: ", error); alert("Failed to add task."); }
     };
@@ -326,44 +335,37 @@ const ChecklistsView = ({ user }) => {
     );
 };
 
-// --- ✨ UPDATED CalendarView with real Task data ---
+// --- ✨ UPDATED CalendarView to use scheduledDate ---
 const CalendarView = ({ property }) => {
     const [events, setEvents] = useState([]);
     const [newCalLink, setNewCalLink] = useState("");
 
-    // Effect to fetch tasks and combine all events for the calendar
     useEffect(() => {
-        // --- Mock Bookings (will be replaced by iCal parsing later) ---
         const bookingEvents = [
             { id: 'booking-001', title: `Guest: John Doe`, start: '2025-07-10T14:00:00', end: '2025-07-15T11:00:00', backgroundColor: '#3b82f6', borderColor: '#2563eb' },
             { id: 'booking-002', title: `Guest: Jane Smith`, start: '2025-07-22', end: '2025-07-28', backgroundColor: '#3b82f6', borderColor: '#2563eb' },
-            { id: 'booking-003', title: `Guest: Sam Wilson`, start: '2025-08-01T16:00:00', end: '2025-08-04T10:00:00', backgroundColor: '#3b82f6', borderColor: '#2563eb' }
         ];
 
-        // --- Fetch Real Tasks from Firestore ---
         const tasksQuery = query(collection(db, "tasks"), where("propertyId", "==", property.id));
         const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
             const taskEvents = snapshot.docs.map(doc => {
                 const task = doc.data();
-                // Note: We're using 'createdAt' for the date. A 'dueDate' field would be ideal.
-                const taskDate = task.createdAt?.toDate(); 
-                
+                // ✨ USE scheduledDate for the calendar event start date
                 return {
                     id: doc.id,
                     title: `Task: ${task.taskName}`,
-                    start: taskDate,
-                    allDay: true, // Display tasks as all-day events for now
-                    backgroundColor: '#10b981', // Green for tasks
+                    start: task.scheduledDate, // Use the new scheduledDate field
+                    allDay: true,
+                    backgroundColor: '#10b981',
                     borderColor: '#059669'
                 };
-            }).filter(event => event.start); // Filter out any tasks that might not have a date yet
+            }).filter(event => event.start);
 
-            // Combine bookings and tasks into one array for the calendar
             setEvents([...bookingEvents, ...taskEvents]);
         });
 
-        return () => unsubscribe(); // Cleanup subscription on component unmount
-    }, [property.id]); // Rerun effect if the property changes
+        return () => unsubscribe();
+    }, [property.id]);
 
     const handleAddCalendarLink = async (e) => {
         e.preventDefault();
@@ -393,7 +395,7 @@ const CalendarView = ({ property }) => {
                         center: 'title',
                         right: 'dayGridMonth,timeGridWeek,timeGridDay'
                     }}
-                    events={events} // Use the combined events state
+                    events={events}
                     editable={false}
                     dayMaxEvents={true}
                     weekends={true}
