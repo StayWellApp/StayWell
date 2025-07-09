@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
+import { usePermissions } from './hooks/usePermissions'; // <-- Import the hook
 import { Login, SignUp } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
@@ -18,17 +19,19 @@ import { ThemeProvider } from './contexts/ThemeContext';
 function App() {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loadingUser, setLoadingUser] = useState(true);
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
-    const [properties, setProperties] = useState([]); // <-- ADD THIS STATE TO HOLD PROPERTIES
+
+    // --- Use our new permissions hook ---
+    const { hasPermission, loadingPermissions } = usePermissions(userData);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
             if (!currentUser) {
-                setLoading(false);
+                setLoadingUser(false);
                 setUserData(null);
             }
         });
@@ -37,27 +40,11 @@ function App() {
 
     useEffect(() => {
         if (user) {
-            // Fetch user data
-            const userDocUnsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+            const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
                 setUserData(doc.exists() ? doc.data() : null);
-                setLoading(false);
+                setLoadingUser(false);
             });
-
-            // --- ADDED: Fetch properties data ---
-            const propertiesQuery = query(collection(db, "properties"), where("ownerId", "==", user.uid));
-            const propertiesUnsub = onSnapshot(propertiesQuery, (snapshot) => {
-                const props = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setProperties(props);
-            });
-            
-            return () => {
-                userDocUnsub();
-                propertiesUnsub();
-            };
-            // --- END OF ADDITION ---
-
-        } else {
-            setLoading(false);
+            return () => unsub();
         }
     }, [user]);
 
@@ -65,47 +52,44 @@ function App() {
         setSelectedProperty(property);
         setActiveView('propertyDetail');
     };
-
-    const hasAdminPrivileges = () => {
-        if (!userData) return false;
-        const isOwner = userData.uid === userData.ownerId;
-        const isAdminOrManager = userData.role === 'Admin' || userData.role === 'Manager' || userData.role === 'Owner';
-        return isOwner || isAdminOrManager;
-    };
     
     const renderActiveView = () => {
         if (selectedProperty) {
+            // For now, allow anyone with property access to see details.
+            // This can be refined later with more specific permissions.
             return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={user} />;
         }
         
-        const hasFullAccess = hasAdminPrivileges();
-        
         switch (activeView) {
             case 'dashboard':
-                return hasFullAccess 
+                // A user with no permissions will see the staff dashboard by default.
+                return hasPermission('properties_view_all') || hasPermission('team_manage')
                     ? <ClientDashboard user={user} setActiveView={setActiveView} /> 
                     : <StaffDashboard user={user} userData={userData} />;
             case 'properties':
-                // --- Pass the 'properties' state down as a prop ---
-                return <PropertiesView properties={properties} onSelectProperty={handleSelectProperty} user={user} userData={userData} />;
+                return <PropertiesView onSelectProperty={handleSelectProperty} user={user} userData={userData} hasPermission={hasPermission} />;
             case 'team':
-                return hasFullAccess ? <TeamView user={user} /> : null;
+                return hasPermission('team_manage') ? <TeamView user={user} /> : null;
             case 'templates':
-                return hasFullAccess ? <ChecklistsView user={user} /> : null;
+                return hasPermission('templates_manage') ? <ChecklistsView user={user} /> : null;
             case 'storage':
-                return <StorageView user={user} ownerId={userData?.ownerId || user.uid} />;
+                 // Let's say viewing storage is a specific permission now
+                return hasPermission('storage_view') ? <StorageView user={user} ownerId={userData?.ownerId || user.uid} hasPermission={hasPermission} /> : null;
             case 'calendar':
-                return <MasterCalendarView user={user} userData={userData} />;
+                // Let's say viewing the master calendar is also a permission
+                return hasPermission('tasks_view_all') ? <MasterCalendarView user={user} userData={userData} /> : <StaffDashboard user={user} userData={userData} />; // Or a personal calendar
             case 'settings':
-                 return hasFullAccess ? <SettingsView user={user} /> : null;
+                 return hasPermission('team_manage') ? <SettingsView user={user} /> : null; // Only show settings to admin-like roles
             default:
-                return hasFullAccess 
+                return hasPermission('properties_view_all')
                     ? <ClientDashboard user={user} setActiveView={setActiveView} /> 
                     : <StaffDashboard user={user} userData={userData} />;
         }
     };
 
-    if (loading) {
+    const isLoading = loadingUser || loadingPermissions;
+
+    if (isLoading) {
         return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading...</p></div>;
     }
 
@@ -124,7 +108,7 @@ function App() {
 
     return (
         <ThemeProvider>
-            <Layout user={user} userData={userData} activeView={activeView} setActiveView={setActiveView}>
+            <Layout user={user} userData={userData} activeView={activeView} setActiveView={setActiveView} hasPermission={hasPermission}>
                 {renderActiveView()}
             </Layout>
         </ThemeProvider>
