@@ -7,7 +7,6 @@ import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit } from 'lu
 import { PERMISSION_CATEGORIES } from '../config/permissions';
 
 // --- Reusable Components for the Tabbed Layout ---
-
 const SettingsTab = ({ id, label, icon: Icon, activeTab, setActiveTab }) => (
     <button
         onClick={() => setActiveTab(id)}
@@ -30,55 +29,25 @@ const SettingsPanel = ({ title, children }) => (
 );
 
 // --- Main Settings View Component ---
-
 const SettingsView = ({ user }) => {
-    // --- STATE MANAGEMENT ---
     const [activeTab, setActiveTab] = useState('profile');
-    
-    // Profile State
     const [profileName, setProfileName] = useState(user.displayName || '');
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [profileError, setProfileError] = useState('');
-    
-    // Appearance State
     const { themeSetting, setThemeSetting } = useContext(ThemeContext);
-
-    // Notifications State
     const [notifications, setNotifications] = useState({});
 
-    // Roles State
-    const [roles, setRoles] = useState([]);
-    const [rolesLoading, setRolesLoading] = useState(true);
-    const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
-    const [editingRole, setEditingRole] = useState(null);
-
-    // --- DATA FETCHING ---
     useEffect(() => {
         if (!user) return;
-
-        // Fetch user-specific settings (notifications)
         const userSettingsRef = doc(db, 'userSettings', user.uid);
         const userSettingsUnsub = onSnapshot(userSettingsRef, (docSnap) => {
             if (docSnap.exists()) {
-                const settings = docSnap.data();
-                setNotifications(settings.notifications || {});
+                setNotifications(docSnap.data().notifications || {});
             }
         });
-
-        // Fetch custom roles
-        const rolesQuery = query(collection(db, "customRoles"), where("ownerId", "==", user.uid));
-        const rolesUnsub = onSnapshot(rolesQuery, (snapshot) => {
-            setRoles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setRolesLoading(false);
-        });
-
-        return () => {
-            userSettingsUnsub();
-            rolesUnsub();
-        };
+        return () => userSettingsUnsub();
     }, [user]);
 
-    // --- EVENT HANDLERS ---
     const handleProfileSave = async (e) => {
         e.preventDefault();
         if (!profileName.trim()) {
@@ -89,8 +58,7 @@ const SettingsView = ({ user }) => {
         setProfileError('');
         try {
             await updateProfile(user, { displayName: profileName });
-            const userDocRef = doc(db, 'users', user.uid);
-            await updateDoc(userDocRef, { displayName: profileName });
+            await updateDoc(doc(db, 'users', user.uid), { displayName: profileName });
             alert('Profile updated successfully!');
         } catch (err) {
             setProfileError('Failed to update profile.');
@@ -105,7 +73,6 @@ const SettingsView = ({ user }) => {
         await setDoc(doc(db, 'userSettings', user.uid), { notifications: newNotifications }, { merge: true });
     };
     
-    // --- JSX RENDER ---
     return (
         <div className="p-4 sm:p-6 md:p-8">
             <header className="mb-8">
@@ -114,7 +81,6 @@ const SettingsView = ({ user }) => {
             </header>
 
             <div className="flex flex-col md:flex-row gap-8">
-                {/* --- Tab Navigation --- */}
                 <aside className="md:w-1/4 lg:w-1/5">
                     <nav className="space-y-1">
                         <SettingsTab id="profile" label="Profile" icon={User} activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -125,7 +91,6 @@ const SettingsView = ({ user }) => {
                     </nav>
                 </aside>
 
-                {/* --- Tab Content --- */}
                 <main className="flex-1">
                     {activeTab === 'profile' && (
                         <SettingsPanel title="Profile Information">
@@ -140,18 +105,12 @@ const SettingsView = ({ user }) => {
                                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                                 </div>
                                 <div className="flex justify-end pt-2">
-                                    <button type="submit" disabled={isSavingProfile} className="button-primary">
-                                        {isSavingProfile ? 'Saving...' : 'Save Profile'}
-                                    </button>
+                                    <button type="submit" disabled={isSavingProfile} className="button-primary">{isSavingProfile ? 'Saving...' : 'Save Profile'}</button>
                                 </div>
                             </form>
                         </SettingsPanel>
                     )}
-
-                    {activeTab === 'roles' && (
-                        <RolesPanel user={user} roles={roles} loading={rolesLoading} />
-                    )}
-
+                    {activeTab === 'roles' && <RolesPanel user={user} />}
                     {activeTab === 'appearance' && (
                         <SettingsPanel title="Appearance">
                              <div className="flex items-center justify-between max-w-lg">
@@ -167,27 +126,14 @@ const SettingsView = ({ user }) => {
                             </div>
                         </SettingsPanel>
                     )}
-                    
                     {activeTab === 'notifications' && (
                         <SettingsPanel title="Notification Settings">
                              <div className="space-y-3 max-w-lg">
-                                {/* Example Notification */}
-                                <NotificationToggle
-                                    id="taskUpdates"
-                                    label="Task Updates"
-                                    checked={!!notifications.taskUpdates}
-                                    onChange={(e) => handleNotificationChange('taskUpdates', e.target.checked)}
-                                />
-                                <NotificationToggle
-                                    id="bookingAlerts"
-                                    label="New Booking Alerts"
-                                    checked={!!notifications.bookingAlerts}
-                                    onChange={(e) => handleNotificationChange('bookingAlerts', e.target.checked)}
-                                />
+                                <NotificationToggle id="taskUpdates" label="Task Updates" checked={!!notifications.taskUpdates} onChange={(e) => handleNotificationChange('taskUpdates', e.target.checked)} />
+                                <NotificationToggle id="bookingAlerts" label="New Booking Alerts" checked={!!notifications.bookingAlerts} onChange={(e) => handleNotificationChange('bookingAlerts', e.target.checked)} />
                              </div>
                         </SettingsPanel>
                     )}
-
                     {activeTab === 'account' && (
                         <SettingsPanel title="Account Actions">
                              <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg max-w-lg">
@@ -195,9 +141,7 @@ const SettingsView = ({ user }) => {
                                       <h4 className="font-semibold text-red-800 dark:text-red-300">Delete Account</h4>
                                       <p className="text-sm text-red-600 dark:text-red-400">Permanently remove all your data.</p>
                                   </div>
-                                  <button disabled className="button-danger disabled:bg-red-300 dark:disabled:bg-red-800 disabled:cursor-not-allowed">
-                                      <Trash2 size={16} className="mr-2" /> Delete
-                                  </button>
+                                  <button disabled className="button-danger disabled:bg-red-300 dark:disabled:bg-red-800 disabled:cursor-not-allowed"><Trash2 size={16} className="mr-2" /> Delete</button>
                               </div>
                         </SettingsPanel>
                     )}
@@ -207,26 +151,32 @@ const SettingsView = ({ user }) => {
     );
 };
 
-
-// --- Sub-component for the Roles & Permissions Panel ---
-
-const RolesPanel = ({ user, roles, loading }) => {
+// --- Roles & Permissions Panel Component ---
+const RolesPanel = ({ user }) => {
+    const [roles, setRoles] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRole, setEditingRole] = useState(null);
+
+    useEffect(() => {
+        const q = query(collection(db, "customRoles"), where("ownerId", "==", user.uid));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setRoles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [user]);
 
     const handleOpenModal = (role = null) => {
         setEditingRole(role);
         setIsModalOpen(true);
     };
-
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingRole(null);
     };
-
     const handleSaveRole = async (roleData) => {
         if (!roleData.roleName.trim()) return;
-
         if (editingRole) {
             await updateDoc(doc(db, "customRoles", editingRole.id), { ...roleData, updatedAt: serverTimestamp() });
         } else {
@@ -234,7 +184,6 @@ const RolesPanel = ({ user, roles, loading }) => {
         }
         handleCloseModal();
     };
-
     const handleDeleteRole = async (roleId) => {
         if (window.confirm("Are you sure you want to delete this role?")) {
             await deleteDoc(doc(db, "customRoles", roleId));
@@ -245,10 +194,7 @@ const RolesPanel = ({ user, roles, loading }) => {
         <SettingsPanel title="Roles & Permissions">
              <div className="flex justify-between items-center mb-6">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Define custom roles for your team members.</p>
-                <button onClick={() => handleOpenModal()} className="button-primary">
-                    <Plus size={16} className="mr-2" />
-                    Create Role
-                </button>
+                <button onClick={() => handleOpenModal()} className="button-primary"><Plus size={16} className="mr-2" /> Create Role</button>
             </div>
              <div className="border-t border-gray-200 dark:border-gray-700">
                 {loading ? <p className="text-center py-4">Loading roles...</p> : (
@@ -271,8 +217,7 @@ const RolesPanel = ({ user, roles, loading }) => {
     );
 };
 
-// --- Sub-component for the Role Creation/Edit Modal ---
-
+// --- CORRECTED: Role Creation/Edit Modal Component ---
 const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
     const [roleName, setRoleName] = useState(existingRole?.roleName || '');
     const [permissions, setPermissions] = useState(existingRole?.permissions || {});
@@ -287,13 +232,17 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
     };
     
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fade-in">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
-                <div className="p-6 border-b dark:border-gray-700">
+                {/* Header */}
+                <div className="p-6 border-b dark:border-gray-700 flex-shrink-0">
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{existingRole ? 'Edit Role' : 'Create New Role'}</h3>
                 </div>
-                <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto">
-                    <div className="p-6 space-y-6">
+
+                {/* Form Body */}
+                <form onSubmit={handleSubmit} className="flex-grow flex flex-col overflow-hidden">
+                    {/* Scrollable Content */}
+                    <div className="p-6 space-y-6 overflow-y-auto">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role Name</label>
                             <input type="text" value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="e.g., Property Manager" className="mt-1 input-style" required />
@@ -315,7 +264,9 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
                             ))}
                         </div>
                     </div>
-                    <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border-t dark:border-gray-700 flex justify-end space-x-2">
+
+                    {/* Footer */}
+                    <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border-t dark:border-gray-700 flex justify-end space-x-2 flex-shrink-0">
                         <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
                         <button type="submit" className="button-primary">Save Role</button>
                     </div>
@@ -325,15 +276,15 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
     );
 };
 
+// --- Reusable Notification Toggle Component ---
 const NotificationToggle = ({ id, label, checked, onChange }) => (
     <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
         <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" checked={checked} onChange={onChange} className="sr-only peer" />
+            <input type="checkbox" id={id} checked={checked} onChange={onChange} className="sr-only peer" />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
         </label>
     </div>
 );
-
 
 export default SettingsView;
