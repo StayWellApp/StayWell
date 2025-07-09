@@ -154,7 +154,7 @@ const SettingsView = ({ user }) => {
 // --- Roles & Permissions Panel Component ---
 const RolesPanel = ({ user }) => {
     const [roles, setRoles] = useState([]);
-    const [loading, setLoading] = true);
+    const [loading, setLoading] = useState(true); // Corrected this line
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRole, setEditingRole] = useState(null);
 
