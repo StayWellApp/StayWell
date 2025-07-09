@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
-import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks } from 'lucide-react';
+import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks, Info, Image, ChevronDown } from 'lucide-react';
 
 export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDate }) => {
     const [taskName, setTaskName] = useState('');
@@ -34,8 +34,8 @@ export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDa
             assignedToEmail,
             templateId: selectedTemplate?.id || '',
             templateName: selectedTemplate?.name || '',
-            // --- NEW: Copy checklist items into the task ---
-            checklistItems: selectedTemplate ? selectedTemplate.items.map(itemText => ({ text: itemText, completed: false })) : [],
+            // Copy checklist items into the task, ensuring they have a 'completed' status
+            checklistItems: selectedTemplate ? selectedTemplate.items.map(item => ({ ...item, completed: false })) : [],
         };
 
         onAddTask(taskData);
@@ -136,7 +136,7 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
     };
     
     const handleDelete = async () => {
-        if (window.confirm("Are you sure you want to delete this task?")) {
+        if (window.confirm("Are you sure?")) {
             await deleteDoc(doc(db, 'tasks', task.id));
             onClose();
         }
@@ -156,7 +156,6 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
         setNewComment('');
     };
 
-    // --- NEW: Function to handle checklist item toggling ---
     const handleToggleChecklistItem = async (index) => {
         const newChecklist = [...checklist];
         newChecklist[index].completed = !newChecklist[index].completed;
@@ -203,7 +202,6 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
                         </div>
                     )}
                     
-                    {/* --- NEW: Interactive Checklist Section --- */}
                     {checklist && checklist.length > 0 && (
                         <div className="mt-6 pt-4 border-t dark:border-gray-700">
                             <TaskChecklist items={checklist} onToggle={handleToggleChecklistItem} />
@@ -243,8 +241,9 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
     );
 };
 
-// --- NEW: Checklist Component ---
 const TaskChecklist = ({ items, onToggle }) => {
+    const [expandedItem, setExpandedItem] = useState(null);
+
     const completedCount = items.filter(item => item.completed).length;
     const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
 
@@ -255,20 +254,32 @@ const TaskChecklist = ({ items, onToggle }) => {
                 <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{completedCount} / {items.length} Complete</span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-4">
-                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
             </div>
             <ul className="space-y-2">
                 {items.map((item, index) => (
-                    <li key={index} onClick={() => onToggle(index)} className="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer">
-                        <input 
-                            type="checkbox" 
-                            checked={item.completed} 
-                            readOnly
-                            className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                        />
-                        <span className={`ml-3 text-sm font-medium ${item.completed ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
-                            {item.text}
-                        </span>
+                    <li key={index} className="bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg border dark:border-gray-600">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center cursor-pointer" onClick={() => onToggle(index)}>
+                                <input type="checkbox" checked={item.completed} readOnly className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
+                                <span className={`ml-3 text-sm font-medium ${item.completed ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>{item.text}</span>
+                            </div>
+                            {(item.instructions || item.imageUrl) && (
+                                <button onClick={() => setExpandedItem(expandedItem === index ? null : index)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                    <ChevronDown size={20} className={`transition-transform ${expandedItem === index ? 'rotate-180' : ''}`} />
+                                </button>
+                            )}
+                        </div>
+                        {expandedItem === index && (
+                            <div className="mt-2 pl-8 pr-4 py-2 bg-white dark:bg-gray-800 rounded-md animate-fade-in-down">
+                                {item.instructions && <p className="text-sm text-gray-600 dark:text-gray-300 flex items-start"><Info size={14} className="mr-2 mt-0.5 flex-shrink-0"/>{item.instructions}</p>}
+                                {item.imageUrl && (
+                                    <div className="mt-2">
+                                        <img src={item.imageUrl} alt="Instructional" className="rounded-lg max-w-xs max-h-48 border dark:border-gray-600" />
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </li>
                 ))}
             </ul>
