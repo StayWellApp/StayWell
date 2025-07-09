@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { db } from '../firebase-config';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore'; // Added deleteField
+import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, DollarSign, Clock, Languages } from 'lucide-react';
 import { PERMISSION_CATEGORIES, INITIAL_PERMISSIONS_STATE, STANDARD_ROLES } from '../config/permissions';
@@ -109,16 +109,60 @@ const SettingsView = ({ user }) => {
     };
 
     // Options for dropdowns
-    const currencyOptions = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'];
+    const currencyOptions = [
+        { value: 'USD', label: 'USD ($)' },
+        { value: 'EUR', label: 'EUR (€)' },
+        { value: 'GBP', label: 'GBP (£)' },
+        { value: 'JPY', label: 'JPY (¥)' },
+        { value: 'CAD', label: 'CAD ($)' },
+        { value: 'AUD', label: 'AUD ($)' },
+        { value: 'CHF', label: 'CHF (CHF)' }, // Swiss Franc
+        { value: 'CNY', label: 'CNY (¥)' }, // Chinese Yuan
+        { value: 'SEK', label: 'SEK (kr)' }, // Swedish Krona
+        { value: 'NZD', label: 'NZD ($)' }, // New Zealand Dollar
+        { value: 'SGD', label: 'SGD ($)' }, // Singapore Dollar
+    ];
     const timezoneOptions = [
-        'UTC', 'America/New_York', 'America/Los_Angeles', 'Europe/London',
-        'Europe/Berlin', 'Asia/Tokyo', 'Australia/Sydney'
+        { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+        { value: 'America/New_York', label: 'Eastern Time - New York (EST/EDT)' },
+        { value: 'America/Chicago', label: 'Central Time - Chicago (CST/CDT)' },
+        { value: 'America/Denver', label: 'Mountain Time - Denver (MST/MDT)' },
+        { value: 'America/Los_Angeles', label: 'Pacific Time - Los Angeles (PST/PDT)' },
+        { value: 'America/Toronto', label: 'Toronto (EST/EDT)' },
+        { value: 'America/Vancouver', label: 'Vancouver (PST/PDT)' },
+        { value: 'Europe/London', label: 'London (GMT/BST)' },
+        { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+        { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)' },
+        { value: 'Europe/Madrid', label: 'Madrid (CET/CEST)' },
+        { value: 'Europe/Rome', label: 'Rome (CET/CEST)' },
+        { value: 'Europe/Amsterdam', label: 'Amsterdam (CET/CEST)' },
+        { value: 'Europe/Zurich', label: 'Zurich (CET/CEST)' },
+        { value: 'Europe/Stockholm', label: 'Stockholm (CET/CEST)' },
+        { value: 'Europe/Oslo', label: 'Oslo (CET/CEST)' },
+        { value: 'Europe/Helsinki', label: 'Helsinki (EET/EEST)' },
+        { value: 'Europe/Warsaw', label: 'Warsaw (CET/CEST)' },
+        { value: 'Europe/Prague', label: 'Prague (CET/CEST)' },
+        { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+        { value: 'Asia/Shanghai', label: 'Shanghai (CST)' },
+        { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+        { value: 'Asia/Kolkata', label: 'Kolkata (IST)' },
+        { value: 'Australia/Sydney', label: 'Sydney (AEST/AEDT)' },
+        { value: 'Australia/Melbourne', label: 'Melbourne (AEST/AEDT)' },
+        { value: 'Australia/Perth', label: 'Perth (AWST)' },
+        { value: 'Africa/Cairo', label: 'Cairo (EET/EEST)' },
+        { value: 'Africa/Johannesburg', label: 'Johannesburg (SAST)' },
+        { value: 'America/Sao_Paulo', label: 'São Paulo (BRT/BRST)' },
+        { value: 'America/Mexico_City', label: 'Mexico City (CST/CDT)' },
     ];
     const languageOptions = [
-        { value: 'en', label: 'English' },
-        { value: 'es', label: 'Spanish' },
-        { value: 'fr', label: 'French' },
-        { value: 'de', label: 'German' },
+        { value: 'en', label: '🇺🇸 English' },
+        { value: 'es', label: '🇪🇸 Spanish' },
+        { value: 'fr', label: '🇫🇷 French' },
+        { value: 'de', label: '🇩🇪 German' },
+        { value: 'it', label: '🇮🇹 Italian' },
+        { value: 'pt', label: '🇵🇹 Portuguese' },
+        { value: 'zh', label: '🇨🇳 Chinese' },
+        { value: 'ja', label: '🇯🇵 Japanese' },
     ];
     
     return (
@@ -195,7 +239,7 @@ const SettingsView = ({ user }) => {
                                         className="mt-1 input-style"
                                     >
                                         {currencyOptions.map(opt => (
-                                            <option key={opt} value={opt}>{opt}</option>
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -208,7 +252,7 @@ const SettingsView = ({ user }) => {
                                         className="mt-1 input-style"
                                     >
                                         {timezoneOptions.map(opt => (
-                                            <option key={opt} value={opt}>{opt}</option>
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                     </select>
                                 </div>
