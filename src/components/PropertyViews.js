@@ -1,9 +1,9 @@
-// --- src/components/PropertyViews.js ---
-// Replace the entire contents of your file with this code.
+// --- src/components/PropertyViews.js (Part 1 of 2) ---
+// Combine this with Part 2 to create the full file.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { TaskDetailModal, AddTaskForm } from './TaskViews';
 import { ChecklistTemplateForm } from './ChecklistViews';
 import { InventoryView } from './InventoryViews';
@@ -231,6 +231,8 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         </div>
     );
 };
+// --- src/components/PropertyViews.js (Part 2 of 2) ---
+// Append this code to the end of Part 1.
 
 const TasksView = ({ property, user }) => {
     const [tasks, setTasks] = useState([]);
