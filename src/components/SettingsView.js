@@ -230,18 +230,19 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
         e.preventDefault();
         onSave({ roleName, permissions });
     };
-
+    
     return (
-        <div className="fixed inset-0 w-screen h-screen bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in"> {/* Added w-screen h-screen */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col px-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50"> {/* Removed flex items-center justify-center and animate-fade-in */}
+            {/* Inner modal box: Now centered using absolute top/left/translate */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 {/* Header */}
                 <div className="p-6 border-b dark:border-gray-700 flex-shrink-0">
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{existingRole ? 'Edit Role' : 'Create New Role'}</h3>
                 </div>
 
-                {/* Form Body - Now properly flexible */}
-                <form onSubmit={handleSubmit} className="flex flex-col flex-grow">
-                    {/* Scrollable Content - Added flex-grow */}
+                {/* Form Body */}
+                <form onSubmit={handleSubmit} className="flex-grow flex flex-col overflow-hidden">
+                    {/* Scrollable Content */}
                     <div className="p-6 space-y-6 overflow-y-auto flex-grow">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role Name</label>
