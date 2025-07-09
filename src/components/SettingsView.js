@@ -1,9 +1,8 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { db } from '../firebase-config';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore'; // Added deleteField
+import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore';
 import { ThemeContext } from '../contexts/ThemeContext';
-// Added new icons for localization
 import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, DollarSign, Clock, Languages } from 'lucide-react';
 import { PERMISSION_CATEGORIES, INITIAL_PERMISSIONS_STATE, STANDARD_ROLES } from '../config/permissions';
 
@@ -55,8 +54,6 @@ const SettingsView = ({ user }) => {
                 setCurrency(settingsData.currency || 'USD'); // Fetch currency, default to USD
                 setTimezone(settingsData.timezone || 'UTC'); // Fetch timezone, default to UTC
                 setLanguage(settingsData.language || 'en'); // Fetch language, default to en
-                // Also fetch standardRolePermissions if it's not already handled here
-                // Note: standardRolePermissions are already handled in RolesPanel's useEffect
             } else {
                 // Set default values if no settings doc exists
                 setCurrency('USD');
@@ -334,11 +331,16 @@ const RolesPanel = ({ user }) => {
     const handleSaveRole = async (roleData) => {
         // Normalize roleName to an empty string if it's undefined or null
         const normalizedRoleName = roleData.roleName || '';
-        // Determine if it's a new custom role (no id, and not explicitly a standard role)
-        const isNewCustomRole = !roleData.id && roleData.type !== 'standard';
+        // Determine if it's a new custom role (no id, and explicitly type === 'custom' due to RoleFormModal changes)
+        const isNewCustomRole = !roleData.id && roleData.type === 'custom';
+
+        console.log("handleSaveRole - Received roleData:", roleData); // DIAGNOSTIC LOG
+        console.log("handleSaveRole - Normalized Role Name:", normalizedRoleName, "trimmed:", normalizedRoleName.trim()); // DIAGNOSTIC LOG
+        console.log("handleSaveRole - isNewCustomRole:", isNewCustomRole); // DIAGNOSTIC LOG
 
         // Check if role name is empty for custom roles (new or existing)
         if ((roleData.type === 'custom' || isNewCustomRole) && !normalizedRoleName.trim()) {
+            console.log("handleSaveRole - Validation failed: role name is empty or only whitespace."); // DIAGNOSTIC LOG
             alert('Role name cannot be empty for custom roles.');
             return;
         }
@@ -445,7 +447,10 @@ const RolesPanel = ({ user }) => {
 // --- CORRECTED: Role Creation/Edit Modal Component ---
 const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
     // For existing standard roles, roleName is fixed. For new/custom, it's editable.
-    const [roleName, setRoleName] = useState(existingRole?.type === 'custom' ? existingRole.roleName : (existingRole?.label || ''));
+    // Simplified initialization to ensure roleName is always a string
+    const [roleName, setRoleName] = useState(
+        existingRole ? (existingRole.type === 'custom' ? existingRole.roleName : existingRole.label) : ''
+    );
     const [permissions, setPermissions] = useState(existingRole?.permissions || INITIAL_PERMISSIONS_STATE); // Use INITIAL_PERMISSIONS_STATE as default
 
     useEffect(() => {
@@ -467,11 +472,18 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSave({
-            ...existingRole, // Pass existing role details (like id, type)
-            roleName: existingRole?.type === 'custom' ? roleName : existingRole?.label, // Use label for standard roles
+        const rolePayload = {
+            ...existingRole, // Preserve existing role properties like id
+            roleName: existingRole?.type === 'custom' ? roleName : existingRole?.label, // Use appropriate role name/label
             permissions: permissions
-        });
+        };
+
+        // Explicitly set type to 'custom' if it's a new role being created
+        if (!existingRole) {
+            rolePayload.type = 'custom';
+        }
+        console.log("RoleFormModal - Submitting rolePayload:", rolePayload); // DIAGNOSTIC LOG
+        onSave(rolePayload);
     };
     
     return (
