@@ -18,12 +18,12 @@ import SettingsView from './components/SettingsView';
 const AuthScreen = () => {
     const [showLogin, setShowLogin] = useState(true);
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center">
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col justify-center items-center">
             <div className="w-full max-w-md p-4">
                 {showLogin ? <Login /> : <SignUp />}
                 <button
                     onClick={() => setShowLogin(!showLogin)}
-                    className="mt-4 text-center w-full text-sm text-blue-600 hover:underline"
+                    className="mt-4 text-center w-full text-sm text-blue-600 dark:text-blue-400 hover:underline"
                 >
                     {showLogin ? "Need an account? Sign Up" : "Already have an account? Login"}
                 </button>
@@ -37,10 +37,8 @@ function App() {
     const [userRole, setUserRole] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeView, setActiveView] = useState('dashboard');
-
     const [properties, setProperties] = useState([]);
     const [selectedProperty, setSelectedProperty] = useState(null);
-
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -86,8 +84,14 @@ function App() {
         }
     };
 
+    // ✨ NEW: Function to handle navigation from the sidebar
+    const handleNavClick = (viewId) => {
+        setSelectedProperty(null); // This is the key fix for the navigation bug
+        setActiveView(viewId);
+    };
+
     if (loading) {
-        return <div className="flex justify-center items-center h-screen font-semibold text-gray-500">Loading Application...</div>;
+        return <div className="flex justify-center items-center h-screen font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-900">Loading Application...</div>;
     }
 
     const renderView = () => {
@@ -128,7 +132,7 @@ function App() {
                     user={user} 
                     userRole={userRole}
                     activeView={activeView} 
-                    setActiveView={setActiveView} 
+                    setActiveView={handleNavClick} // Use the new handler
                     onLogout={handleLogout}
                 >
                     {renderView()}
