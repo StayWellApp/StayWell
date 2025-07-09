@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
-import { Building, AlertTriangle, Package, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'; // <-- FIX: Added missing imports
+import { Building, AlertTriangle, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X } from 'lucide-react'; // <-- FIX: Removed unused 'Package' icon
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TaskDetailModal } from './TaskViews';
 
 const ClientDashboard = ({ user, setActiveView }) => {
