@@ -13,7 +13,7 @@ import PropertiesView from './components/PropertiesView';
 import { PropertyDetailView } from './components/PropertyViews';
 import TeamView from './components/TeamView';
 import MasterCalendarView from './components/MasterCalendarView';
-import SettingsView from './components/SettingsView'; // ✨ NEW: Import SettingsView
+import SettingsView from './components/SettingsView';
 
 const AuthScreen = () => {
     const [showLogin, setShowLogin] = useState(true);
@@ -113,7 +113,6 @@ function App() {
             case 'team':
                 return <TeamView user={user} />;
             case 'settings':
-                // ✨ NEW: Render the SettingsView component
                 return <SettingsView user={user} />;
             default:
                 return <ClientDashboard user={user} />;
@@ -125,7 +124,13 @@ function App() {
             {!user ? (
                 <AuthScreen />
             ) : (
-                <Layout activeView={activeView} setActiveView={setActiveView} onLogout={handleLogout}>
+                <Layout 
+                    user={user} 
+                    userRole={userRole}
+                    activeView={activeView} 
+                    setActiveView={setActiveView} 
+                    onLogout={handleLogout}
+                >
                     {renderView()}
                 </Layout>
             )}
