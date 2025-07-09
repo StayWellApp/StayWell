@@ -239,10 +239,10 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{existingRole ? 'Edit Role' : 'Create New Role'}</h3>
                 </div>
 
-                {/* Form Body */}
-                <form onSubmit={handleSubmit} className="flex-grow flex flex-col overflow-hidden">
+                {/* Form Body - Removed overflow-hidden from form, and made the content div flex-grow */}
+                <form onSubmit={handleSubmit} className="flex-grow flex flex-col"> {/* Removed overflow-hidden */}
                     {/* Scrollable Content */}
-                    <div className="p-6 space-y-6 overflow-y-auto">
+                    <div className="p-6 space-y-6 overflow-y-auto flex-grow"> {/* Added flex-grow here */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role Name</label>
                             <input type="text" value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="e.g., Property Manager" className="mt-1 input-style" required />
