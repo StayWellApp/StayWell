@@ -36,25 +36,25 @@ const preGeneratedTemplates = [
     }
 ];
 
+
+// --- Main Component for Viewing Checklist Templates ---
 export const ChecklistsView = ({ user }) => {
     const [templates, setTemplates] = useState([]);
     const [properties, setProperties] = useState([]);
     const [showForm, setShowForm] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState(null);
-    const [expandedTemplate, setExpandedTemplate] = useState(null);
+    const [expandedState, setExpandedState] = useState({}); // Manages expanded templates and items
     const [loading, setLoading] = useState(true);
-    const [expandedItem, setExpandedItem] = useState(null);
 
+    // --- Data Fetching Effect ---
     useEffect(() => {
         if (!user) return;
-        // Listener for templates
         const qTemplates = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
         const unsubTemplates = onSnapshot(qTemplates, (snapshot) => {
             setTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setLoading(false);
         });
 
-        // Listener for properties (to pass to the form)
         const qProperties = query(collection(db, "properties"), where("ownerId", "==", user.uid));
         const unsubProperties = onSnapshot(qProperties, (snapshot) => {
             setProperties(snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().propertyName })));
@@ -66,6 +66,28 @@ export const ChecklistsView = ({ user }) => {
         };
     }, [user]);
 
+    // --- State Toggle Functions ---
+    const toggleTemplate = (templateId) => {
+        setExpandedState(prev => ({
+            ...prev,
+            [templateId]: {
+                ...prev[templateId],
+                isExpanded: !prev[templateId]?.isExpanded,
+            }
+        }));
+    };
+
+    const toggleItem = (templateId, itemIndex) => {
+        setExpandedState(prev => ({
+            ...prev,
+            [templateId]: {
+                ...prev[templateId],
+                [itemIndex]: !prev[templateId]?.[itemIndex]
+            }
+        }));
+    };
+
+    // --- CRUD Operations ---
     const handleSave = async (templateData) => {
         try {
             if (editingTemplate) {
@@ -79,7 +101,7 @@ export const ChecklistsView = ({ user }) => {
     };
 
     const handleDelete = async (templateId) => {
-        if (window.confirm("Are you sure?")) {
+        if (window.confirm("Are you sure you want to delete this template?")) {
             await deleteDoc(doc(db, "checklistTemplates", templateId));
         }
     };
@@ -94,16 +116,39 @@ export const ChecklistsView = ({ user }) => {
         await batch.commit();
         alert("Sample templates added!");
     };
-
-    const toggleExpand = (templateId) => {
-        setExpandedTemplate(expandedTemplate === templateId ? null : templateId);
-        setExpandedItem(null);
-    };
     
-    const toggleItemExpand = (index) => {
-        setExpandedItem(expandedItem === index ? null : index);
+    // --- Render Helper for Checklist Items ---
+    const renderChecklistItem = (item, templateId, index) => {
+        // This handles both old (string) and new (object) item formats
+        const itemObject = typeof item === 'string' ? { text: item, instructions: '', imageUrl: '' } : item;
+        const isExpanded = !!expandedState[templateId]?.[index];
+        const hasDetails = itemObject.instructions || itemObject.imageUrl;
+
+        return (
+            <li key={index} className="text-sm text-gray-800 dark:text-gray-200">
+                <div className="flex items-center justify-between">
+                    <span>{itemObject.text}</span>
+                    {hasDetails && (
+                        <button onClick={() => toggleItem(templateId, index)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                            <ChevronDown size={20} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                    )}
+                </div>
+                {isExpanded && hasDetails && (
+                    <div className="mt-2 pl-4 pr-2 py-2 bg-white dark:bg-gray-800 rounded-md animate-fade-in-down">
+                        {itemObject.instructions && <p className="text-sm text-gray-600 dark:text-gray-300 flex items-start"><Info size={14} className="mr-2 mt-0.5 flex-shrink-0"/>{itemObject.instructions}</p>}
+                        {itemObject.imageUrl && (
+                            <div className="mt-2">
+                                <img src={itemObject.imageUrl} alt="Instructional" className="rounded-lg max-w-xs max-h-48 border dark:border-gray-600" />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </li>
+        );
     };
 
+    // --- Main JSX ---
     return (
         <div className="p-4 sm:p-6 md:p-8">
             <div className="flex justify-between items-center mb-6">
@@ -116,62 +161,43 @@ export const ChecklistsView = ({ user }) => {
             {showForm && <ChecklistTemplateForm onSave={handleSave} onCancel={() => { setShowForm(false); setEditingTemplate(null); }} existingTemplate={editingTemplate} properties={properties} />}
 
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                {loading ? <p className="text-center py-8 text-gray-500 dark:text-gray-400">Loading...</p> : templates.length > 0 ? (
+                {loading ? <p className="text-center py-8 text-gray-500 dark:text-gray-400">Loading templates...</p> : templates.length > 0 ? (
                     <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {templates.map(template => (
-                            <li key={template.id} className="py-3">
-                                <div className="p-2 flex justify-between items-center">
-                                    <div className="flex-grow cursor-pointer" onClick={() => toggleExpand(template.id)}>
-                                        <div className="flex items-center">
-                                            <ChevronDown size={20} className={`mr-2 text-gray-400 transition-transform ${expandedTemplate === template.id ? 'rotate-180' : ''}`} />
-                                            <span className="font-semibold text-gray-800 dark:text-gray-100">{template.name}</span>
+                        {templates.map(template => {
+                            const isTemplateExpanded = !!expandedState[template.id]?.isExpanded;
+                            return (
+                                <li key={template.id} className="py-3">
+                                    <div className="p-2 flex justify-between items-center">
+                                        <div className="flex-grow cursor-pointer" onClick={() => toggleTemplate(template.id)}>
+                                            <div className="flex items-center">
+                                                <ChevronDown size={20} className={`mr-2 text-gray-400 transition-transform ${isTemplateExpanded ? 'rotate-180' : ''}`} />
+                                                <span className="font-semibold text-gray-800 dark:text-gray-100">{template.name}</span>
+                                            </div>
+                                            <div className="flex items-center space-x-4 ml-8 mt-1 text-xs">
+                                                <span className="flex items-center text-gray-500 dark:text-gray-400"><Tag size={12} className="mr-1.5" />{template.taskType || 'Any Task'}</span>
+                                                <span className="flex items-center text-gray-500 dark:text-gray-400"><Building size={12} className="mr-1.5" />{template.linkedProperties?.length > 0 ? `${template.linkedProperties.length} Properties` : 'All Properties'}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center space-x-4 ml-8 mt-1 text-xs">
-                                            <span className="flex items-center text-gray-500 dark:text-gray-400"><Tag size={12} className="mr-1.5" />{template.taskType || 'Any Task'}</span>
-                                            <span className="flex items-center text-gray-500 dark:text-gray-400"><Building size={12} className="mr-1.5" />{template.linkedProperties?.length > 0 ? `${template.linkedProperties.length} Properties` : 'All Properties'}</span>
+                                        <div className="space-x-4 flex-shrink-0">
+                                            <button onClick={() => { setEditingTemplate(template); setShowForm(true); }} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
+                                            <button onClick={() => handleDelete(template.id)} className="font-semibold text-red-600 dark:text-red-400 hover:underline">Delete</button>
                                         </div>
                                     </div>
-                                    <div className="space-x-4 flex-shrink-0">
-                                        <button onClick={() => { setEditingTemplate(template); setShowForm(true); }} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
-                                        <button onClick={() => handleDelete(template.id)} className="font-semibold text-red-600 dark:text-red-400 hover:underline">Delete</button>
-                                    </div>
-                                </div>
-                                {expandedTemplate === template.id && (
-                                    <div className="pl-8 pr-4 py-2 mt-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-fade-in-down">
-                                        <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Checklist Items:</h4>
-                                        
-                                        {template.items && template.items.length > 0 ? (
-                                            <ul className="space-y-2">
-                                                {template.items.map((item, index) => (
-                                                    <li key={index} className="text-sm text-gray-800 dark:text-gray-200">
-                                                        <div className="flex items-center justify-between">
-                                                            <span>{item.text}</span>
-                                                            {(item.instructions || item.imageUrl) && (
-                                                                <button onClick={() => toggleItemExpand(index)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                                                                    <ChevronDown size={20} className={`transition-transform ${expandedItem === index ? 'rotate-180' : ''}`} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        {expandedItem === index && (
-                                                            <div className="mt-2 pl-4 pr-2 py-2 bg-white dark:bg-gray-800 rounded-md animate-fade-in-down">
-                                                                {item.instructions && <p className="text-sm text-gray-600 dark:text-gray-300 flex items-start"><Info size={14} className="mr-2 mt-0.5 flex-shrink-0"/>{item.instructions}</p>}
-                                                                {item.imageUrl && (
-                                                                    <div className="mt-2">
-                                                                        <img src={item.imageUrl} alt="Instructional" className="rounded-lg max-w-xs max-h-48 border dark:border-gray-600" />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 py-2">This template has no checklist items.</p>
-                                        )}
-                                    </div>
-                                )}
-                            </li>
-                        ))}
+                                    {isTemplateExpanded && (
+                                        <div className="pl-8 pr-4 py-2 mt-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-fade-in-down">
+                                            <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Checklist Items:</h4>
+                                            {(template.items && template.items.length > 0) ? (
+                                                <ul className="space-y-2">
+                                                    {template.items.map((item, index) => renderChecklistItem(item, template.id, index))}
+                                                </ul>
+                                            ) : (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 py-2">This template has no checklist items.</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
                     </ul>
                 ) : (
                     <div className="text-center py-8"><p className="text-gray-500 dark:text-gray-400">You don't have any checklist templates yet.</p><button onClick={handleGenerateSamples} className="mt-2 button-secondary flex items-center mx-auto"><ListPlus size={16} className="mr-2"/>Generate Sample Templates</button></div>
@@ -181,6 +207,8 @@ export const ChecklistsView = ({ user }) => {
     );
 };
 
+
+// --- Form Component (No changes needed here, but included for completeness) ---
 export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, properties }) => {
     const [name, setName] = useState('');
     const [taskType, setTaskType] = useState('Cleaning');
