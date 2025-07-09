@@ -1,12 +1,12 @@
 // --- src/components/ChecklistViews.js ---
-// This file handles creating, viewing, and managing detailed checklist templates.
+// This file handles creating, viewing, and managing checklist templates.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Plus, Trash2, ListPlus, Image, Info } from 'lucide-react';
+import { Plus, Trash2, ListPlus, Info, Image } from 'lucide-react';
 
-// --- NEW: Updated data structure for pre-generated templates ---
+// --- Pre-generated templates for easy onboarding ---
 const preGeneratedTemplates = [
     {
         name: "Standard Post-Checkout Clean",
@@ -124,7 +124,20 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate }) =>
     useEffect(() => {
         if (existingTemplate) {
             setName(existingTemplate.name);
-            setItems(existingTemplate.items.length > 0 ? existingTemplate.items : [{ text: '', instructions: '', imageUrl: '' }]);
+            // --- FIX: This block now handles both old (string) and new (object) data structures ---
+            if (existingTemplate.items && existingTemplate.items.length > 0) {
+                const convertedItems = existingTemplate.items.map(item => {
+                    if (typeof item === 'string') {
+                        // If it's an old string item, convert it to the new object format
+                        return { text: item, instructions: '', imageUrl: '' };
+                    }
+                    // If it's already an object, use it as is
+                    return item;
+                });
+                setItems(convertedItems);
+            } else {
+                setItems([{ text: '', instructions: '', imageUrl: '' }]);
+            }
         } else {
             setName('');
             setItems([{ text: '', instructions: '', imageUrl: '' }]);
