@@ -12,6 +12,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Plus, Building, Bed, Bath, Users, Wifi, Tv, Wind, Utensils, Sun, Droplet, CookingPot, Flame, Tent, Bandage, Siren, CheckSquare, Calendar, BarChart2, Archive, Settings } from 'lucide-react';
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
 
 const amenityCategories = {
     essentials: {
@@ -366,13 +368,201 @@ const ChecklistsView = ({ user }) => {
 };
 
 const CalendarView = ({ property, user }) => {
-    // ... (logic is fine, just need to update the wrapper JSX)
+    const [events, setEvents] = useState([]);
+    const [newCalLink, setNewCalLink] = useState("");
+    
+    const [showAddTaskForm, setShowAddTaskForm] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [team, setTeam] = useState([]);
+    const [checklistTemplates, setChecklistTemplates] = useState([]);
+
+    useEffect(() => {
+        if (!user) return;
+        const checklistsQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
+        const checklistsUnsubscribe = onSnapshot(checklistsQuery, (snapshot) => {
+            setChecklistTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
+        const teamQuery = query(collection(db, 'users'), where('ownerId', '==', user.uid));
+        const teamUnsubscribe = onSnapshot(teamQuery, snapshot => {
+            setTeam(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+        });
+
+        return () => {
+            checklistsUnsubscribe();
+            teamUnsubscribe();
+        };
+    }, [user]);
+
+    useEffect(() => {
+        const bookingEvents = [
+            { id: 'booking-001', title: `Guest: John Doe`, start: '2025-07-10T14:00:00', end: '2025-07-15T11:00:00', backgroundColor: '#3b82f6', borderColor: '#2563eb' },
+            { id: 'booking-002', title: `Guest: Jane Smith`, start: '2025-07-22', end: '2025-07-28', backgroundColor: '#3b82f6', borderColor: '#2563eb' },
+        ];
+
+        const tasksQuery = query(collection(db, "tasks"), where("propertyId", "==", property.id));
+        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+            const taskEvents = snapshot.docs.map(doc => {
+                const task = doc.data();
+                return {
+                    id: doc.id,
+                    title: `Task: ${task.taskName}`,
+                    start: task.scheduledDate,
+                    allDay: true,
+                    backgroundColor: '#10b981',
+                    borderColor: '#059669'
+                };
+            }).filter(event => event.start);
+
+            setEvents([...bookingEvents, ...taskEvents]);
+        });
+
+        return () => unsubscribe();
+    }, [property.id]);
+
+    const handleDateClick = (arg) => {
+        setSelectedDate(arg.dateStr);
+        setShowAddTaskForm(true);
+    };
+
+    const handleAddTask = async (taskData) => {
+        try {
+            await addDoc(collection(db, "tasks"), { 
+                ...taskData, 
+                propertyId: property.id, 
+                propertyName: property.propertyName, 
+                propertyAddress: property.address, 
+                ownerId: user.uid, 
+                status: 'Pending', 
+                createdAt: serverTimestamp() 
+            });
+            setShowAddTaskForm(false);
+        } catch (error) { 
+            console.error("Error adding task: ", error); 
+            alert("Failed to add task."); 
+        }
+    };
+
+    const handleAddCalendarLink = async (e) => {
+        e.preventDefault();
+        if (!newCalLink.startsWith("https") || !newCalLink.endsWith(".ics")) {
+            alert("Please enter a valid iCal link (should start with https and end with .ics).");
+            return;
+        }
+        try {
+            const propertyRef = doc(db, "properties", property.id);
+            await updateDoc(propertyRef, { calendarLinks: arrayUnion(newCalLink) });
+            setNewCalLink("");
+        } catch (error) {
+            console.error("Error adding calendar link:", error);
+            alert("Failed to add calendar link.");
+        }
+    };
+
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            {showAddTaskForm && (
+                <div className="mb-6">
+                    <AddTaskForm 
+                        onAddTask={handleAddTask} 
+                        checklistTemplates={checklistTemplates} 
+                        team={team}
+                        preselectedDate={selectedDate}
+                    />
+                     <button onClick={() => setShowAddTaskForm(false)} className="w-full mt-2 text-center text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 p-2">Cancel</button>
+                     <hr className="my-6 border-gray-200 dark:border-gray-700"/>
+                </div>
+            )}
+
+            <div className="flex justify-between items-center mb-4">
+                <div>
+                    <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Unified Calendar</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Click a date to add a task, or use the button.</p>
+                </div>
+                <button 
+                    onClick={() => {
+                        setSelectedDate(null);
+                        setShowAddTaskForm(true);
+                    }}
+                    className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm"
+                >
+                    <Plus size={18} className="mr-2" />
+                    New Task
+                </button>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-lg">
+                <FullCalendar
+                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                    initialView="dayGridMonth"
+                    headerToolbar={{
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    }}
+                    events={events}
+                    editable={false}
+                    dayMaxEvents={true}
+                    weekends={true}
+                    dateClick={handleDateClick}
+                />
+            </div>
+            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h4 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Sync Calendars (iCal)</h4>
+                <form onSubmit={handleAddCalendarLink} className="flex space-x-2">
+                    <input
+                        type="url"
+                        value={newCalLink}
+                        onChange={e => setNewCalLink(e.target.value)}
+                        placeholder="Paste iCal link..."
+                        className="flex-grow px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <button type="submit" className="bg-gray-700 text-white font-semibold px-4 rounded-lg hover:bg-gray-800 transition-colors text-sm">Add</button>
+                </form>
+                <ul className="mt-3 space-y-2">
+                    {property.calendarLinks && property.calendarLinks.map((link, index) => (
+                        <li key={index} className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-2 rounded border dark:border-gray-700 truncate">{link}</li>
+                    ))}
+                </ul>
+            </div>
+        </div>
+    );
 };
 
 const AnalyticsView = ({ property }) => {
-    // ... (logic is fine, just need to update the wrapper JSX)
+    const data = [
+        { name: 'Jan', revenue: 4000 }, { name: 'Feb', revenue: 3000 },
+        { name: 'Mar', revenue: 5000 }, { name: 'Apr', revenue: 4500 },
+        { name: 'May', revenue: 6000 }, { name: 'Jun', revenue: 5500 },
+    ];
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Revenue Analytics</h3>
+            <ResponsiveContainer width="100%" height={300}>
+                <RechartsBarChart data={data}>
+                    <XAxis dataKey="name" stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
+                    <YAxis stroke="#9ca3af" tick={{ fill: '#9ca3af' }}/>
+                    <Tooltip 
+                        cursor={{fill: 'rgba(156, 163, 175, 0.1)'}}
+                        contentStyle={{ 
+                            backgroundColor: 'rgba(31, 41, 55, 0.8)',
+                            backdropFilter: 'blur(4px)',
+                            border: '1px solid #4b5563',
+                            borderRadius: '0.75rem'
+                        }}
+                        labelStyle={{ color: '#d1d5db' }}
+                    />
+                    <Legend wrapperStyle={{ color: '#9ca3af' }} />
+                    <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </RechartsBarChart>
+            </ResponsiveContainer>
+        </div>
+    );
 };
 
-const SettingsView = ({ property }) => {
-    // ... (logic is fine, just need to update the wrapper JSX)
-};
+const SettingsView = ({ property }) => (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Property Settings</h3>
+        <p className="text-gray-600 dark:text-gray-400">Manage settings specific to {property.propertyName}.</p>
+    </div>
+);
