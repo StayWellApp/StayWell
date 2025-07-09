@@ -209,8 +209,7 @@ const InventorySection = ({ title, collectionName, property, user, fields, place
             {showLinenModal && <LinenStatusModal item={showLinenModal} property={property} onClose={() => setShowLinenModal(null)} />}
         </div>
     );
-};
-// --- src/components/InventoryViews.js (Part 2 of 2) ---
+};// --- src/components/InventoryViews.js (Part 2 of 2) ---
 // Append this code to the end of Part 1.
 
 const InventoryItemForm = ({ onSave, onCancel, fields, placeholders, existingItem, title }) => {
