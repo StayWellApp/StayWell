@@ -1,3 +1,44 @@
+/* --- src/index.css --- */
+/* Replace the entire contents of this file. */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Add custom styles for FullCalendar dark mode */
+.dark .fc {
+    /* Day-of-week headers (Mon, Tue, etc.) */
+    --fc-col-header-cell-bg-color: theme('colors.gray.800');
+    
+    /* Main calendar background */
+    --fc-daygrid-day-bg-color: theme('colors.gray.800');
+    --fc-timegrid-slot-lane-bg-color: theme('colors.gray.800');
+
+    /* Border colors */
+    --fc-border-color: theme('colors.gray.700');
+}
+
+.dark .fc-daygrid-day-number,
+.dark .fc-col-header-cell-cushion {
+    color: theme('colors.gray.300');
+}
+
+.dark .fc .fc-daygrid-day.fc-day-today {
+    background-color: rgba(37, 99, 235, 0.15); /* A semi-transparent blue */
+}
+
+.dark .fc .fc-button {
+    background-color: theme('colors.gray.700');
+    color: theme('colors.gray.200');
+    border-color: theme('colors.gray.600');
+}
+
+.dark .fc .fc-button-primary:not(:disabled).fc-button-active,
+.dark .fc .fc-button-primary:not(:disabled):active {
+    background-color: theme('colors.blue.600');
+    border-color: theme('colors.blue.600');
+}
+
+.dark .fc-toolbar-title {
+    color: theme('colors.gray.100');
+}

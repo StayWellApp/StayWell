@@ -1,5 +1,5 @@
 // --- src/components/MasterCalendarView.js ---
-// Create this new file.
+// Replace the entire contents of this file.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
@@ -16,7 +16,6 @@ const MasterCalendarView = ({ user }) => {
     useEffect(() => {
         if (!user) return;
 
-        // Query for all tasks owned by the user, across all properties
         const tasksQuery = query(collection(db, "tasks"), where("ownerId", "==", user.uid));
         
         const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
@@ -24,11 +23,10 @@ const MasterCalendarView = ({ user }) => {
                 const task = doc.data();
                 return {
                     id: doc.id,
-                    // Add property name to the title for clarity
                     title: `[${task.propertyName}] ${task.taskName}`,
                     start: task.scheduledDate,
                     allDay: true,
-                    backgroundColor: '#10b981', // Green for tasks
+                    backgroundColor: '#10b981',
                     borderColor: '#059669',
                     extendedProps: {
                         propertyId: task.propertyId,
@@ -38,8 +36,6 @@ const MasterCalendarView = ({ user }) => {
                 };
             }).filter(event => event.start);
 
-            // Here you would also fetch and combine booking events from all properties
-            // For now, we'll just use the tasks.
             setEvents(taskEvents);
             setLoading(false);
         });
@@ -48,20 +44,19 @@ const MasterCalendarView = ({ user }) => {
     }, [user]);
 
     const handleEventClick = (clickInfo) => {
-        // In the future, this could open the task or booking detail modal
         alert(`Event: ${clickInfo.event.title}\nProperty: ${clickInfo.event.extendedProps.propertyName}`);
     };
 
     return (
-        <div className="p-8 bg-gray-50 min-h-full">
+        <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-full">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Master Calendar</h1>
-                <p className="text-gray-600 mt-1">A unified view of all tasks and bookings across your properties.</p>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Master Calendar</h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">A unified view of all tasks and bookings across your properties.</p>
             </div>
 
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                 {loading ? (
-                    <div className="text-center py-20 text-gray-500">Loading calendar events...</div>
+                    <div className="text-center py-20 text-gray-500 dark:text-gray-400">Loading calendar events...</div>
                 ) : (
                     <FullCalendar
                         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
