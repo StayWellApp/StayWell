@@ -10,7 +10,8 @@ import { InventoryView } from './InventoryViews';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction'; // ✨ NEW: Import for click handling
+import interactionPlugin from '@fullcalendar/interaction';
+import { Plus } from 'lucide-react'; // ✨ NEW: Import Plus icon
 
 // --- (No changes to this section) ---
 const amenityCategories = {
@@ -336,18 +337,16 @@ const ChecklistsView = ({ user }) => {
     );
 };
 
-// --- ✨ UPDATED CalendarView with Click-to-Create ---
+// --- ✨ UPDATED CalendarView with "+ New Task" Button ---
 const CalendarView = ({ property, user }) => {
     const [events, setEvents] = useState([]);
     const [newCalLink, setNewCalLink] = useState("");
     
-    // State for the "Add Task" form
     const [showAddTaskForm, setShowAddTaskForm] = useState(false);
     const [selectedDate, setSelectedDate] = useState(null);
     const [team, setTeam] = useState([]);
     const [checklistTemplates, setChecklistTemplates] = useState([]);
 
-    // Fetch data needed for the AddTaskForm
     useEffect(() => {
         if (!user) return;
         const checklistsQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
@@ -366,7 +365,6 @@ const CalendarView = ({ property, user }) => {
         };
     }, [user]);
 
-    // Fetch and combine calendar events (bookings + tasks)
     useEffect(() => {
         const bookingEvents = [
             { id: 'booking-001', title: `Guest: John Doe`, start: '2025-07-10T14:00:00', end: '2025-07-15T11:00:00', backgroundColor: '#3b82f6', borderColor: '#2563eb' },
@@ -393,13 +391,11 @@ const CalendarView = ({ property, user }) => {
         return () => unsubscribe();
     }, [property.id]);
 
-    // ✨ NEW: Handler for clicking a date on the calendar
     const handleDateClick = (arg) => {
-        setSelectedDate(arg.dateStr); // e.g., "2025-07-10"
+        setSelectedDate(arg.dateStr);
         setShowAddTaskForm(true);
     };
 
-    // Handler for adding the task (moved from TasksView)
     const handleAddTask = async (taskData) => {
         try {
             await addDoc(collection(db, "tasks"), { 
@@ -411,7 +407,7 @@ const CalendarView = ({ property, user }) => {
                 status: 'Pending', 
                 createdAt: serverTimestamp() 
             });
-            setShowAddTaskForm(false); // Close form on success
+            setShowAddTaskForm(false);
         } catch (error) { 
             console.error("Error adding task: ", error); 
             alert("Failed to add task."); 
@@ -442,18 +438,34 @@ const CalendarView = ({ property, user }) => {
                         onAddTask={handleAddTask} 
                         checklistTemplates={checklistTemplates} 
                         team={team}
-                        preselectedDate={selectedDate} // Pass the clicked date to the form
+                        preselectedDate={selectedDate}
                     />
                      <button onClick={() => setShowAddTaskForm(false)} className="w-full mt-2 text-center text-gray-600 hover:text-gray-800 p-2">Cancel</button>
                      <hr className="my-6"/>
                 </div>
             )}
 
-            <h3 className="text-2xl font-semibold text-gray-700 mb-4">Unified Calendar</h3>
-            <p className="text-sm text-gray-500 mb-4 -mt-3">Click on any date to quickly add a new task.</p>
+            <div className="flex justify-between items-center mb-4">
+                <div>
+                    <h3 className="text-2xl font-semibold text-gray-700">Unified Calendar</h3>
+                    <p className="text-sm text-gray-500">Click a date to add a task, or use the button.</p>
+                </div>
+                {/* ✨ NEW: "+ New Task" Button */}
+                <button 
+                    onClick={() => {
+                        setSelectedDate(null); // Ensure no date is pre-selected
+                        setShowAddTaskForm(true);
+                    }}
+                    className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-600 transition-colors shadow-sm"
+                >
+                    <Plus size={18} className="mr-2" />
+                    New Task
+                </button>
+            </div>
+            
             <div className="bg-white p-4 rounded-lg border shadow-sm">
                 <FullCalendar
-                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} // Add interaction plugin
+                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                     initialView="dayGridMonth"
                     headerToolbar={{
                         left: 'prev,next today',
@@ -464,7 +476,7 @@ const CalendarView = ({ property, user }) => {
                     editable={false}
                     dayMaxEvents={true}
                     weekends={true}
-                    dateClick={handleDateClick} // ✨ NEW: Attach the click handler
+                    dateClick={handleDateClick}
                 />
             </div>
             <div className="mt-6 pt-6 border-t">
