@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { db } from '../firebase-config';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore'; // Added deleteField
 import { ThemeContext } from '../contexts/ThemeContext';
 import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, DollarSign, Clock, Languages } from 'lucide-react';
 import { PERMISSION_CATEGORIES, INITIAL_PERMISSIONS_STATE, STANDARD_ROLES } from '../config/permissions';
@@ -299,13 +299,14 @@ const RolesPanel = ({ user }) => {
             };
         });
 
-        // Add custom roles, potentially overriding standard roles if IDs conflict (unlikely)
+        // Add custom roles, explicitly setting isDeletable: true
         customRoles.forEach(customRole => {
             combinedRoles[customRole.id] = {
                 ...customRole,
                 id: customRole.id, // Ensure ID is present if not destructured
                 label: customRole.roleName, // Custom roles use roleName as label
                 type: 'custom', // Mark as custom role
+                isDeletable: true, // Explicitly set to true for custom roles
             };
         });
 
@@ -474,7 +475,7 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
         e.preventDefault();
         const rolePayload = {
             ...existingRole, // Preserve existing role properties like id
-            roleName: existingRole?.type === 'custom' ? roleName : existingRole?.label, // Use appropriate role name/label
+            roleName: String(roleName), // Ensure roleName is always a string before passing
             permissions: permissions
         };
 
