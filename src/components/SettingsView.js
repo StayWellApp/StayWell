@@ -87,7 +87,7 @@ const SettingsView = ({ user }) => {
                         <SettingsTab id="roles" label="Roles & Permissions" icon={Shield} activeTab={activeTab} setActiveTab={setActiveTab} />
                         <SettingsTab id="appearance" label="Appearance" icon={Palette} activeTab={activeTab} setActiveTab={setActiveTab} />
                         <SettingsTab id="notifications" label="Notifications" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
-                        <SettingsTab id="account" label="Account" icon={AlertCircle} activeTab={activeTab} setActiveTab={activeTab} />
+                        <SettingsTab id="account" label="Account" icon={AlertCircle} activeTab={activeTab} setActiveTab={setActiveTab} />
                     </nav>
                 </aside>
 
@@ -154,7 +154,7 @@ const SettingsView = ({ user }) => {
 // --- Roles & Permissions Panel Component ---
 const RolesPanel = ({ user }) => {
     const [roles, setRoles] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRole, setEditingRole] = useState(null);
 
@@ -232,8 +232,8 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in"> {/* Removed p-4 from here */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col px-4"> {/* Added px-4 here */}
                 {/* Header */}
                 <div className="p-6 border-b dark:border-gray-700 flex-shrink-0">
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{existingRole ? 'Edit Role' : 'Create New Role'}</h3>
