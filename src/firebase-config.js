@@ -16,7 +16,7 @@ const firebaseConfig = {
 };
 
 
-// --- CORRECTED INITIALIZATION ORDER ---
+// --- CORRECT INITIALIZATION ORDER ---
 
 // Step 1: Initialize the main Firebase app
 const app = initializeApp(firebaseConfig);
@@ -27,5 +27,5 @@ const auth = getAuth(app);
 const storage = getStorage(app);
 const functions = getFunctions(app);
 
-// Step 3: Export the initialized services
+// Step 3: Export the initialized services so other files can use them
 export { db, auth, storage, functions };
