@@ -1,5 +1,4 @@
 // --- src/components/PropertiesView.js ---
-// Replace the entire contents of this file.
 
 import React, { useState } from 'react';
 import { PropertyCard, PropertyForm } from './PropertyViews';
@@ -14,17 +13,14 @@ const PropertiesView = ({ properties, onAddProperty, onSelectProperty }) => {
     };
 
     return (
-        <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-full">
+        <div className="p-4 sm:p-6 md:p-8">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Your Properties</h1>
                     <p className="text-gray-600 dark:text-gray-400 mt-1">View, manage, and add your properties below.</p>
                 </div>
-                <button
-                    onClick={() => setShowAddForm(true)}
-                    className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm"
-                >
-                    <Plus size={18} className="mr-2" />
+                <button onClick={() => setShowAddForm(true)} className="button-primary">
+                    <Plus size={18} className="-ml-1 mr-2" />
                     Add Property
                 </button>
             </div>

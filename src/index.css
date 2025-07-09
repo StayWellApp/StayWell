@@ -1,11 +1,41 @@
 /* --- src/index.css --- */
-/* Replace the entire contents of this file. */
+/* This is the complete, updated file. */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Add custom styles for FullCalendar dark mode */
+@layer components {
+  /* --- NEW: Standardized Button Styles --- */
+
+  /* Base styles for all buttons */
+  .button-base {
+    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-semibold rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Primary action button (e.g., Save, Submit, Add) */
+  .button-primary {
+    @apply button-base text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500;
+  }
+
+  /* Secondary action button (e.g., Cancel, Close) */
+  .button-secondary {
+    @apply button-base text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 focus:ring-blue-500;
+  }
+
+  /* Danger action button (e.g., Delete) */
+  .button-danger {
+    @apply button-base text-white bg-red-600 hover:bg-red-700 focus:ring-red-500;
+  }
+
+  /* --- NEW: Standardized Input Field Styles --- */
+  .input-style {
+      @apply block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500;
+  }
+}
+
+
+/* --- FullCalendar Dark Mode Styles --- */
 .dark .fc {
     /* Day-of-week headers (Mon, Tue, etc.) */
     --fc-col-header-cell-bg-color: theme('colors.gray.800');

@@ -1,5 +1,5 @@
-// --- src/components/PropertyViews.js (Part 1 of 2) ---
-// Combine this with Part 2 to create the full file.
+// --- src/components/PropertyViews.js ---
+// This is the complete, updated file.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
@@ -11,7 +11,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { Plus, Building, Bed, Bath, Users, Wifi, Tv, Wind, Utensils, Sun, Droplet, CookingPot, Flame, Tent, Bandage, Siren, CheckSquare, Calendar, BarChart2, Archive, Settings, Home } from 'lucide-react';
+import { Plus, Building, Bed, Bath, Users, Wifi, Tv, Wind, Utensils, Sun, Droplet, CookingPot, Flame, Tent, Bandage, Siren, CheckSquare, Calendar, BarChart2, Archive, Settings, Home, ListChecks } from 'lucide-react';
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const amenityCategories = {
@@ -146,10 +146,8 @@ const AmenitiesForm = ({ amenities, setAmenities }) => {
     );
 };
 
-// REPLACE your existing PropertyDetailView function with this entire block
-
 export const PropertyDetailView = ({ property, onBack, user }) => {
-    const [activeTab, setActiveTab] = useState('overview'); // Changed default to 'overview'
+    const [activeTab, setActiveTab] = useState('overview');
     const [isEditing, setIsEditing] = useState(false);
     const [liveProperty, setLiveProperty] = useState(property);
 
@@ -178,7 +176,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         </button>
     );
     
-    // This is the new Overview component, right inside the main view
     const Overview = () => (
          <div className="bg-white dark:bg-gray-800 p-8 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex justify-between items-start">
@@ -206,15 +203,15 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     );
 
     return (
-        <div className="p-4 sm:p-6 md:p-8"> {/* Changed padding and removed background color for consistency */}
+        <div className="p-4 sm:p-6 md:p-8">
             <div className="max-w-7xl mx-auto">
                 <button onClick={onBack} className="mb-6 text-blue-600 dark:text-blue-400 font-semibold hover:underline">← Back to Properties</button>
                 
-                {isEditing && ( // Changed this: if editing, show ONLY the form
+                {isEditing && (
                      <PropertyForm existingProperty={liveProperty} onSave={handleUpdateProperty} onCancel={() => setIsEditing(false)} />
                 )}
 
-                {!isEditing && ( // If NOT editing, show the tabs and content
+                {!isEditing && (
                     <>
                         <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
                             <div className="flex space-x-2 sm:space-x-4 overflow-x-auto">
@@ -242,13 +239,72 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         </div>
     );
 };
-// --- src/components/PropertyViews.js (Part 2 of 2) ---
-// Append this code to the end of Part 1.
+
+// --- NEW COMPONENT: Modal for adding a task from a template ---
+const TemplateTaskModal = ({ templates, onClose, onAddTask }) => {
+    const [selectedTemplateId, setSelectedTemplateId] = useState('');
+
+    const handleCreateTaskFromTemplate = () => {
+        if (!selectedTemplateId) {
+            alert('Please select a template.');
+            return;
+        }
+        const template = templates.find(t => t.id === selectedTemplateId);
+        if (!template) {
+            alert('Selected template not found.');
+            return;
+        }
+
+        const taskData = {
+            taskName: template.name,
+            taskType: template.taskType || 'Cleaning',
+            description: `Task created from template: ${template.name}`,
+            priority: 'Medium',
+            scheduledDate: '',
+            assignedTo: '',
+            assignedToEmail: '',
+            templateId: template.id,
+            templateName: template.name,
+            checklistItems: template.items ? template.items.map(item => ({...item, completed: false})) : [],
+        };
+        
+        onAddTask(taskData);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700">
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Task from Template</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Select a Template</label>
+                        <select
+                            value={selectedTemplateId}
+                            onChange={e => setSelectedTemplateId(e.target.value)}
+                            className="mt-1 w-full input-style"
+                        >
+                            <option value="">-- Choose a template --</option>
+                            {templates.map(template => (
+                                <option key={template.id} value={template.id}>{template.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                <div className="flex justify-end space-x-2 pt-6 mt-4 border-t dark:border-gray-700">
+                    <button type="button" onClick={onClose} className="button-secondary">Cancel</button>
+                    <button type="button" onClick={handleCreateTaskFromTemplate} className="button-primary">Create Task</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const TasksView = ({ property, user }) => {
     const [tasks, setTasks] = useState([]);
     const [loadingTasks, setLoadingTasks] = useState(true);
     const [showAddTaskForm, setShowAddTaskForm] = useState(false);
+    const [showTemplateModal, setShowTemplateModal] = useState(false); // <-- NEW STATE
     const [selectedTask, setSelectedTask] = useState(null);
     const [team, setTeam] = useState([]);
     const [checklistTemplates, setChecklistTemplates] = useState([]);
@@ -269,54 +325,13 @@ const TasksView = ({ property, user }) => {
         const teamUnsubscribe = onSnapshot(teamQuery, snapshot => {
             setTeam(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
         });
-
-        // Automation logic
-        const lastRun = localStorage.getItem(`lastRun_${property.id}`);
-        const today = new Date().toDateString();
-
-        if (lastRun !== today) {
-            // Monthly deep clean on the 1st of the month
-            const dayOfMonth = new Date().getDate();
-            if (dayOfMonth === 1) {
-                const task = {
-                    taskName: 'Monthly Deep Clean',
-                    taskType: 'Cleaning',
-                    priority: 'Medium',
-                    status: 'Pending',
-                    ownerId: user.uid,
-                    propertyId: property.id,
-                    propertyName: property.propertyName,
-                    propertyAddress: property.address,
-                    createdAt: serverTimestamp(),
-                };
-                addDoc(collection(db, 'tasks'), task);
-            }
-
-            // Quarterly maintenance inspection on the 1st of Jan, Apr, Jul, Oct
-            const month = new Date().getMonth();
-            if (dayOfMonth === 1 && [0, 3, 6, 9].includes(month)) {
-                const task = {
-                    taskName: 'Quarterly Maintenance Inspection',
-                    taskType: 'Inspection',
-                    priority: 'High',
-                    status: 'Pending',
-                    ownerId: user.uid,
-                    propertyId: property.id,
-                    propertyName: property.propertyName,
-                    propertyAddress: property.address,
-                    createdAt: serverTimestamp(),
-                };
-                addDoc(collection(db, 'tasks'), task);
-            }
-            localStorage.setItem(`lastRun_${property.id}`, today);
-        }
         
         return () => {
             tasksUnsubscribe();
             checklistsUnsubscribe();
             teamUnsubscribe();
         };
-    }, [property.id, user.uid, property.propertyName, property.address]);
+    }, [property.id, user.uid]);
 
     const handleAddTask = async (taskData) => {
         try {
@@ -337,13 +352,23 @@ const TasksView = ({ property, user }) => {
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Tasks</h3>
-                <button onClick={() => setShowAddTaskForm(!showAddTaskForm)} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm">
-                    <Plus size={18} className="mr-2" />
-                    {showAddTaskForm ? 'Cancel' : 'Add Task'}
-                </button>
+                {/* --- UPDATED BUTTON CONTAINER --- */}
+                <div className="flex items-center space-x-2">
+                    <button onClick={() => setShowTemplateModal(true)} className="button-secondary flex items-center">
+                        <ListChecks size={16} className="mr-2" />
+                        Add from Template
+                    </button>
+                    <button onClick={() => setShowAddTaskForm(true)} className="button-primary flex items-center">
+                        <Plus size={18} className="mr-2" />
+                        Add New Task
+                    </button>
+                </div>
             </div>
-            {showAddTaskForm && <AddTaskForm onAddTask={handleAddTask} checklistTemplates={checklistTemplates} team={team} />}
             
+            {/* --- UPDATED FORM RENDERING LOGIC --- */}
+            {showAddTaskForm && <AddTaskForm onAddTask={handleAddTask} onCancel={() => setShowAddTaskForm(false)} checklistTemplates={checklistTemplates} team={team} />}
+            {showTemplateModal && <TemplateTaskModal templates={checklistTemplates} onClose={() => setShowTemplateModal(false)} onAddTask={handleAddTask} />}
+
             <div className="mt-4 border-t border-gray-200 dark:border-gray-700">
                 {loadingTasks ? <p className="text-center py-8 text-gray-500 dark:text-gray-400">Loading tasks...</p> : (
                     <ul className="divide-y divide-gray-200 dark:divide-gray-700">

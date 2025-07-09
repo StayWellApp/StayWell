@@ -1,5 +1,4 @@
 // --- src/components/Auth.js ---
-// Replace the entire contents of this file.
 
 import React, { useState } from 'react';
 import { auth, db } from '../firebase-config';
@@ -13,7 +12,7 @@ const InputField = ({ id, type, placeholder, value, onChange }) => (
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="input-style"
         required
     />
 );
@@ -38,7 +37,7 @@ export const Login = () => {
             <form onSubmit={handleLogin} className="space-y-6">
                 <InputField id="email" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 <InputField id="password" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">Log In</button>
+                <button type="submit" className="w-full button-primary">Log In</button>
             </form>
         </div>
     );
@@ -80,7 +79,7 @@ export const SignUp = () => {
                 <InputField id="displayName" type="text" placeholder="Full Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
                 <InputField id="email" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 <InputField id="password" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">Sign Up</button>
+                <button type="submit" className="w-full button-primary">Sign Up</button>
             </form>
         </div>
     );
