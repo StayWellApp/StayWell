@@ -8,7 +8,7 @@ import { TaskDetailModal } from './TaskViews';
 const ClientDashboard = ({ user, setActiveView }) => {
     const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
     const [unassignedTasks, setUnassignedTasks] = useState([]);
-    const [todaysTasks, setTodaysTasks] = useState([]); // <-- NEW STATE for Today's Tasks
+    const [todaysTasks, setTodaysTasks] = useState([]);
     const [allOpenTasks, setAllOpenTasks] = useState([]);
     const [lowStockItems, setLowStockItems] = useState([]);
     const [taskStatusData, setTaskStatusData] = useState([]);
@@ -18,6 +18,13 @@ const ClientDashboard = ({ user, setActiveView }) => {
     const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
+
+    // --- RESTORED: Hardcoded upcoming bookings data ---
+    const upcomingBookings = [
+        { id: 'booking-1', propertyName: 'Seaside Villa', guestName: 'John Doe', checkIn: '2025-07-10' },
+        { id: 'booking-2', propertyName: 'Downtown Loft', guestName: 'Jane Smith', checkIn: '2025-07-12' },
+        { id: 'booking-3', propertyName: 'Mountain Cabin', guestName: 'Peter Jones', checkIn: '2025-07-14' },
+    ];
 
     useEffect(() => {
         if (!user) return;
@@ -31,14 +38,11 @@ const ClientDashboard = ({ user, setActiveView }) => {
             const allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const openTasks = allTasks.filter(task => task.status !== 'Completed');
             
-            // --- NEW: Logic to get today's date and filter tasks ---
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Normalize to start of the day
+            today.setHours(0, 0, 0, 0);
             const todayISO = today.toISOString().split('T')[0];
 
             setTodaysTasks(allTasks.filter(task => task.scheduledDate === todayISO));
-            // --- End of new logic ---
-
             setAllOpenTasks(openTasks);
             setUnassignedTasks(openTasks.filter(task => !task.assignedTo));
             
@@ -86,7 +90,7 @@ const ClientDashboard = ({ user, setActiveView }) => {
 
     const handleOpenTask = (task) => {
         setSelectedTask(task);
-        setIsTasksModalOpen(false); // Close any other modals if open
+        setIsTasksModalOpen(false);
     };
 
     return (
@@ -97,15 +101,14 @@ const ClientDashboard = ({ user, setActiveView }) => {
             </header>
 
             {loading ? <p className="text-center text-gray-500 dark:text-gray-400">Loading dashboard...</p> : (
-                <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <StatCard icon={<Building size={24} />} title="Total Properties" value={stats.properties} color="blue" onClick={() => setActiveView('properties')} />
                         <StatCard icon={<ListTodo size={24} />} title="Open Tasks" value={stats.openTasks} color="green" onClick={() => setIsTasksModalOpen(true)} />
                         <StatCard icon={<AlertTriangle size={24} />} title="Low Stock Items" value={stats.lowStockItems} color="red" onClick={() => setIsStockModalOpen(true)} />
                     </div>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* --- NEW: Today's Tasks Card --- */}
                         <DashboardCard icon={<ClipboardCheck size={22} />} title="Today's Tasks" className="lg:col-span-1">
                             {todaysTasks.length > 0 ? (
                                 <ul className="divide-y divide-gray-200 dark:divide-gray-700 -mx-2">
@@ -122,7 +125,6 @@ const ClientDashboard = ({ user, setActiveView }) => {
                             ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No tasks scheduled for today.</p>}
                         </DashboardCard>
                         
-                        {/* --- Unassigned Tasks Card --- */}
                         <DashboardCard icon={<Siren size={22} />} title="Unassigned Tasks" className="lg:col-span-1">
                             {unassignedTasks.length > 0 ? (
                                 <ul className="divide-y divide-gray-200 dark:divide-gray-700 -mx-2">
@@ -138,10 +140,26 @@ const ClientDashboard = ({ user, setActiveView }) => {
                             ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No unassigned tasks.</p>}
                         </DashboardCard>
 
-                        {/* --- Task Status Chart --- */}
                         <DashboardCard icon={<PieChartIcon size={22} />} title="Task Status" className="lg:col-span-1"><TaskStatusChart data={taskStatusData} /></DashboardCard>
                     </div>
-                </>
+
+                    {/* --- RESTORED: Upcoming Bookings Card --- */}
+                    <DashboardCard icon={<Calendar size={22} />} title="Upcoming Bookings">
+                        {upcomingBookings.length > 0 ? (
+                            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                                {upcomingBookings.map(booking => (
+                                    <li key={booking.id} className="py-3 flex justify-between items-center">
+                                        <div>
+                                            <p className="font-medium text-gray-800 dark:text-gray-100">{booking.guestName}</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">{booking.propertyName}</p>
+                                        </div>
+                                        <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{new Date(booking.checkIn).toLocaleDateString()}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No upcoming bookings.</p>}
+                    </DashboardCard>
+                </div>
             )}
 
             {isTasksModalOpen && <TasksModal tasks={allOpenTasks} onOpenTask={handleOpenTask} onClose={() => setIsTasksModalOpen(false)} />}
