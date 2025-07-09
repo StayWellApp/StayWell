@@ -13,14 +13,14 @@ const preGeneratedTemplates = [
         taskType: "Cleaning",
         linkedProperties: [],
         items: [
-            { text: "Strip all beds and start laundry", instructions: "Include all sheets, pillowcases, and towels.", imageUrl: "" },
-            { text: "Wash, dry, and put away all dishes", instructions: "Check the dishwasher first. Ensure the sink is empty and clean.", imageUrl: "" },
-            { text: "Wipe down all kitchen counters and sink", instructions: "Use multi-surface cleaner. Don't forget the faucet.", imageUrl: "" },
-            { text: "Clean and sanitize toilets, showers, and bathroom sinks", instructions: "Use appropriate bathroom cleaner. Check for hair in drains.", imageUrl: "" },
-            { text: "Dust all accessible surfaces", instructions: "This includes tables, nightstands, dressers, and window sills.", imageUrl: "" },
-            { text: "Vacuum all carpets and mop all hard floors", instructions: "Start from the farthest corner and work your way out.", imageUrl: "" },
-            { text: "Restock all consumables", instructions: "Check levels of toilet paper, paper towels, soap, and coffee pods. Refill as needed.", imageUrl: "" },
-            { text: "Make all beds with fresh linens", instructions: "Ensure linens are wrinkle-free and pillows are fluffed.", imageUrl: "" },
+            { text: "Strip all beds and start laundry", instructions: "1. Gather all used towels, bathmats, sheets, and pillowcases. 2. Start the first load of laundry on a warm cycle. 3. Use one detergent pod.", imageUrl: "" },
+            { text: "Wash, dry, and put away all dishes", instructions: "1. Empty the dishwasher if it contains clean dishes. 2. Load any dirty dishes from the sink or counters. 3. Run the dishwasher on a normal cycle. 4. Hand-wash any items that are not dishwasher-safe.", imageUrl: "" },
+            { text: "Wipe down all kitchen counters and sink", instructions: "1. Clear all items from the counters. 2. Spray with multi-surface cleaner and wipe down with a clean cloth. 3. Scrub the sink basin and faucet handles until they shine.", imageUrl: "" },
+            { text: "Clean and sanitize toilets, showers, and bathroom sinks", instructions: "1. Spray toilet bowl, seat, and exterior with disinfectant. Let it sit. 2. Spray shower walls, tub, and sink. 3. Wipe down the sink and shower, then scrub the toilet bowl and wipe the exterior. 4. Check and clear hair from all drains.", imageUrl: "" },
+            { text: "Dust all accessible surfaces", instructions: "Use a microfiber cloth to dust all hard surfaces, including nightstands, dressers, tables, window sills, and the tops of picture frames. Don't forget electronics like the TV.", imageUrl: "" },
+            { text: "Vacuum all carpets and mop all hard floors", instructions: "1. Vacuum all rugs and carpeted areas. 2. Sweep or vacuum all hard floors to remove debris. 3. Mop hard floors with an appropriate cleaning solution, starting from the far corner of the room and moving toward the exit.", imageUrl: "" },
+            { text: "Restock all consumables", instructions: "1. Leave two new rolls of toilet paper in each bathroom. 2. Ensure paper towel roll is at least half full. 3. Refill hand soap and dish soap dispensers. 4. Restock the coffee station with at least 10 coffee pods, sugar, and creamers.", imageUrl: "" },
+            { text: "Make all beds with fresh linens", instructions: "1. Use one fitted sheet, one flat sheet, and two pillowcases per bed. 2. Ensure the flat sheet is placed with the finished side down. 3. Tuck sheets in tightly for a crisp look. 4. Fluff pillows and place decorative cushions.", imageUrl: "" },
         ]
     },
     {
@@ -28,10 +28,10 @@ const preGeneratedTemplates = [
         taskType: "Maintenance",
         linkedProperties: [],
         items: [
-            { text: "Clean inside of oven and microwave", instructions: "Use oven cleaner for the oven. A bowl of water and lemon juice microwaved for 3 minutes helps loosen grime inside.", imageUrl: "" },
-            { text: "Test smoke and carbon monoxide detectors", instructions: "Press and hold the 'Test' button on each unit until it beeps loudly. If it doesn't beep, replace the batteries. If it still doesn't work, report it for replacement.", imageUrl: "https://i.imgur.com/L3n4m2R.png" },
-            { text: "Wash all windows, inside and out", instructions: "Use a squeegee for a streak-free finish.", imageUrl: "" },
-            { text: "Dust and wipe down all baseboards and trim", instructions: "A damp cloth works well for this task.", imageUrl: "" },
+            { text: "Clean inside of oven and microwave", instructions: "For Microwave: 1. Mix 1 cup water and juice of one lemon in a microwave-safe bowl. 2. Microwave on high for 3-5 minutes until it boils. 3. Let it stand for 5 minutes before opening. 4. Wipe the inside clean with a sponge. For Oven: 1. Remove racks and soak in hot, soapy water. 2. Use an oven-safe cleaner, following the product's instructions for application and ventilation. 3. Scrub and wipe clean.", imageUrl: "" },
+            { text: "Test smoke and carbon monoxide detectors", instructions: "1. Press and hold the 'Test' button on each detector for a few seconds. 2. A loud alarm should sound. If it's weak or doesn't sound, replace the batteries. 3. Test again after replacing batteries. If it still fails, report the unit for immediate replacement.", imageUrl: "https://i.imgur.com/L3n4m2R.png" },
+            { text: "Wash all windows, inside and out", instructions: "1. Mix a few drops of dish soap in a bucket of warm water. 2. Use a sponge to wash the window surface. 3. Use a clean squeegee to wipe the window dry, starting from the top and pulling down in one smooth motion. 4. Wipe the blade clean after each stroke.", imageUrl: "" },
+            { text: "Dust and wipe down all baseboards and trim", instructions: "1. Use a vacuum with a brush attachment to remove loose dust from baseboards and door/window trim. 2. Mix a mild cleaner with warm water. 3. Use a microfiber cloth dipped in the solution to wipe down all baseboards and trim, removing scuffs and dirt.", imageUrl: "" },
         ]
     }
 ];
