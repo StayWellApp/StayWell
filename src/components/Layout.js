@@ -1,23 +1,64 @@
+// --- src/components/Layout.js ---
+// Create this new file. It defines the main structure with a vertical sidebar.
+
 import React from 'react';
+import { LayoutDashboard, Home, Calendar, Settings, Users, LogOut } from 'lucide-react';
 
-export const DashboardLayout = ({ onLogout, user, children }) => (
-    <div className="w-full min-h-screen bg-gray-100 flex flex-col">
-        <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
-            <h1 className="text-2xl font-bold text-blue-600">StayWellApp</h1>
-            <div className="flex items-center"><span className="text-gray-600 mr-4">Welcome, {user.email}</span><button onClick={onLogout} className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">Logout</button></div>
-        </header>
-        <main className="flex-grow p-4 md:p-8">{children}</main>
-    </div>
-);
+const Sidebar = ({ activeView, setActiveView, onLogout }) => {
+    const navItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+        { id: 'properties', label: 'Properties', icon: <Home size={20} /> },
+        { id: 'calendar', label: 'Master Calendar', icon: <Calendar size={20} /> },
+        { id: 'team', label: 'Team', icon: <Users size={20} /> },
+        { id: 'settings', label: 'Settings', icon: <Settings size={20} /> },
+    ];
 
-export const LoadingScreen = ({ message = "Loading..."}) => (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center">
-            <svg className="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p className="mt-4 text-gray-600">{message}</p>
+    return (
+        <aside className="w-64 flex-shrink-0 bg-gray-800 text-gray-200 flex flex-col">
+            <div className="h-16 flex items-center justify-center text-2xl font-bold text-white border-b border-gray-700">
+                StayWell
+            </div>
+            <nav className="flex-grow px-4 py-6">
+                <ul className="space-y-2">
+                    {navItems.map(item => (
+                        <li key={item.id}>
+                            <button
+                                onClick={() => setActiveView(item.id)}
+                                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
+                                    activeView === item.id
+                                        ? 'bg-blue-600 text-white'
+                                        : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                                }`}
+                            >
+                                {item.icon}
+                                <span className="font-medium">{item.label}</span>
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            </nav>
+            <div className="p-4 border-t border-gray-700">
+                <button
+                    onClick={onLogout}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white"
+                >
+                    <LogOut size={20} />
+                    <span className="font-medium">Logout</span>
+                </button>
+            </div>
+        </aside>
+    );
+};
+
+const Layout = ({ children, activeView, setActiveView, onLogout }) => {
+    return (
+        <div className="flex h-screen bg-gray-100">
+            <Sidebar activeView={activeView} setActiveView={setActiveView} onLogout={onLogout} />
+            <main className="flex-1 overflow-y-auto">
+                {children}
+            </main>
         </div>
-    </div>
-);
+    );
+};
+
+export default Layout;
