@@ -232,10 +232,9 @@ const RoleFormModal = ({ onSave, onCancel, existingRole = null }) => {
     };
     
     return (
-        // Outermost div: Full screen overlay, removed animation and explicit padding.
-        // It now purely serves as a fixed, transparent backdrop that centers its child.
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"> 
-            {/* Inner modal box: Uses w-full max-w-2xl for size, and its internal padding. */}
+        // Outermost div: Full screen overlay, now using grid for centering, no animation.
+        <div className="fixed inset-0 grid place-items-center bg-black bg-opacity-50 z-50"> 
+            {/* Inner modal box: Will be centered by the parent grid. */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
                 {/* Header */}
                 <div className="p-6 border-b dark:border-gray-700 flex-shrink-0">
