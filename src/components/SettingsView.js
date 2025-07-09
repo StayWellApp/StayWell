@@ -1,13 +1,12 @@
 // --- src/components/SettingsView.js ---
-// This is the complete, feature-rich version.
-// Replace the entire contents of your file with this code.
+// This is the complete, corrected version.
 
 import React, { useState, useContext, useEffect } from 'react';
 import { auth, db } from '../firebase-config';
 import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { User, Bell, Palette, LogOut, Trash2, AlertCircle } from 'lucide-react';
+import { User, Bell, Palette, Trash2, AlertCircle } from 'lucide-react'; // <-- FIX: Removed unused 'LogOut' import
 
 const SettingsView = ({ user }) => {
     // --- STATE MANAGEMENT ---
@@ -22,7 +21,6 @@ const SettingsView = ({ user }) => {
     const [error, setError] = useState('');
 
     // --- DATA FETCHING ---
-    // In a real app, you'd fetch notification settings from Firestore
     useEffect(() => {
         const fetchUserSettings = async () => {
             if (!user) return;
@@ -85,6 +83,12 @@ const SettingsView = ({ user }) => {
                     {/* --- Profile Settings Section --- */}
                     <SettingsCard icon={<User />} title="Profile" description="Update your personal information.">
                         <form onSubmit={handleProfileSave} className="space-y-4">
+                            {/* --- FIX: Display the error message if it exists --- */}
+                            {error && (
+                                <div className="bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-500/50 text-red-700 dark:text-red-300 text-sm font-medium p-3 rounded-lg">
+                                    {error}
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Display Name</label>
                                 <input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -100,8 +104,8 @@ const SettingsView = ({ user }) => {
                             </div>
                         </form>
                     </SettingsCard>
-
-                    {/* --- Appearance Settings Section --- */}
+                    
+                    {/* Other sections remain the same */}
                     <SettingsCard icon={<Palette />} title="Appearance" description="Customize the look and feel of the application.">
                         <div className="flex items-center justify-between">
                              <div>
@@ -118,7 +122,6 @@ const SettingsView = ({ user }) => {
                         </div>
                     </SettingsCard>
 
-                    {/* --- Notification Settings Section --- */}
                     <SettingsCard icon={<Bell />} title="Notifications" description="Choose how you want to be notified.">
                          <div className="space-y-3">
                              {Object.keys(notifications).map((key) => (
@@ -133,7 +136,6 @@ const SettingsView = ({ user }) => {
                          </div>
                     </SettingsCard>
 
-                     {/* --- Account Actions Section --- */}
                     <SettingsCard icon={<AlertCircle />} title="Account Actions" description="Manage your account status.">
                          <div className="space-y-4">
                             <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg">
@@ -153,7 +155,6 @@ const SettingsView = ({ user }) => {
     );
 };
 
-// A helper component to create consistent card styling
 const SettingsCard = ({ icon, title, description, children }) => (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-start space-x-4">
@@ -170,6 +171,5 @@ const SettingsCard = ({ icon, title, description, children }) => (
         </div>
     </div>
 );
-
 
 export default SettingsView;
