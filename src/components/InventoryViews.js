@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment } from 'firebase/firestore';
+import { Plus, Trash2, Edit, AlertTriangle } from 'lucide-react';
 
 // --- Sample Data for Pre-generation ---
 const sampleData = {
@@ -18,7 +19,7 @@ const sampleData = {
         { name: 'Coffee Pods', parLevel: 20, currentStock: 20, purchasePrice: 0.50 },
         { name: 'Toilet Paper Roll', parLevel: 4, currentStock: 4, purchasePrice: 0.75 },
         { name: 'Shampoo', parLevel: 2, currentStock: 2, purchasePrice: 1.20 },
-        { name: 'Hand Soap', parLevel: 2, currentStock: 2, purchasePrice: 1.50 },
+        { name: 'Hand Soap', parLevel: 2, currentStock: 1.50 },
     ],
     linens: [
         { name: 'King Sheet Set', total: 8, inUnit: 2, inLaundry: 2, washCount: 10, retireAfter: 50 },
@@ -74,9 +75,9 @@ export const InventoryView = ({ property, user }) => {
                 placeholders={{name: "Item Name (e.g., Coffee Pods)", parLevel: "Par Level (e.g., 20)", currentStock: "Current Stock (e.g., 15)", purchasePrice: "Purchase Price ($)"}}
                 displayLogic={(item) => (
                     <div className="flex items-center space-x-4">
-                        <span className="text-sm text-gray-500">${parseFloat(item.purchasePrice || 0).toFixed(2)}</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">${parseFloat(item.purchasePrice || 0).toFixed(2)}</span>
                         <div className={`w-3 h-3 rounded-full ${parseInt(item.currentStock) < parseInt(item.parLevel) ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                        <span className="text-gray-600">Stock: {item.currentStock || 0} / {item.parLevel || 0}</span>
+                        <span className="text-gray-600 dark:text-gray-300">Stock: {item.currentStock || 0} / {item.parLevel || 0}</span>
                     </div>
                 )}
             />
@@ -101,7 +102,7 @@ export const InventoryView = ({ property, user }) => {
                 displayLogic={(item) => (
                      <div className="flex items-center space-x-4">
                         <div className={`w-3 h-3 rounded-full ${parseInt(item.currentStock) < parseInt(item.parLevel) ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                        <span className="text-gray-600">Stock: {item.currentStock || 0} / {item.parLevel || 0}</span>
+                        <span className="text-gray-600 dark:text-gray-300">Stock: {item.currentStock || 0} / {item.parLevel || 0}</span>
                     </div>
                 )}
             />
@@ -164,11 +165,12 @@ const InventorySection = ({ title, collectionName, property, user, fields, place
     }
 
     return (
-        <div>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-semibold text-gray-700">{title}</h3>
-                <button onClick={() => { setEditingItem(null); setShowForm(true); }} className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 text-sm">
-                    {`+ Add ${title.slice(0, -1)}`}
+                <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">{title}</h3>
+                <button onClick={() => { setEditingItem(null); setShowForm(!showForm); }} className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold px-4 py-2 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900 text-sm flex items-center">
+                    <Plus size={16} className="mr-2" />
+                    {showForm ? 'Cancel' : `Add ${title.slice(0, -1)}`}
                 </button>
             </div>
             {showForm && (
@@ -181,26 +183,26 @@ const InventorySection = ({ title, collectionName, property, user, fields, place
                     title={title}
                 />
             )}
-            <ul className="space-y-2">
+            <ul className="mt-4 space-y-2 divide-y divide-gray-200 dark:divide-gray-700">
                 {items.length === 0 && !showForm && sampleItems && (
-                     <div className="text-center py-6 bg-gray-50 rounded-lg border-2 border-dashed">
-                        <p className="text-gray-500">This inventory is empty.</p>
-                        <button onClick={handleGenerateSample} className="mt-2 text-sm text-blue-600 hover:underline">Generate a sample list to get started?</button>
+                     <div className="text-center py-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                        <p className="text-gray-500 dark:text-gray-400">This inventory is empty.</p>
+                        <button onClick={handleGenerateSample} className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-semibold">Generate a sample list to get started?</button>
                     </div>
                 )}
                 {items.map(item => (
-                    <li key={item.id} className="bg-white p-3 rounded-md border flex justify-between items-center">
+                    <li key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg">
                         <div>
-                            <p className="font-medium text-gray-800">{item.name || item.setName}</p>
-                            {item.notes && <p className="text-sm text-gray-500">{item.notes}</p>}
+                            <p className="font-medium text-gray-800 dark:text-gray-100">{item.name || item.setName}</p>
+                            {item.notes && <p className="text-sm text-gray-500 dark:text-gray-400">{item.notes}</p>}
                         </div>
                         <div className="flex items-center space-x-4">
                             {isLinen && <LinenDisplay item={item} />}
                             {displayLogic && !isLinen && displayLogic(item)}
-                            {onReportIssue && <button onClick={() => onReportIssue(item)} className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-md hover:bg-red-200">Report Issue</button>}
-                            {isLinen && <button onClick={() => setShowLinenModal(item)} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-md hover:bg-purple-200">Update Status</button>}
-                            <button onClick={() => handleEditClick(item)} className="text-xs text-blue-500 hover:underline">Edit</button>
-                            <button onClick={() => handleDeleteItem(item.id)} className="text-xs text-red-500 hover:underline">Delete</button>
+                            {onReportIssue && <button onClick={() => onReportIssue(item)} className="text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2 py-1 rounded-md hover:bg-red-200 dark:hover:bg-red-900 font-semibold flex items-center"><AlertTriangle size={14} className="mr-1" /> Report Issue</button>}
+                            {isLinen && <button onClick={() => setShowLinenModal(item)} className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-md hover:bg-purple-200 dark:hover:bg-purple-900 font-semibold">Update Status</button>}
+                            <button onClick={() => handleEditClick(item)} className="text-sm text-blue-600 dark:text-blue-400 hover:underline"><Edit size={16}/></button>
+                            <button onClick={() => handleDeleteItem(item.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline"><Trash2 size={16}/></button>
                         </div>
                     </li>
                 ))}
@@ -240,36 +242,36 @@ const InventoryItemForm = ({ onSave, onCancel, fields, placeholders, existingIte
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
-                <h3 className="text-xl font-semibold mb-4">{existingItem ? `Edit ${title.slice(0, -1)}` : `Add New ${title.slice(0, -1)}`}</h3>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {Object.keys(fields).map(field => (
-                        <div key={field}>
-                            <label className="block text-sm font-medium text-gray-700 capitalize">{field.replace(/([A-Z])/g, ' $1')}</label>
-                            {Array.isArray(fields[field]) ? (
-                                <select value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                                    {fields[field].map(option => <option key={option} value={option}>{option}</option>)}
-                                </select>
-                            ) : fields[field] === 'textarea' ? (
-                                <textarea value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} placeholder={placeholders[field]} rows="2" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                            ) : (
-                                <input 
-                                    value={itemData[field] || ''} 
-                                    onChange={e => handleInputChange(field, e.target.value)} 
-                                    placeholder={placeholders[field]}
-                                    type={fields[field]}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" 
-                                />
-                            )}
-                        </div>
-                    ))}
-                    <div className="flex justify-end space-x-2 pt-4">
-                        <button type="button" onClick={onCancel} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
-                        <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">Save</button>
+        <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg border border-gray-200 dark:border-gray-600 my-4">
+             <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-100">{existingItem ? `Edit ${title.slice(0, -1)}` : `Add New ${title.slice(0, -1)}`}</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.keys(fields).map(field => (
+                    <div key={field} className={fields[field] === 'textarea' ? 'md:col-span-2' : ''}>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 capitalize mb-1">{field.replace(/([A-Z])/g, ' $1')}</label>
+                        {Array.isArray(fields[field]) ? (
+                            <select value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                {fields[field].map(option => <option key={option} value={option}>{option}</option>)}
+                            </select>
+                        ) : fields[field] === 'textarea' ? (
+                            <textarea value={itemData[field] || ''} onChange={e => handleInputChange(field, e.target.value)} placeholder={placeholders[field]} rows="2" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        ) : (
+                            <input 
+                                value={itemData[field] || ''} 
+                                onChange={e => handleInputChange(field, e.target.value)} 
+                                placeholder={placeholders[field]}
+                                type={fields[field]}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        )}
                     </div>
-                </form>
-            </div>
+                ))}
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                    <button type="button" onClick={onCancel} className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
+                    <button type="submit" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save</button>
+                </div>
+            </form>
         </div>
     );
 };
@@ -285,35 +287,35 @@ const ReportIssueModal = ({ item, onSave, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
-                <h3 className="text-xl font-semibold mb-4">Report Issue for: {item.name}</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700">
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Report Issue for: {item.name}</h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Title</label>
-                        <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
+                        <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Description</label>
-                        <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe the issue..." rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                        <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe the issue..." rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Priority</label>
-                        <select value={priority} onChange={e => setPriority(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Priority</label>
+                        <select value={priority} onChange={e => setPriority(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option>Low</option>
                             <option>Medium</option>
                             <option>High</option>
                         </select>
                     </div>
                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Photo of Issue</label>
-                        <button type="button" disabled className="mt-1 w-full flex justify-center py-2 px-4 border border-dashed rounded-md text-sm font-medium text-gray-400 bg-gray-50 cursor-not-allowed">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Photo of Issue</label>
+                        <button type="button" disabled className="mt-1 w-full flex justify-center py-2 px-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 cursor-not-allowed">
                             Upload Photo (Coming Soon)
                         </button>
                     </div>
                     <div className="flex justify-end space-x-4 pt-4">
-                        <button type="button" onClick={onClose} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
-                        <button type="submit" className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">Create Task</button>
+                        <button type="button" onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
+                        <button type="submit" className="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600">Create Task</button>
                     </div>
                 </form>
             </div>
@@ -329,10 +331,10 @@ const LinenDisplay = ({ item }) => {
     return (
         <div className="flex items-center space-x-4 text-xs">
             {needsReplacing && <div className="w-3 h-3 rounded-full bg-red-500" title="Replacement Recommended"></div>}
-            <span title="Average Wash Count" className="text-gray-500">Washes: {avgWashCount}</span>
-            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Unit: {item.inUnit || 0}</span>
-            <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Laundry: {item.inLaundry || 0}</span>
-            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">Storage: {inStorage}</span>
+            <span title="Average Wash Count" className="text-gray-500 dark:text-gray-400">Washes: {avgWashCount}</span>
+            <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full">Unit: {item.inUnit || 0}</span>
+            <span className="bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 px-2 py-1 rounded-full">Laundry: {item.inLaundry || 0}</span>
+            <span className="bg-gray-100 dark:bg-gray-600/50 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full">Storage: {inStorage}</span>
         </div>
     );
 };
@@ -353,23 +355,23 @@ const LinenStatusModal = ({ item, property, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-                <h3 className="text-xl font-semibold mb-4">Update Status for {item.name}</h3>
-                <p className="text-sm text-gray-500 mb-4">Total in circulation: {item.total}</p>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md border dark:border-gray-700">
+                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Update Status for {item.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Total in circulation: {item.total}</p>
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700"># In Unit</label>
-                        <input type="number" value={inUnit} onChange={e => setInUnit(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" />
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300"># In Unit</label>
+                        <input type="number" value={inUnit} onChange={e => setInUnit(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700"># In Laundry</label>
-                        <input type="number" value={inLaundry} onChange={e => setInLaundry(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" />
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300"># In Laundry</label>
+                        <input type="number" value={inLaundry} onChange={e => setInLaundry(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                 </div>
                 <div className="flex justify-end space-x-4 pt-6">
-                    <button type="button" onClick={onClose} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
-                    <button type="button" onClick={handleUpdate} className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Update</button>
+                    <button type="button" onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
+                    <button type="button" onClick={handleUpdate} className="bg-purple-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-purple-700">Update</button>
                 </div>
             </div>
         </div>
