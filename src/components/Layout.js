@@ -1,10 +1,9 @@
 import React, { useContext } from 'react';
 import { auth } from '../firebase-config';
 import { signOut } from 'firebase/auth';
-import { LayoutDashboard, Building, ClipboardCheck, Calendar, Users, Archive, Settings, LogOut, Sun, Moon, ListChecks } from 'lucide-react';
+import { LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings, LogOut, Sun, Moon } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 
-// Define navigation links for different roles
 const ownerLinks = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'properties', label: 'Properties', icon: Building },
@@ -62,9 +61,15 @@ const Layout = ({ children, user, userData, activeView, setActiveView }) => {
         }
     };
     
-    // Determine which links to show based on the user's role
-    const userRole = userData?.role;
-    const navLinks = userRole === 'Owner' || userRole === 'Manager' || userRole === 'Admin' ? ownerLinks : staffLinks;
+    // --- MORE ROBUST ACCESS CONTROL LOGIC ---
+    const hasAdminPrivileges = () => {
+        if (!userData) return false;
+        const isOwner = userData.uid === userData.ownerId;
+        const isAdminOrManager = userData.role === 'Admin' || userData.role === 'Manager' || userData.role === 'Owner';
+        return isOwner || isAdminOrManager;
+    };
+    
+    const navLinks = hasAdminPrivileges() ? ownerLinks : staffLinks;
 
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-gray-900">

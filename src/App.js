@@ -11,10 +11,8 @@ import TeamView from './components/TeamView';
 import { PropertyDetailView } from './components/PropertyViews';
 import { ChecklistsView } from './components/ChecklistViews';
 import { StorageView } from './components/StorageViews';
-// --- CORRECTED IMPORTS ---
 import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
-// --- END CORRECTIONS ---
 import { ThemeProvider } from './contexts/ThemeContext';
 
 function App() {
@@ -55,33 +53,42 @@ function App() {
         setActiveView('propertyDetail');
     };
 
+    // --- MORE ROBUST ACCESS CONTROL LOGIC ---
+    const hasAdminPrivileges = () => {
+        if (!userData) return false;
+        // The user is the Owner if their ID is the same as their ownerId.
+        const isOwner = userData.uid === userData.ownerId;
+        // Other roles with admin-like access.
+        const isAdminOrManager = userData.role === 'Admin' || userData.role === 'Manager' || userData.role === 'Owner';
+        return isOwner || isAdminOrManager;
+    };
+    
     const renderActiveView = () => {
         if (selectedProperty) {
             return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={user} />;
         }
         
-        const userRole = userData?.role;
-        const isOwnerOrManager = userRole === 'Owner' || userRole === 'Manager' || userRole === 'Admin';
+        const hasFullAccess = hasAdminPrivileges();
         
         switch (activeView) {
             case 'dashboard':
-                return isOwnerOrManager 
+                return hasFullAccess 
                     ? <ClientDashboard user={user} setActiveView={setActiveView} /> 
                     : <StaffDashboard user={user} userData={userData} />;
             case 'properties':
                 return <PropertiesView onSelectProperty={handleSelectProperty} user={user} userData={userData} />;
             case 'team':
-                return isOwnerOrManager ? <TeamView user={user} /> : null;
+                return hasFullAccess ? <TeamView user={user} /> : null;
             case 'templates':
-                return isOwnerOrManager ? <ChecklistsView user={user} /> : null;
+                return hasFullAccess ? <ChecklistsView user={user} /> : null;
             case 'storage':
                 return <StorageView user={user} ownerId={userData?.ownerId || user.uid} />;
             case 'calendar':
                 return <MasterCalendarView user={user} userData={userData} />;
             case 'settings':
-                 return isOwnerOrManager ? <SettingsView user={user} /> : null;
+                 return hasFullAccess ? <SettingsView user={user} /> : null;
             default:
-                return isOwnerOrManager 
+                return hasFullAccess 
                     ? <ClientDashboard user={user} setActiveView={setActiveView} /> 
                     : <StaffDashboard user={user} userData={userData} />;
         }
