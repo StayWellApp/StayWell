@@ -1,15 +1,14 @@
 // --- src/components/ClientDashboard.js ---
-// This is the complete, updated code for a more feature-rich and interactive dashboard.
+// This is the complete, corrected code.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { Building, AlertTriangle, Package, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip } from 'recharts';
-import { TaskDetailModal } from './TaskViews'; // Import the modal for task details
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'; // <-- FIX: Added missing imports
+import { TaskDetailModal } from './TaskViews';
 
 const ClientDashboard = ({ user, setActiveView }) => {
-    // --- STATE MANAGEMENT ---
     const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
     const [urgentTasks, setUrgentTasks] = useState([]);
     const [allOpenTasks, setAllOpenTasks] = useState([]);
@@ -18,12 +17,10 @@ const ClientDashboard = ({ user, setActiveView }) => {
     const [team, setTeam] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // Modal visibility states
     const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
 
-    // Mock data for upcoming bookings
     const upcomingBookings = [
         { id: 'booking-1', propertyName: 'Seaside Villa', guestName: 'John Doe', checkIn: '2025-07-10' },
         { id: 'booking-2', propertyName: 'Downtown Loft', guestName: 'Jane Smith', checkIn: '2025-07-12' },
@@ -87,7 +84,7 @@ const ClientDashboard = ({ user, setActiveView }) => {
 
     const handleOpenTask = (task) => {
         setSelectedTask(task);
-        setIsTasksModalOpen(false); // Close the list modal when opening the detail modal
+        setIsTasksModalOpen(false);
     };
 
     return (
