@@ -243,12 +243,19 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
             setTaskType(existingTemplate.taskType || 'Cleaning');
             setLinkedProperties(existingTemplate.linkedProperties || []);
             if (existingTemplate.items && existingTemplate.items.length > 0) {
-                const convertedItems = existingTemplate.items.map(item => typeof item === 'string' ? { text: item, instructions: '', imageUrl: '' } : item);
+                // Ensure instructions are always a string to prevent controlled/uncontrolled errors.
+                const convertedItems = existingTemplate.items.map(item => {
+                    if (typeof item === 'string') {
+                        return { text: item, instructions: '', imageUrl: '' };
+                    }
+                    return { ...item, instructions: item.instructions || '' };
+                });
                 setItems(convertedItems);
             } else {
                 setItems([{ text: '', instructions: '', imageUrl: '' }]);
             }
         } else {
+            // For new templates
             setName('');
             setTaskType('Cleaning');
             setLinkedProperties([]);
@@ -310,7 +317,7 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
                             <div key={index} className={itemContainerStyles}>
                                 <div className="flex items-center space-x-3"><input type="text" value={item.text} onChange={e => handleItemChange(index, 'text', e.target.value)} className={inputStyles} placeholder={`Item ${index + 1} Title`} /><button type="button" onClick={() => handleRemoveItem(index)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><Trash2 size={16} /></button></div>
                                 <div className="mt-4 space-y-3 pl-1">
-                                    <div className="flex items-start space-x-3"><Info size={16} className="text-gray-400 mt-2 flex-shrink-0" /><textarea value={item.instructions} onChange={e => handleItemChange(index, 'instructions', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Add detailed step-by-step instructions..." rows="3" /></div>
+                                    <div className="flex items-start space-x-3"><Info size={16} className="text-gray-400 mt-2 flex-shrink-0" /><textarea value={item.instructions} onChange={e => handleItemChange(index, 'instructions', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Add detailed step-by-step instructions..." rows="4" /></div>
                                     <div className="flex items-center space-x-3"><Image size={16} className="text-gray-400 flex-shrink-0" /><input type="text" value={item.imageUrl} onChange={e => handleItemChange(index, 'imageUrl', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Optional: Paste image URL here..." /></div>
                                 </div>
                             </div>
