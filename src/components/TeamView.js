@@ -1,37 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { db, functions } from '../firebase-config'; // This import will now work correctly
+import { db, functions } from '../firebase-config';
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { Plus, Trash2, Send } from 'lucide-react';
 
-// Define the available roles for team members
-const availableRoles = ['Manager', 'Cleaner', 'Maintenance', 'Admin'];
+// Define the standard, built-in roles
+const defaultRoles = ['Manager', 'Cleaner', 'Maintenance', 'Admin'];
 
 const TeamView = ({ user }) => {
     const [team, setTeam] = useState([]);
+    const [customRoles, setCustomRoles] = useState([]); // <-- NEW STATE for custom roles
     const [loading, setLoading] = useState(true);
     const [showInviteForm, setShowInviteForm] = useState(false);
+
+    // Combined list of all available roles
+    const allAvailableRoles = [...defaultRoles, ...customRoles.map(r => r.roleName)];
 
     useEffect(() => {
         if (!user) return;
         setLoading(true);
-        // Query for users who have this user's UID as their ownerId
-        const q = query(collection(db, "users"), where("ownerId", "==", user.uid));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+
+        // Fetch team members
+        const teamQuery = query(collection(db, "users"), where("ownerId", "==", user.uid));
+        const teamUnsubscribe = onSnapshot(teamQuery, (snapshot) => {
             const teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // Sort to show the Owner (you) first
             teamMembers.sort((a, b) => (a.role === 'Owner' ? -1 : b.role === 'Owner' ? 1 : 0));
             setTeam(teamMembers);
             setLoading(false);
         });
-        return () => unsubscribe();
+
+        // --- NEW: Fetch custom roles ---
+        const rolesQuery = query(collection(db, "customRoles"), where("ownerId", "==", user.uid));
+        const rolesUnsubscribe = onSnapshot(rolesQuery, (snapshot) => {
+            const rolesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setCustomRoles(rolesList);
+        });
+
+        return () => {
+            teamUnsubscribe();
+            rolesUnsubscribe();
+        };
     }, [user]);
 
     const handleRoleChange = async (memberId, newRole) => {
         const memberRef = doc(db, "users", memberId);
         try {
             await updateDoc(memberRef, { role: newRole });
-            // You could add a success toast/notification here
         } catch (error) {
             console.error("Error updating role:", error);
             alert("Failed to update role.");
@@ -42,7 +56,6 @@ const TeamView = ({ user }) => {
         if (window.confirm("Are you sure you want to remove this team member? This action cannot be undone.")) {
             try {
                 await deleteDoc(doc(db, "users", memberId));
-                // You could add a success toast/notification here
             } catch (error) {
                 console.error("Error deleting team member:", error);
                 alert("Failed to delete team member.");
@@ -63,7 +76,7 @@ const TeamView = ({ user }) => {
                 </button>
             </div>
 
-            {showInviteForm && <InviteForm user={user} onInviteSent={() => setShowInviteForm(false)} />}
+            {showInviteForm && <InviteForm user={user} availableRoles={allAvailableRoles} onInviteSent={() => setShowInviteForm(false)} />}
 
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-x-auto">
                 {loading ? <p className="text-center p-8 text-gray-500">Loading team...</p> : (
@@ -89,9 +102,16 @@ const TeamView = ({ user }) => {
                                             disabled={member.role === 'Owner'}
                                         >
                                             <option value="Owner" disabled>{member.role === 'Owner' ? 'Owner' : ''}</option>
-                                            {availableRoles.map(role => (
+                                            
+                                            {/* --- UPDATED: Show all default and custom roles --- */}
+                                            {allAvailableRoles.map(role => (
                                                 <option key={role} value={role}>{role}</option>
                                             ))}
+
+                                            {/* Add current role as an option if it's not in the standard list */}
+                                            {!allAvailableRoles.includes(member.role) && member.role !== 'Owner' && (
+                                                <option value={member.role}>{member.role}</option>
+                                            )}
                                         </select>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -111,11 +131,18 @@ const TeamView = ({ user }) => {
     );
 };
 
-const InviteForm = ({ user, onInviteSent }) => {
+const InviteForm = ({ user, availableRoles, onInviteSent }) => {
     const [email, setEmail] = useState('');
-    const [role, setRole] = useState(availableRoles[0]);
+    const [role, setRole] = useState(availableRoles[0] || '');
     const [isInviting, setIsInviting] = useState(false);
     const [feedback, setFeedback] = useState({ message: '', type: '' });
+    
+    useEffect(() => {
+        if(availableRoles.length > 0 && !role) {
+            setRole(availableRoles[0]);
+        }
+    }, [availableRoles, role]);
+
 
     const handleInvite = async (e) => {
         e.preventDefault();
