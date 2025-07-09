@@ -1,116 +1,177 @@
 // --- src/components/ClientDashboard.js ---
-// Replace the entire contents of this file.
+// This is the complete, updated code for a dynamic dashboard.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Bed, CalendarCheck, ClipboardList, AlertTriangle } from 'lucide-react';
-
-const StatCard = ({ title, value, icon, color }) => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center space-x-4">
-        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}>
-            {icon}
-        </div>
-        <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{title}</p>
-            <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{value}</p>
-        </div>
-    </div>
-);
+import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { Building, AlertTriangle, Package, ListTodo, Plus } from 'lucide-react';
 
 const ClientDashboard = ({ user }) => {
-    const [properties, setProperties] = useState([]);
-    const [tasks, setTasks] = useState([]);
-    
+    const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
+    const [upcomingTasks, setUpcomingTasks] = useState([]);
+    const [lowStockItems, setLowStockItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
         if (!user) return;
 
+        // --- Listener for Properties (for stats) ---
         const propertiesQuery = query(collection(db, "properties"), where("ownerId", "==", user.uid));
         const propertiesUnsubscribe = onSnapshot(propertiesQuery, (snapshot) => {
-            setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setStats(prevStats => ({ ...prevStats, properties: snapshot.size }));
         });
 
-        const tasksQuery = query(collection(db, "tasks"), where("ownerId", "==", user.uid));
+        // --- Listener for Tasks (for stats and upcoming tasks list) ---
+        const tasksQuery = query(collection(db, "tasks"), where("ownerId", "==", user.uid), where("status", "!=", "Completed"));
         const tasksUnsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-            setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setStats(prevStats => ({ ...prevStats, openTasks: snapshot.size }));
+            const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setUpcomingTasks(tasks.slice(0, 5)); // Show the 5 most recent open tasks
         });
 
+        // --- Fetch Low Stock Items (more complex query) ---
+        const fetchLowStockItems = async () => {
+            const locationsQuery = query(collection(db, "storageLocations"), where("ownerId", "==", user.uid));
+            const locationsSnapshot = await getDocs(locationsQuery);
+            let lowItems = [];
+
+            for (const locationDoc of locationsSnapshot.docs) {
+                const suppliesQuery = query(
+                    collection(db, `storageLocations/${locationDoc.id}/supplies`)
+                );
+                const suppliesSnapshot = await getDocs(suppliesQuery);
+                suppliesSnapshot.forEach(supplyDoc => {
+                    const supply = supplyDoc.data();
+                    if (parseInt(supply.currentStock) < parseInt(supply.parLevel)) {
+                        lowItems.push({ 
+                            ...supply, 
+                            id: supplyDoc.id, 
+                            locationName: locationDoc.data().name 
+                        });
+                    }
+                });
+            }
+            setLowStockItems(lowItems);
+            setStats(prevStats => ({ ...prevStats, lowStockItems: lowItems.length }));
+        };
+        
+        fetchLowStockItems();
+        setLoading(false);
+
+        // Cleanup subscriptions on unmount
         return () => {
             propertiesUnsubscribe();
             tasksUnsubscribe();
         };
     }, [user]);
 
-    const tasksByStatus = tasks.reduce((acc, task) => {
-        acc[task.status] = (acc[task.status] || 0) + 1;
-        return acc;
-    }, {});
+    return (
+        <div className="p-4 sm:p-6 md:p-8">
+            <header className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                    Welcome back, {user?.displayName || user?.email}!
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Here’s a summary of your operations.
+                </p>
+            </header>
 
-    const pieData = [
-        { name: 'Pending', value: tasksByStatus['Pending'] || 0 },
-        { name: 'In Progress', value: tasksByStatus['In Progress'] || 0 },
-        { name: 'Completed', value: tasksByStatus['Completed'] || 0 },
-    ];
+            {loading ? (
+                <p className="text-center text-gray-500 dark:text-gray-400">Loading dashboard...</p>
+            ) : (
+                <>
+                    {/* --- Stat Cards --- */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <StatCard icon={<Building size={24} />} title="Total Properties" value={stats.properties} color="blue" />
+                        <StatCard icon={<ListTodo size={24} />} title="Open Tasks" value={stats.openTasks} color="green" />
+                        <StatCard icon={<AlertTriangle size={24} />} title="Low Stock Items" value={stats.lowStockItems} color="red" />
+                    </div>
 
-    const COLORS = ['#FBBF24', '#3B82F6', '#10B981'];
+                    {/* --- Dashboard Columns --- */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Upcoming Tasks Column */}
+                        <DashboardCard
+                            icon={<ListTodo size={22} />}
+                            title="Upcoming Tasks"
+                        >
+                            {upcomingTasks.length > 0 ? (
+                                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                                    {upcomingTasks.map(task => (
+                                        <li key={task.id} className="py-3">
+                                            <p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-center py-4 text-gray-500 dark:text-gray-400">No open tasks. Great job!</p>
+                            )}
+                        </DashboardCard>
 
-    const revenueData = [
-        { name: 'Jan', revenue: 4200 }, { name: 'Feb', revenue: 3500 },
-        { name: 'Mar', revenue: 5800 }, { name: 'Apr', revenue: 5100 },
-        { name: 'May', revenue: 6500 }, { name: 'Jun', revenue: 7200 },
-    ];
+                        {/* Low Inventory Column */}
+                        <DashboardCard
+                            icon={<Package size={22} />}
+                            title="Low Inventory Alerts"
+                        >
+                            {lowStockItems.length > 0 ? (
+                                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                                    {lowStockItems.map(item => (
+                                        <li key={item.id} className="py-3 flex justify-between items-center">
+                                            <div>
+                                                <p className="font-medium text-gray-800 dark:text-gray-100">{item.name}</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">{item.locationName}</p>
+                                            </div>
+                                            <span className="text-sm font-bold text-red-500 dark:text-red-400">
+                                                {item.currentStock} / {item.parLevel}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-center py-4 text-gray-500 dark:text-gray-400">All supplies are well-stocked.</p>
+                            )}
+                        </DashboardCard>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
+// Helper component for stat cards
+const StatCard = ({ icon, title, value, color }) => {
+    const colors = {
+        blue: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300',
+        green: 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-300',
+        red: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-300',
+    };
 
     return (
-        <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-full">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Welcome back, {user.displayName || 'Host'}!</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Here's a snapshot of your property management operations.</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
-                <StatCard title="Total Properties" value={properties.length} icon={<Bed size={24} className="text-purple-600"/>} color="bg-purple-100 dark:bg-purple-900/50" />
-                <StatCard title="Upcoming Bookings" value="7" icon={<CalendarCheck size={24} className="text-green-600"/>} color="bg-green-100 dark:bg-green-900/50" />
-                <StatCard title="Pending Tasks" value={tasksByStatus['Pending'] || 0} icon={<ClipboardList size={24} className="text-yellow-600"/>} color="bg-yellow-100 dark:bg-yellow-900/50" />
-                <StatCard title="Urgent Issues" value="2" icon={<AlertTriangle size={24} className="text-red-600"/>} color="bg-red-100 dark:bg-red-900/50" />
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center space-x-4">
+            <div className={`p-3 rounded-full ${colors[color]}`}>
+                {icon}
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-                <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Revenue Overview</h3>
-                     <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={revenueData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
-                            <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tick={{ fill: '#9ca3af' }} />
-                            <YAxis stroke="#9ca3af" fontSize={12} tick={{ fill: '#9ca3af' }} />
-                            <Tooltip 
-                                cursor={{fill: 'rgba(156, 163, 175, 0.1)'}}
-                                contentStyle={{ 
-                                    backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                                    backdropFilter: 'blur(4px)',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: '0.75rem'
-                                }}
-                            />
-                            <Legend wrapperStyle={{ fontSize: '14px', color: '#4b5563' }} />
-                            <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
-                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Task Status</h3>
-                     <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie data={pieData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" nameKey="name" >
-                                {pieData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(4px)', borderRadius: '0.75rem' }} />
-                            <Legend wrapperStyle={{ color: '#9ca3af' }} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </div>
+            <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
             </div>
         </div>
     );
 };
+
+// Helper component for dashboard content cards
+const DashboardCard = ({ icon, title, children }) => (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="flex items-center mb-4">
+            <div className="text-gray-500 dark:text-gray-400">
+                {icon}
+            </div>
+            <h3 className="ml-3 text-xl font-semibold text-gray-800 dark:text-gray-100">{title}</h3>
+        </div>
+        <div className="mt-4">
+            {children}
+        </div>
+    </div>
+);
 
 export default ClientDashboard;
