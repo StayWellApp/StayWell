@@ -97,6 +97,7 @@ export const ChecklistsView = ({ user }) => {
 
     const toggleExpand = (templateId) => {
         setExpandedTemplate(expandedTemplate === templateId ? null : templateId);
+        setExpandedItem(null);
     };
     
     const toggleItemExpand = (index) => {
@@ -138,30 +139,35 @@ export const ChecklistsView = ({ user }) => {
                                 {expandedTemplate === template.id && (
                                     <div className="pl-8 pr-4 py-2 mt-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-fade-in-down">
                                         <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Checklist Items:</h4>
-                                        <ul className="space-y-2">
-                                            {template.items.map((item, index) => (
-                                                <li key={index} className="text-sm text-gray-800 dark:text-gray-200">
-                                                    <div className="flex items-center justify-between">
-                                                        <span>{item.text}</span>
-                                                        {(item.instructions || item.imageUrl) && (
-                                                            <button onClick={() => toggleItemExpand(index)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                                                                <ChevronDown size={20} className={`transition-transform ${expandedItem === index ? 'rotate-180' : ''}`} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    {expandedItem === index && (
-                                                        <div className="mt-2 pl-4 pr-2 py-2 bg-white dark:bg-gray-800 rounded-md animate-fade-in-down">
-                                                            {item.instructions && <p className="text-sm text-gray-600 dark:text-gray-300 flex items-start"><Info size={14} className="mr-2 mt-0.5 flex-shrink-0"/>{item.instructions}</p>}
-                                                            {item.imageUrl && (
-                                                                <div className="mt-2">
-                                                                    <img src={item.imageUrl} alt="Instructional" className="rounded-lg max-w-xs max-h-48 border dark:border-gray-600" />
-                                                                </div>
+                                        
+                                        {template.items && template.items.length > 0 ? (
+                                            <ul className="space-y-2">
+                                                {template.items.map((item, index) => (
+                                                    <li key={index} className="text-sm text-gray-800 dark:text-gray-200">
+                                                        <div className="flex items-center justify-between">
+                                                            <span>{item.text}</span>
+                                                            {(item.instructions || item.imageUrl) && (
+                                                                <button onClick={() => toggleItemExpand(index)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                                                    <ChevronDown size={20} className={`transition-transform ${expandedItem === index ? 'rotate-180' : ''}`} />
+                                                                </button>
                                                             )}
                                                         </div>
-                                                    )}
-                                                </li>
-                                            ))}
-                                        </ul>
+                                                        {expandedItem === index && (
+                                                            <div className="mt-2 pl-4 pr-2 py-2 bg-white dark:bg-gray-800 rounded-md animate-fade-in-down">
+                                                                {item.instructions && <p className="text-sm text-gray-600 dark:text-gray-300 flex items-start"><Info size={14} className="mr-2 mt-0.5 flex-shrink-0"/>{item.instructions}</p>}
+                                                                {item.imageUrl && (
+                                                                    <div className="mt-2">
+                                                                        <img src={item.imageUrl} alt="Instructional" className="rounded-lg max-w-xs max-h-48 border dark:border-gray-600" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 py-2">This template has no checklist items.</p>
+                                        )}
                                     </div>
                                 )}
                             </li>
