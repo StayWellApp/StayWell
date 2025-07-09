@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { db } from '../firebase-config';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore'; // Added deleteField
 import { ThemeContext } from '../contexts/ThemeContext';
 // Added new icons for localization
 import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, DollarSign, Clock, Languages } from 'lucide-react';
@@ -332,32 +332,39 @@ const RolesPanel = ({ user }) => {
     };
 
     const handleSaveRole = async (roleData) => {
-        if (!roleData.roleName.trim() && roleData.type === 'custom') return; // Only custom roles have editable name
+        // Normalize roleName to an empty string if it's undefined or null
+        const normalizedRoleName = roleData.roleName || '';
+        // Determine if it's a new custom role (no id, and not explicitly a standard role)
+        const isNewCustomRole = !roleData.id && roleData.type !== 'standard';
+
+        // Check if role name is empty for custom roles (new or existing)
+        if ((roleData.type === 'custom' || isNewCustomRole) && !normalizedRoleName.trim()) {
+            alert('Role name cannot be empty for custom roles.');
+            return;
+        }
 
         try {
-            if (roleData.type === 'custom') {
-                if (editingRole && editingRole.id) {
-                    // Update existing custom role
-                    await updateDoc(doc(db, "customRoles", editingRole.id), {
-                        roleName: roleData.roleName,
-                        permissions: roleData.permissions,
-                        updatedAt: serverTimestamp()
-                    });
-                } else {
-                    // Create new custom role
-                    await addDoc(collection(db, "customRoles"), {
-                        roleName: roleData.roleName,
-                        permissions: roleData.permissions,
-                        ownerId: user.uid,
-                        createdAt: serverTimestamp()
-                    });
-                }
+            if (isNewCustomRole) {
+                // Create new custom role
+                await addDoc(collection(db, "customRoles"), {
+                    roleName: normalizedRoleName, // Use normalized value
+                    permissions: roleData.permissions,
+                    ownerId: user.uid,
+                    createdAt: serverTimestamp()
+                });
+            } else if (roleData.type === 'custom') {
+                // Update existing custom role
+                await updateDoc(doc(db, "customRoles", roleData.id), { // Use roleData.id
+                    roleName: normalizedRoleName, // Use normalized value
+                    permissions: roleData.permissions,
+                    updatedAt: serverTimestamp()
+                });
             } else if (roleData.type === 'standard') {
                 // Update permissions for a standard role within owner's userSettings
                 const userSettingsRef = doc(db, 'userSettings', user.uid);
                 await updateDoc(userSettingsRef, {
                     [`standardRolePermissions.${roleData.id}`]: roleData.permissions
-                }, { merge: true }); // Merge to avoid overwriting other settings
+                }, { merge: true });
             }
             alert('Role saved successfully!');
             handleCloseModal();
@@ -369,16 +376,28 @@ const RolesPanel = ({ user }) => {
 
     const handleDeleteRole = async (roleId, roleType) => {
         if (roleType === 'standard') {
-            alert('Standard roles cannot be deleted.');
+            // Confirm the reset action
+            if (window.confirm(`Are you sure you want to reset permissions for this built-in role to its default? This cannot be undone.`)) {
+                try {
+                    const userSettingsRef = doc(db, 'userSettings', user.uid);
+                    await updateDoc(userSettingsRef, {
+                        [`standardRolePermissions.${roleId}`]: deleteField() // Use deleteField to remove the specific customization
+                    });
+                    alert('Built-in role permissions reset to default.');
+                } catch (error) {
+                    console.error("Error resetting standard role permissions:", error);
+                    alert('Failed to reset built-in role permissions.');
+                }
+            }
             return;
         }
-        if (window.confirm("Are you sure you want to delete this role?")) {
+        if (window.confirm("Are you sure you want to delete this custom role?")) { // Clarify for custom roles
             try {
                 await deleteDoc(doc(db, "customRoles", roleId));
-                alert("Role deleted successfully.");
+                alert("Custom role deleted successfully.");
             } catch (error) {
-                console.error("Error deleting role:", error);
-                alert('Failed to delete role.');
+                console.error("Error deleting custom role:", error);
+                alert('Failed to delete custom role.');
             }
         }
     };
