@@ -1,5 +1,21 @@
 {
   "projects": {
     "default": "staywellapp-49b62"
-  }
+  },
+  "targets": {
+    "staywellapp-49b62": {
+      "hosting": {
+        "dev": [
+          "dev-staywellapp"
+        ],
+        "qa": [
+          "qa-staywellapp"
+        ],
+        "prod": [
+          "staywellapp"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
