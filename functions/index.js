@@ -1,12 +1,11 @@
-// --- functions/index.js ---
-// NOTE: This is the only file you need to update.
-// Replace the entire contents of your functions/index.js file with this code.
+// This is the full content of your functions/index.js file.
+// It is set up to handle file uploads via a HTTPS request.
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const path = require("path");
 const os = require("os");
-const fs = require("fs");
+const fs =require("fs");
 const cors = require("cors")({ origin: true });
 const Busboy = require("busboy");
 
@@ -32,8 +31,9 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
       });
 
       busboy.on("file", (fieldname, file, info) => {
-        const { filename, mimeType } = info;
-        functions.logger.log(`Receiving file: ${filename} (${mimeType})`);
+        const { filename, encoding, mimeType } = info;
+        functions.logger.log(`Receiving file: ${filename} (${mimeType}) with encoding ${encoding}`);
+
         const filepath = path.join(tmpdir, filename);
         uploads[fieldname] = { filepath, mimeType };
         const writeStream = fs.createWriteStream(filepath);
@@ -78,12 +78,13 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
           });
           functions.logger.log("Upload to GCS successful.");
 
+          // Clean up the temporary file
           fs.unlinkSync(fileData.filepath);
 
           const file = bucket.file(destination);
           const [url] = await file.getSignedUrl({
             action: "read",
-            expires: "03-09-2491",
+            expires: "03-09-2491", // A far-future expiration date
           });
           functions.logger.log("Signed URL generated successfully.");
 
@@ -94,6 +95,8 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
         }
       });
 
+      // The rawBody is automatically parsed by Cloud Functions.
+      // We pass it to busboy.end().
       busboy.end(req.rawBody);
     } catch (error) {
       functions.logger.error("Critical error in function execution:", error);
