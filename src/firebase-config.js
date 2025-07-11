@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage";
+import { getStorage } from "firebase/storage"; // --- NEW ---
 import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
@@ -14,16 +14,10 @@ const firebaseConfig = {
   measurementId: "G-N2YJYST032"
 };
 
-// --- CORRECT INITIALIZATION ORDER ---
-
-// Step 1: Initialize the main Firebase app
 const app = initializeApp(firebaseConfig);
-
-// Step 2: Initialize all the services we need from the app
 const db = getFirestore(app);
 const auth = getAuth(app);
-const storage = getStorage(app);
+const storage = getStorage(app); // --- NEW ---
 const functions = getFunctions(app);
 
-// Step 3: Export the initialized services so other files can use them
-export { db, auth, storage, functions };
+export { db, auth, storage, functions }; // --- UPDATE ---
