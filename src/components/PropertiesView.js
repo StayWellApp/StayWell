@@ -1,112 +1,124 @@
 import React, { useState } from 'react';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc } from 'firebase/firestore';
-// CORRECTED IMPORT PATH:
-// Assumes your firebase.js file is at 'src/firebase.js'
-// If it's at 'src/firebase/index.js' or similar, the path might be just '../firebase'
-import { db } from '../firebase';
+import { db } from '../firebase-config'; // Corrected import path
 
-/**
- * A component to display and manage a single property's details,
- * including photo uploads.
- *
- * @param {object} props - The component props.
- * @param {object} props.property - The property object. Should have at least an `id` and `photoURL`.
- */
-const PropertiesView = ({ property }) => {
-  const [imageUpload, setImageUpload] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState(null);
+// --- The Form for Adding or Editing a Property ---
+export const PropertyForm = ({ onSave, onCancel, property = {} }) => {
+    const [name, setName] = useState(property.name || '');
+    const [address, setAddress] = useState(property.address || '');
 
-  // Handles the file selection
-  const handleImageChange = (e) => {
-    if (e.target.files[0]) {
-      setImageUpload(e.target.files[0]);
-      setError(null); // Clear previous errors
-    }
-  };
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({ name, address });
+    };
 
-  // Handles the file upload to Firebase Storage
-  const handleImageUpload = async () => {
-    if (imageUpload == null) {
-      setError('Please select an image to upload.');
-      return;
-    }
-
-    setIsUploading(true);
-    setError(null);
-    const storage = getStorage();
-    // Create a unique file path for the image
-    const imagePath = `properties/${property.id}/${Date.now()}_${imageUpload.name}`;
-    const imageRef = ref(storage, imagePath);
-
-    try {
-      // Upload the file
-      const snapshot = await uploadBytes(imageRef, imageUpload);
-      // Get the public URL of the uploaded file
-      const downloadURL = await getDownloadURL(snapshot.ref);
-
-      // Update the property document in Firestore with the new photo URL
-      const propertyDocRef = doc(db, 'properties', property.id);
-      await updateDoc(propertyDocRef, {
-        photoURL: downloadURL,
-      });
-
-      // You might want to update the local state or refetch property data here
-      alert('Image uploaded and property updated successfully!');
-
-    } catch (err) {
-      console.error("Error uploading image: ", err);
-      setError('Failed to upload image. Please try again.');
-    } finally {
-      setIsUploading(false);
-      setImageUpload(null);
-      // Reset file input
-      document.getElementById(`file-input-${property.id}`).value = "";
-    }
-  };
-
-  return (
-    <div className="property-card">
-      {/* Assume some existing property details are displayed here */}
-      <h3>{property.name || 'Property Details'}</h3>
-      <p>{property.address || 'No address provided.'}</p>
-
-      <hr style={{ margin: '20px 0' }} />
-
-      <h4>Property Photo</h4>
-
-      {property.photoURL ? (
-        <div className="current-photo">
-          <p>Current Image:</p>
-          <img
-            src={property.photoURL}
-            alt="Property"
-            style={{ maxWidth: '300px', height: 'auto', borderRadius: '8px' }}
-          />
-        </div>
-      ) : (
-        <p>No photo has been uploaded for this property yet.</p>
-      )}
-
-      <div className="upload-section" style={{ marginTop: '20px' }}>
-        <input
-          type="file"
-          id={`file-input-${property.id}`} // Unique ID for the file input
-          onChange={handleImageChange}
-          accept="image/*" // Accept only image files
-        />
-        <button
-          onClick={handleImageUpload}
-          disabled={isUploading || !imageUpload}
-          style={{ marginLeft: '10px' }}
-        >
-          {isUploading ? 'Uploading...' : 'Upload Image'}
-        </button>
-        {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
-      </div>
-    </div>
-  );
+    return (
+        <form onSubmit={handleSubmit} className="p-4 mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Property Name"
+                className="w-full p-2 mb-2 rounded bg-white dark:bg-gray-700"
+                required
+            />
+            <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Property Address"
+                className="w-full p-2 mb-4 rounded bg-white dark:bg-gray-700"
+                required
+            />
+            <div className="flex justify-end gap-4">
+                <button type="button" onClick={onCancel} className="button-secondary">
+                    Cancel
+                </button>
+                <button type="submit" className="button-primary">
+                    Save Property
+                </button>
+            </div>
+        </form>
+    );
 };
 
-export default PropertiesView;
+
+// --- The Card for Displaying a Single Property (WITH UPLOAD LOGIC) ---
+export const PropertyCard = ({ property, onSelect }) => {
+    const [imageUpload, setImageUpload] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const handleImageChange = (e) => {
+        if (e.target.files[0]) {
+            setImageUpload(e.target.files[0]);
+            setError(null);
+        }
+    };
+
+    const handleImageUpload = async (e) => {
+        e.stopPropagation(); // Prevent onSelect from firing when clicking upload
+        if (imageUpload == null) return;
+
+        setIsUploading(true);
+        setError(null);
+        const storage = getStorage();
+        const imagePath = `properties/${property.id}/${Date.now()}_${imageUpload.name}`;
+        const imageRef = ref(storage, imagePath);
+
+        try {
+            const snapshot = await uploadBytes(imageRef, imageUpload);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            const propertyDocRef = doc(db, 'properties', property.id);
+            await updateDoc(propertyDocRef, { photoURL: downloadURL });
+            alert('Image uploaded successfully!');
+        } catch (err) {
+            console.error("Error uploading image: ", err);
+            setError('Failed to upload image.');
+        } finally {
+            setIsUploading(false);
+            setImageUpload(null);
+            if(document.getElementById(`file-input-${property.id}`)) {
+                document.getElementById(`file-input-${property.id}`).value = "";
+            }
+        }
+    };
+
+    return (
+        <div onClick={onSelect} className="property-card bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer">
+            <img
+                className="w-full h-48 object-cover"
+                src={property.photoURL || 'https://via.placeholder.com/400x300.png?text=No+Image'}
+                alt={`Photo of ${property.name}`}
+            />
+            <div className="p-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{property.name}</h3>
+                <p className="text-gray-600 dark:text-gray-400">{property.address}</p>
+                
+                {/* --- Image Upload Section --- */}
+                <div className="upload-section mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Update Photo</p>
+                    <div className="flex items-center gap-2">
+                         <input
+                            type="file"
+                            id={`file-input-${property.id}`}
+                            onChange={handleImageChange}
+                            onClick={(e) => e.stopPropagation()} // Prevent card click
+                            className="text-sm text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            accept="image/*"
+                        />
+                        <button
+                            onClick={handleImageUpload}
+                            disabled={isUploading || !imageUpload}
+                            className="button-primary text-xs px-2 py-1"
+                        >
+                            {isUploading ? '...' : 'Upload'}
+                        </button>
+                    </div>
+                    {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
+                </div>
+            </div>
+        </div>
+    );
+};
