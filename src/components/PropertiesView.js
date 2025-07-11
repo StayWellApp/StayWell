@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase'; // Ensure you have initialized Firebase and exported db
+// CORRECTED IMPORT PATH:
+// Assumes your firebase.js file is at 'src/firebase.js'
+// If it's at 'src/firebase/index.js' or similar, the path might be just '../firebase'
+import { db } from '../firebase';
 
 /**
  * A component to display and manage a single property's details,
@@ -10,7 +13,7 @@ import { db } from '../firebase'; // Ensure you have initialized Firebase and ex
  * @param {object} props - The component props.
  * @param {object} props.property - The property object. Should have at least an `id` and `photoURL`.
  */
-const PropertyViews = ({ property }) => {
+const PropertiesView = ({ property }) => {
   const [imageUpload, setImageUpload] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
@@ -106,4 +109,4 @@ const PropertyViews = ({ property }) => {
   );
 };
 
-export default PropertyViews;
+export default PropertiesView;
