@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase-config';
+import { db, storage } from '../firebase-config'; // --- MODIFIED: Added storage
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // --- NEW ---
 import { TaskDetailModal, AddTaskForm } from './TaskViews';
 import { ChecklistTemplateForm } from './ChecklistViews';
 import { InventoryView } from './InventoryViews';
@@ -50,7 +51,11 @@ const propertyTypes = ["House", "Apartment", "Guesthouse", "Hotel", "Cabin", "Ba
 export const PropertyCard = ({ property, onSelect }) => (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col">
         <div className="bg-gray-100 dark:bg-gray-700 h-48 flex items-center justify-center relative">
-            <Building className="text-gray-300 dark:text-gray-500 w-16 h-16" />
+            {property.photoURL ? (
+                <img src={property.photoURL} alt={property.propertyName} className="w-full h-full object-cover" />
+            ) : (
+                <Building className="text-gray-300 dark:text-gray-500 w-16 h-16" />
+            )}
             <div className="absolute top-2 right-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold text-gray-700 dark:text-gray-200">{property.propertyType}</div>
         </div>
         <div className="p-5 flex flex-col flex-grow">
@@ -75,6 +80,9 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
     const [bathrooms, setBathrooms] = useState(1);
     const [guests, setGuests] = useState(2);
     const [amenities, setAmenities] = useState(initialAmenitiesState);
+    const [photo, setPhoto] = useState(null); // --- NEW ---
+    const [photoURL, setPhotoURL] = useState(''); // --- NEW ---
+    const [isUploading, setIsUploading] = useState(false); // --- NEW ---
 
     useEffect(() => {
         if (existingProperty) {
@@ -86,14 +94,50 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
             setBathrooms(existingProperty.bathrooms || 1);
             setGuests(existingProperty.guests || 2);
             setAmenities(existingProperty.amenities || initialAmenitiesState);
+            setPhotoURL(existingProperty.photoURL || ''); // --- NEW ---
         }
     }, [existingProperty]);
 
-    const handleSubmit = (e) => {
+    // --- NEW ---
+    const handleFileChange = (e) => {
+        if (e.target.files[0]) {
+            setPhoto(e.target.files[0]);
+            // Create a preview URL
+            setPhotoURL(URL.createObjectURL(e.target.files[0]));
+        }
+    };
+    
+    // --- MODIFIED ---
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!propertyName || !address) { alert("Please fill out at least the property name and address."); return; }
-        const propertyData = { propertyName, propertyType, address, description, bedrooms, bathrooms, guests, amenities };
-        onSave(propertyData);
+        if (!propertyName || !address) {
+            alert("Please fill out at least the property name and address.");
+            return;
+        }
+
+        setIsUploading(true);
+        let uploadedPhotoURL = existingProperty?.photoURL || '';
+
+        // If a new photo was selected, upload it
+        if (photo) {
+            const photoRef = ref(storage, `property_photos/${Date.now()}_${photo.name}`);
+            await uploadBytes(photoRef, photo);
+            uploadedPhotoURL = await getDownloadURL(photoRef);
+        }
+
+        const propertyData = {
+            propertyName,
+            propertyType,
+            address,
+            description,
+            bedrooms,
+            bathrooms,
+            guests,
+            amenities,
+            photoURL: uploadedPhotoURL, // Save the final URL
+        };
+        await onSave(propertyData);
+        setIsUploading(false);
     };
 
     return (
@@ -112,12 +156,26 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
                     <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="bathrooms">Bathrooms</label><input type="number" id="bathrooms" value={bathrooms} min="1" step="0.5" onChange={(e) => setBathrooms(parseFloat(e.target.value))} className="input-style" /></div>
                 </div>
                 <AmenitiesForm amenities={amenities} setAmenities={setAmenities} />
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="photo">Main Photo</label><input type="file" id="photo" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/50 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900"/><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Image uploads coming soon!</p></div>
-                <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700"><button type="button" onClick={onCancel} className="button-secondary">Cancel</button><button type="submit" className="button-primary">{existingProperty ? 'Update Property' : 'Save Property'}</button></div>
+                
+                {/* --- MODIFIED: Photo Upload Field --- */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="photo">Main Photo</label>
+                    <input type="file" id="photo" onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/50 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900"/>
+                    {photoURL && <img src={photoURL} alt="Property Preview" className="mt-4 w-40 h-40 object-cover rounded-lg shadow-md" />}
+                </div>
+
+                {/* --- MODIFIED: Buttons --- */}
+                <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
+                    <button type="submit" className="button-primary" disabled={isUploading}>
+                        {isUploading ? 'Saving...' : (existingProperty ? 'Update Property' : 'Save Property')}
+                    </button>
+                </div>
             </form>
         </div>
     );
 };
+
 
 const AmenitiesForm = ({ amenities, setAmenities }) => {
     const toggleAmenity = (amenity) => {
