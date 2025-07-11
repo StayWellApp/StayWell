@@ -2,11 +2,12 @@
 // This file provides the modals needed for viewing, editing, and adding tasks.
 
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase-config';
+import { db, storage } from '../firebase-config'; // --- MODIFIED: Added storage
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
-import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks, Info, Image, ChevronDown } from 'lucide-react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // --- NEW ---
+import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks, Info, Image, ChevronDown, Upload } from 'lucide-react'; // --- MODIFIED: Added Upload icon
 
-export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDate }) => {
+export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, preselectedDate }) => {
     const [taskName, setTaskName] = useState('');
     const [taskType, setTaskType] = useState('Maintenance');
     const [description, setDescription] = useState('');
@@ -34,20 +35,11 @@ export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDa
             assignedToEmail,
             templateId: selectedTemplate?.id || '',
             templateName: selectedTemplate?.name || '',
-            // Copy checklist items into the task, ensuring they have a 'completed' status
             checklistItems: selectedTemplate ? selectedTemplate.items.map(item => ({ ...item, completed: false })) : [],
         };
 
         onAddTask(taskData);
-        
-        // Reset form
-        setTaskName('');
-        setTaskType('Maintenance');
-        setDescription('');
-        setPriority('Medium');
-        setScheduledDate('');
-        setAssignedTo('');
-        setTemplateId('');
+        onCancel(); // Close form after adding
     };
 
     return (
@@ -102,7 +94,8 @@ export const AddTaskForm = ({ onAddTask, checklistTemplates, team, preselectedDa
                         </div>
                     )}
                 </div>
-                <div className="flex justify-end pt-2">
+                <div className="flex justify-end space-x-2 pt-2">
+                    <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
                     <button type="submit" className="button-primary">Create Task</button>
                 </div>
             </form>
@@ -116,6 +109,8 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [checklist, setChecklist] = useState([]);
+    const [proofFile, setProofFile] = useState(null); // --- NEW ---
+    const [isUploadingProof, setIsUploadingProof] = useState(false); // --- NEW ---
 
     useEffect(() => {
         setEditedTask(task);
@@ -123,10 +118,62 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
 
         const commentsQuery = query(collection(db, `tasks/${task.id}/comments`));
         const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
-            setComments(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+            const fetchedComments = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            // Sort comments with newest first
+            fetchedComments.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            setComments(fetchedComments);
         });
         return unsubscribe;
     }, [task]);
+    
+    // --- NEW: Function to handle file selection ---
+    const handleProofFileChange = (e) => {
+        if (e.target.files[0]) {
+            setProofFile(e.target.files[0]);
+        }
+    };
+
+    // --- NEW: Function to handle file upload ---
+    const handleProofUpload = async () => {
+        if (!proofFile) {
+            alert("Please select a file to upload.");
+            return;
+        }
+        setIsUploadingProof(true);
+        try {
+            // Create a reference in Firebase Storage
+            const proofRef = ref(storage, `proofs/${task.id}/${Date.now()}-${proofFile.name}`);
+            
+            // Upload the file
+            const uploadResult = await uploadBytes(proofRef, proofFile);
+            
+            // Get the download URL
+            const proofURL = await getDownloadURL(uploadResult.ref);
+
+            // Add the proof URL as a comment for historical record
+            await addDoc(collection(db, `tasks/${task.id}/comments`), {
+                text: `Proof of completion uploaded.`,
+                author: "System", // Or current user's name
+                createdAt: serverTimestamp(),
+                isProof: true,
+                proofURL: proofURL
+            });
+            
+            // Also update the task itself with the latest proof URL, if you want a direct link
+            await updateDoc(doc(db, 'tasks', task.id), {
+                lastProofURL: proofURL,
+                status: 'Completed' // Optionally update status upon proof upload
+            });
+
+            alert('Proof uploaded successfully!');
+        } catch (error) {
+            console.error("Error uploading proof:", error);
+            alert("Failed to upload proof. See console for details.");
+        } finally {
+            setIsUploadingProof(false);
+            setProofFile(null);
+        }
+    };
 
     const handleUpdate = async () => {
         const taskRef = doc(db, 'tasks', task.id);
@@ -136,7 +183,7 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
     };
     
     const handleDelete = async () => {
-        if (window.confirm("Are you sure?")) {
+        if (window.confirm("Are you sure you want to delete this task?")) {
             await deleteDoc(doc(db, 'tasks', task.id));
             onClose();
         }
@@ -150,7 +197,7 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
         if (!newComment.trim()) return;
         await addDoc(collection(db, `tasks/${task.id}/comments`), {
             text: newComment,
-            author: "Admin",
+            author: "Admin", // Replace with actual user name
             createdAt: serverTimestamp()
         });
         setNewComment('');
@@ -170,7 +217,7 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
                 <div className="flex justify-between items-center mb-4 pb-4 border-b dark:border-gray-700">
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{task.taskName}</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">&times;</button>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 rounded-full">&times;</button>
                 </div>
 
                 <div className="overflow-y-auto pr-2 flex-grow">
@@ -207,14 +254,32 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
                             <TaskChecklist items={checklist} onToggle={handleToggleChecklistItem} />
                         </div>
                     )}
+                    
+                    {/* --- NEW: Proof of Completion Section --- */}
+                    <div className="mt-6 pt-4 border-t dark:border-gray-700">
+                         <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><Upload size={18} className="mr-2"/>Proof of Completion</h4>
+                         <div className="flex items-center space-x-2">
+                             <input type="file" onChange={handleProofFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/50 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900"/>
+                             <button onClick={handleProofUpload} className="button-primary" disabled={isUploadingProof || !proofFile}>
+                                 {isUploadingProof ? 'Uploading...' : 'Upload'}
+                             </button>
+                         </div>
+                    </div>
+
 
                     <div className="mt-6 pt-4 border-t dark:border-gray-700">
-                        <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><MessageSquare size={18} className="mr-2"/>Comments</h4>
-                        <div className="space-y-3 mb-4">
+                        <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><MessageSquare size={18} className="mr-2"/>Activity & Comments</h4>
+                        <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
                             {comments.length > 0 ? comments.map(comment => (
                                 <div key={comment.id} className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg">
                                     <p className="text-gray-800 dark:text-gray-200">{comment.text}</p>
                                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">- {comment.author}</p>
+                                    {/* --- MODIFIED: Show link to proof --- */}
+                                    {comment.isProof && comment.proofURL && (
+                                        <a href={comment.proofURL} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline flex items-center mt-1">
+                                            <Image size={12} className="mr-1" /> View Proof
+                                        </a>
+                                    )}
                                 </div>
                             )) : <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>}
                         </div>
