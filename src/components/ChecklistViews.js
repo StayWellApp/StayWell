@@ -1,11 +1,13 @@
 // src/components/ChecklistViews.js
 // This file handles creating, viewing, and managing checklist templates with improved UI/UX.
+// MODIFIED to allow direct image uploads for checklist items instead of URL pasting.
 
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase-config';
+import { db, storage } from '../firebase-config'; // --- MODIFIED: Ensure storage is imported
 import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // --- NEW ---
 import { toast } from 'react-toastify';
-import { Plus, Trash2, ListPlus, Info, Image, ChevronDown, Building, Tag, ShieldCheck, FileText } from 'lucide-react';
+import { Plus, Trash2, ListPlus, Info, Image, ChevronDown, Building, Tag, ShieldCheck, FileText, UploadCloud, X } from 'lucide-react';
 
 // --- Pre-generated templates for easy onboarding ---
 const preGeneratedTemplates = [
@@ -71,9 +73,10 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
                 instructions: item.instructions || '',
                 imageUrl: item.imageUrl || '',
                 proofRequired: item.proofRequired || false,
+                imageFile: null, // --- NEW: To hold the file object for new uploads
             }));
         }
-        return [{ text: '', instructions: '', imageUrl: '', proofRequired: false }];
+        return [{ text: '', instructions: '', imageUrl: '', proofRequired: false, imageFile: null }];
     });
 
     const handleItemChange = (index, field, value) => {
@@ -82,24 +85,66 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
         );
     };
 
+    // --- NEW: Handle image file selection for a specific item ---
+    const handleImageFileChange = (index, file) => {
+        if (file) {
+            const newItems = [...items];
+            newItems[index].imageFile = file;
+            // Create a temporary preview URL
+            newItems[index].imageUrl = URL.createObjectURL(file);
+            setItems(newItems);
+        }
+    };
+    
+    // --- NEW: Handle removing an image from an item ---
+    const handleRemoveImage = (index) => {
+        const newItems = [...items];
+        newItems[index].imageFile = null;
+        newItems[index].imageUrl = '';
+        setItems(newItems);
+    };
+
     const handlePropertyLink = (propId) => {
         setLinkedProperties(prev => prev.includes(propId) ? prev.filter(id => id !== propId) : [...prev, propId]);
     };
 
-    const handleAddItem = () => setItems([...items, { text: '', instructions: '', imageUrl: '', proofRequired: false }]);
+    const handleAddItem = () => setItems([...items, { text: '', instructions: '', imageUrl: '', proofRequired: false, imageFile: null }]);
     const handleRemoveItem = (index) => {
         if (items.length <= 1) return;
         setItems(items.filter((_, i) => i !== index));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const filteredItems = items.filter(item => item.text.trim() !== '');
         if (!name || filteredItems.length === 0) {
             toast.error("Please provide a template name and at least one checklist item.");
             return;
         }
-        onSave({ name, taskType, linkedProperties, items: filteredItems });
+
+        const toastId = toast.loading("Saving template and uploading images...");
+
+        try {
+            // --- NEW: Upload images before saving the template data ---
+            const itemsWithUploadedUrls = await Promise.all(
+                filteredItems.map(async (item) => {
+                    if (item.imageFile) {
+                        const imageRef = ref(storage, `checklist_template_images/${Date.now()}_${item.imageFile.name}`);
+                        await uploadBytes(imageRef, item.imageFile);
+                        const downloadURL = await getDownloadURL(imageRef);
+                        return { ...item, imageUrl: downloadURL, imageFile: null }; // Replace blob URL with final URL
+                    }
+                    return item; // Keep existing URL if no new file
+                })
+            );
+
+            onSave({ name, taskType, linkedProperties, items: itemsWithUploadedUrls });
+            toast.update(toastId, { render: "Template saved!", type: "success", isLoading: false, autoClose: 3000 });
+
+        } catch (error) {
+            console.error("Error during template save:", error);
+            toast.update(toastId, { render: "Failed to save template.", type: "error", isLoading: false, autoClose: 5000 });
+        }
     };
 
     const inputStyles = "mt-1 w-full input-style dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 rounded-lg px-4";
@@ -133,7 +178,26 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
                                 </div>
                                 <div className="mt-4 space-y-3 pl-1">
                                     <div className="flex items-start space-x-3"><Info size={16} className="text-gray-400 mt-2 flex-shrink-0" /><textarea value={item.instructions} onChange={e => handleItemChange(index, 'instructions', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Add detailed step-by-step instructions..." rows="4" /></div>
-                                    <div className="flex items-center space-x-3"><Image size={16} className="text-gray-400 flex-shrink-0" /><input type="text" value={item.imageUrl} onChange={e => handleItemChange(index, 'imageUrl', e.target.value)} className={`${inputStyles} text-sm`} placeholder="Optional: Paste image URL here..." /></div>
+                                    
+                                    {/* --- NEW: Image Upload UI --- */}
+                                    <div className="flex items-start space-x-3">
+                                        <Image size={16} className="text-gray-400 mt-2 flex-shrink-0" />
+                                        <div className="flex-grow">
+                                            {item.imageUrl ? (
+                                                <div className="relative w-40 h-40">
+                                                    <img src={item.imageUrl} alt="Instruction preview" className="w-full h-full object-cover rounded-lg shadow-md" />
+                                                    <button type="button" onClick={() => handleRemoveImage(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"><X size={12} /></button>
+                                                </div>
+                                            ) : (
+                                                <label htmlFor={`image-upload-${index}`} className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/80">
+                                                    <UploadCloud size={24} className="text-gray-400" />
+                                                    <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Upload Image</span>
+                                                    <input id={`image-upload-${index}`} type="file" onChange={(e) => handleImageFileChange(index, e.target.files[0])} className="hidden" accept="image/*" />
+                                                </label>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <div className="flex items-center space-x-3 pl-1 pt-2">
                                         <input id={`proof-required-${index}`} type="checkbox" checked={item.proofRequired} onChange={e => handleItemChange(index, 'proofRequired', e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                                         <label htmlFor={`proof-required-${index}`} className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">Require photo proof for this item</label>
