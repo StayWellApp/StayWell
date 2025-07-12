@@ -14,7 +14,7 @@ import { ChecklistsView } from './components/ChecklistViews';
 import { StorageView } from './components/StorageViews';
 import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
-import ChatLayout from './components/ChatLayout'; // UPDATED: Import the new ChatLayout
+import ChatLayout from './components/ChatLayout';
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
@@ -24,32 +24,53 @@ import 'react-toastify/dist/ReactToastify.css';
 function App() {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
-    const [loadingUser, setLoadingUser] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
-    const [isChatOpen, setIsChatOpen] = useState(false); // This now controls the full-screen chat
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
     const { hasPermission, loadingPermissions } = usePermissions(userData);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            if (!currentUser) {
-                setLoadingUser(false);
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+            } else {
+                // If there's no user, stop loading and clear data.
+                setUser(null);
                 setUserData(null);
+                setIsLoading(false);
             }
         });
-        return () => unsubscribe();
+        return () => unsubscribeAuth();
     }, []);
 
     useEffect(() => {
+        // Only run this effect if we have a user object.
         if (user) {
-            const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-                setUserData(doc.exists() ? doc.data() : null);
-                setLoadingUser(false);
-            });
-            return () => unsub();
+            const userDocRef = doc(db, "users", user.uid);
+            const unsubscribeSnapshot = onSnapshot(userDocRef, 
+                (doc) => {
+                    // This is the success callback.
+                    if (doc.exists()) {
+                        setUserData(doc.data());
+                    } else {
+                        // Handle case where user exists in Auth but not Firestore.
+                        setUserData(null);
+                    }
+                    // We have our answer (or lack thereof), so we can stop loading.
+                    setIsLoading(false);
+                },
+                (error) => {
+                    // This is the error callback.
+                    console.error("A Firestore permission error occurred. This is likely due to security rules. Please ensure they are deployed correctly.", error);
+                    // Stop loading even on error to prevent the app from getting stuck.
+                    setIsLoading(false);
+                }
+            );
+            // Cleanup the listener when the component unmounts or user changes.
+            return () => unsubscribeSnapshot();
         }
     }, [user]);
 
@@ -66,6 +87,10 @@ function App() {
     };
     
     const renderActiveView = () => {
+        if (loadingPermissions) {
+            return <div className="flex items-center justify-center h-full"><p className="text-gray-500">Checking permissions...</p></div>;
+        }
+
         if (selectedProperty) {
             return <PropertyDetailView 
                         property={selectedProperty} 
@@ -101,12 +126,12 @@ function App() {
         }
     };
 
-    const isLoading = loadingUser || loadingPermissions;
-
+    // First loading screen: waits for auth and initial data fetch attempt.
     if (isLoading) {
-        return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading...</p></div>;
+        return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading StayWell...</p></div>;
     }
 
+    // If not loading and still no user, show login page.
     if (!user) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
@@ -120,18 +145,21 @@ function App() {
             </div>
         );
     }
+    
+    // Final check: If we have a user but no userData, something is wrong with their profile.
+    // Also wait for permissions to be calculated.
+    if (loadingPermissions || !userData) {
+        return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading User Profile...</p></div>;
+    }
 
     return (
         <ThemeProvider>
             <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
             
-            {/* The main application layout is always rendered */}
             <Layout user={user} userData={userData} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
                 {renderActiveView()}
             </Layout>
             
-            {/* UPDATED: Chat Integration Logic */}
-            {/* The floating button is only shown when the chat is NOT open */}
             {!isChatOpen && (
                 <div className="fixed bottom-4 right-4 z-50">
                     <button onClick={() => setIsChatOpen(true)} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
@@ -140,8 +168,8 @@ function App() {
                 </div>
             )}
             
-            {/* The full-screen chat layout is rendered when isChatOpen is true */}
-            {isChatOpen && <ChatLayout onClose={() => setIsChatOpen(false)} userData={userData} />}
+            {/* Only render the chat layout if we have the necessary user data */}
+            {isChatOpen && userData && <ChatLayout onClose={() => setIsChatOpen(false)} userData={userData} />}
         </ThemeProvider>
     );
 }
