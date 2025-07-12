@@ -1,6 +1,6 @@
 // src/components/property/TaskComponents.js
 // This file contains smaller, reusable components related to tasks.
-// MODIFIED to allow inline editing in the detail modal and recurring tasks from templates.
+// MODIFIED to improve the task editing experience and use real usernames for comments.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { db, storage } from '../../firebase-config';
@@ -128,27 +128,58 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
     );
 };
 
-export const TaskDetailModal = ({ task, team, onClose }) => {
+// --- NEW: Separate modal for editing core task details ---
+const EditDetailsModal = ({ task, onSave, onCancel }) => {
+    const [taskName, setTaskName] = useState(task.taskName);
+    const [description, setDescription] = useState(task.description);
+
+    const handleSave = () => {
+        onSave({ taskName, description });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60] p-4 animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700">
+                <h3 className="text-xl font-semibold mb-4">Edit Task Details</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Name</label>
+                        <input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} className="mt-1 w-full input-style" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                        <textarea value={description} onChange={e => setDescription(e.target.value)} className="mt-1 w-full input-style" rows="4"></textarea>
+                    </div>
+                </div>
+                <div className="flex justify-end space-x-2 pt-6 mt-4 border-t dark:border-gray-700">
+                    <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
+                    <button type="button" onClick={handleSave} className="button-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+export const TaskDetailModal = ({ task, team, user, onClose }) => {
     const [liveTask, setLiveTask] = useState(task);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [checklist, setChecklist] = useState([]);
     const [proofFile, setProofFile] = useState(null);
     const [isUploadingProof, setIsUploadingProof] = useState(false);
-    const [isEditingDetails, setIsEditingDetails] = useState(false); // For name/description editing
+    const [isEditingDetails, setIsEditingDetails] = useState(false);
 
-    // Debounced update function
     const debouncedUpdate = useCallback(debounce(async (taskId, data) => {
         const taskRef = doc(db, 'tasks', taskId);
         try {
             await updateDoc(taskRef, data);
-            toast.success("Task updated!", { autoClose: 1500 });
+            toast.success("Task auto-saved!", { autoClose: 1500, position: "bottom-right" });
         } catch (error) {
             console.error("Auto-save failed:", error);
             toast.error("Failed to save changes.");
         }
     }, 1000), []);
-
 
     useEffect(() => {
         const taskRef = doc(db, 'tasks', task.id);
@@ -158,7 +189,6 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
                 setChecklist(doc.data().checklistItems || []);
             }
         });
-
         const commentsQuery = query(collection(db, `tasks/${task.id}/comments`));
         const unsubscribeComments = onSnapshot(commentsQuery, (snapshot) => {
             const fetchedComments = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
@@ -168,35 +198,20 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
             console.error("Error fetching comments:", error);
             toast.error("Could not load comments.");
         });
-
-        return () => {
-            unsubscribeTask();
-            unsubscribeComments();
-        };
+        return () => { unsubscribeTask(); unsubscribeComments(); };
     }, [task.id]);
     
-    const handleProofFileChange = (e) => {
-        if (e.target.files[0]) setProofFile(e.target.files[0]);
-    };
+    const handleProofFileChange = (e) => { if (e.target.files[0]) setProofFile(e.target.files[0]); };
 
     const handleProofUpload = async () => {
-        if (!proofFile) {
-            toast.error("Please select a file to upload.");
-            return;
-        }
+        if (!proofFile) { toast.error("Please select a file to upload."); return; }
         setIsUploadingProof(true);
         const toastId = toast.loading("Uploading proof...");
         try {
             const proofRef = ref(storage, `proofs/${task.id}/${Date.now()}-${proofFile.name}`);
             const uploadResult = await uploadBytes(proofRef, proofFile);
             const proofURL = await getDownloadURL(uploadResult.ref);
-            await addDoc(collection(db, `tasks/${task.id}/comments`), {
-                text: `Proof of completion uploaded.`,
-                author: "System",
-                createdAt: serverTimestamp(),
-                isProof: true,
-                proofURL: proofURL
-            });
+            await addDoc(collection(db, `tasks/${task.id}/comments`), { text: `Proof of completion uploaded.`, author: user?.displayName || user?.email || "System", createdAt: serverTimestamp(), isProof: true, proofURL: proofURL });
             await updateDoc(doc(db, 'tasks', task.id), { lastProofURL: proofURL, status: 'Completed' });
             toast.update(toastId, { render: "Proof uploaded successfully!", type: "success", isLoading: false, autoClose: 3000 });
         } catch (error) {
@@ -211,27 +226,13 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
     const createNextRecurringTask = async (completedTask) => {
         const { recurring, ...originalTaskData } = completedTask;
         if (!recurring?.enabled || !originalTaskData.scheduledDate) return;
-
         let nextDueDate = new Date(originalTaskData.scheduledDate);
-        if (isNaN(nextDueDate.getTime())) {
-            console.warn("Cannot create recurring task: invalid original due date.");
-            return;
-        }
-
+        if (isNaN(nextDueDate.getTime())) { console.warn("Cannot create recurring task: invalid original due date."); return; }
         if (recurring.frequency === 'daily') nextDueDate.setDate(nextDueDate.getDate() + 1);
         else if (recurring.frequency === 'weekly') nextDueDate.setDate(nextDueDate.getDate() + 7);
         else if (recurring.frequency === 'monthly') nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-
-        const newTask = {
-            ...originalTaskData,
-            status: 'Pending',
-            scheduledDate: nextDueDate.toISOString().split('T')[0],
-            createdAt: serverTimestamp(),
-            lastProofURL: null,
-            checklistItems: originalTaskData.checklistItems.map(item => ({ ...item, completed: false })),
-        };
-        delete newTask.id; // Ensure new doc is created
-
+        const newTask = { ...originalTaskData, status: 'Pending', scheduledDate: nextDueDate.toISOString().split('T')[0], createdAt: serverTimestamp(), lastProofURL: null, checklistItems: originalTaskData.checklistItems.map(item => ({ ...item, completed: false })), };
+        delete newTask.id;
         try {
             await addDoc(collection(db, "tasks"), newTask);
             toast.info(`Next recurring task for "${newTask.taskName}" has been created.`);
@@ -243,13 +244,11 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
 
     const handleImmediateUpdate = (field, value) => {
         let updatedData = { [field]: value };
-        // If we change the assignee, we also need to update the email
         if (field === 'assignedTo') {
             const assignedToEmail = team.find(member => member.uid === value)?.email || '';
             updatedData.assignedToEmail = assignedToEmail;
         }
-        // If we change the status to completed, check for recurrence
-        if (field === 'status' && value === 'Completed' && liveTask.recurring?.enabled) {
+        if (field === 'status' && value === 'Completed' && liveTask.status !== 'Completed' && liveTask.recurring?.enabled) {
             createNextRecurringTask(liveTask);
         }
         setLiveTask(prev => ({ ...prev, ...updatedData }));
@@ -273,7 +272,7 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
     const handleAddComment = async () => {
         if (!newComment.trim()) return;
         try {
-            await addDoc(collection(db, `tasks/${task.id}/comments`), { text: newComment, author: "Admin", createdAt: serverTimestamp() });
+            await addDoc(collection(db, `tasks/${task.id}/comments`), { text: newComment, author: user?.displayName || user?.email || "User", createdAt: serverTimestamp() });
             setNewComment('');
         } catch (error) {
             console.error("Error adding comment:", error);
@@ -295,44 +294,65 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
         }
     };
 
+    // --- NEW: Handler for saving name/description ---
+    const handleSaveDetails = async (details) => {
+        const toastId = toast.loading("Saving details...");
+        try {
+            await updateDoc(doc(db, 'tasks', task.id), details);
+            toast.update(toastId, { render: "Details saved!", type: "success", isLoading: false, autoClose: 2000 });
+            setIsEditingDetails(false);
+        } catch (error) {
+            console.error("Error saving details:", error);
+            toast.update(toastId, { render: "Failed to save details.", type: "error", isLoading: false, autoClose: 5000 });
+        }
+    };
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
-                <div className="flex justify-between items-center mb-4 pb-4 border-b dark:border-gray-700">
-                    <div className="flex items-center gap-3">
-                        {liveTask.recurring?.enabled && <Repeat size={18} className="text-gray-400" title={`Repeats ${liveTask.recurring.frequency}`} />}
-                        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{liveTask.taskName}</h3>
-                        <button onClick={() => setIsEditingDetails(true)} className="text-gray-400 hover:text-blue-500"><Edit size={16} /></button>
-                    </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 rounded-full"><X size={20} /></button>
-                </div>
-
-                <div className="overflow-y-auto pr-2 flex-grow">
-                    <p className="text-gray-600 dark:text-gray-300 mb-6">{liveTask.description || 'No description provided.'}</p>
-                    
-                    {/* --- MODIFIED: Inline Editable Fields --- */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-6">
-                        <InlineSelect label="Status" value={liveTask.status} options={['Pending', 'In Progress', 'Completed']} onChange={(e) => handleImmediateUpdate('status', e.target.value)} />
-                        <InlineSelect label="Priority" value={liveTask.priority} options={['Low', 'Medium', 'High']} onChange={(e) => handleImmediateUpdate('priority', e.target.value)} />
-                        <InlineSelect label="Assign To" value={liveTask.assignedTo || ''} options={[{value: '', label: 'Unassigned'}, ...team.map(m => ({value: m.uid, label: m.email}))]} onChange={(e) => handleImmediateUpdate('assignedTo', e.target.value)} />
-                        <InlineDate label="Due Date" value={liveTask.scheduledDate} onChange={(e) => handleImmediateUpdate('scheduledDate', e.target.value)} />
+        <>
+            {isEditingDetails && (
+                <EditDetailsModal 
+                    task={liveTask}
+                    onSave={handleSaveDetails}
+                    onCancel={() => setIsEditingDetails(false)}
+                />
+            )}
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
+                    <div className="flex justify-between items-center mb-4 pb-4 border-b dark:border-gray-700">
+                        <div className="flex items-center gap-3">
+                            {liveTask.recurring?.enabled && <Repeat size={18} className="text-gray-400" title={`Repeats ${liveTask.recurring.frequency}`} />}
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{liveTask.taskName}</h3>
+                            <button onClick={() => setIsEditingDetails(true)} className="text-gray-400 hover:text-blue-500"><Edit size={16} /></button>
+                        </div>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 rounded-full"><X size={20} /></button>
                     </div>
 
-                    {checklist && checklist.length > 0 && <div className="mt-6 pt-4 border-t dark:border-gray-700"><TaskChecklist items={checklist} onToggle={handleToggleChecklistItem} /></div>}
-                    <div className="mt-6 pt-4 border-t dark:border-gray-700"><h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><Upload size={18} className="mr-2"/>Proof of Completion</h4><div className="flex items-center space-x-2"><input type="file" onChange={handleProofFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/50 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900"/><button onClick={handleProofUpload} className="button-primary" disabled={isUploadingProof || !proofFile}>{isUploadingProof ? 'Uploading...' : 'Upload'}</button></div></div>
-                    <div className="mt-6 pt-4 border-t dark:border-gray-700"><h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><MessageSquare size={18} className="mr-2"/>Activity & Comments</h4><div className="space-y-3 mb-4 max-h-48 overflow-y-auto">{comments.length > 0 ? comments.map(comment => (<div key={comment.id} className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg"><p className="text-gray-800 dark:text-gray-200">{comment.text}</p><p className="text-xs text-gray-400 dark:text-gray-500 mt-1">- {comment.author}</p>{comment.isProof && comment.proofURL && (<a href={comment.proofURL} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline flex items-center mt-1"><Image size={12} className="mr-1" /> View Proof</a>)}</div>)) : <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>}</div><div className="flex space-x-2"><input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Add a comment..." className="flex-grow input-style" /><button onClick={handleAddComment} className="button-primary px-4"><Plus size={16}/></button></div></div>
-                </div>
+                    <div className="overflow-y-auto pr-2 flex-grow">
+                        <p className="text-gray-600 dark:text-gray-300 mb-6">{liveTask.description || 'No description provided.'}</p>
+                        
+                        {/* --- MODIFIED: Improved Inline Editable Fields Layout --- */}
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <InlineSelect label="Status" value={liveTask.status} options={['Pending', 'In Progress', 'Completed']} onChange={(e) => handleImmediateUpdate('status', e.target.value)} />
+                            <InlineSelect label="Priority" value={liveTask.priority} options={['Low', 'Medium', 'High']} onChange={(e) => handleImmediateUpdate('priority', e.target.value)} />
+                            <InlineSelect label="Assign To" value={liveTask.assignedTo || ''} options={[{value: '', label: 'Unassigned'}, ...team.map(m => ({value: m.uid, label: m.email}))]} onChange={(e) => handleImmediateUpdate('assignedTo', e.target.value)} />
+                            <InlineDate label="Due Date" value={liveTask.scheduledDate} onChange={(e) => handleImmediateUpdate('scheduledDate', e.target.value)} />
+                        </div>
 
-                <div className="flex justify-between items-center mt-6 pt-4 border-t dark:border-gray-700 flex-shrink-0">
-                    <button onClick={handleDelete} className="text-sm font-semibold text-red-600 hover:text-red-500 flex items-center"><Trash2 size={14} className="mr-1.5"/> Delete Task</button>
-                    <button onClick={onClose} className="button-primary">Close</button>
+                        {checklist && checklist.length > 0 && <div className="mb-6"><TaskChecklist items={checklist} onToggle={handleToggleChecklistItem} /></div>}
+                        <div className="mb-6"><h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><Upload size={18} className="mr-2"/>Proof of Completion</h4><div className="flex items-center space-x-2"><input type="file" onChange={handleProofFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/50 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900"/><button onClick={handleProofUpload} className="button-primary" disabled={isUploadingProof || !proofFile}>{isUploadingProof ? 'Uploading...' : 'Upload'}</button></div></div>
+                        <div><h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><MessageSquare size={18} className="mr-2"/>Activity & Comments</h4><div className="space-y-3 mb-4 max-h-48 overflow-y-auto">{comments.length > 0 ? comments.map(comment => (<div key={comment.id} className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg"><p className="text-gray-800 dark:text-gray-200">{comment.text}</p><p className="text-xs text-gray-400 dark:text-gray-500 mt-1">- {comment.author}</p>{comment.isProof && comment.proofURL && (<a href={comment.proofURL} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline flex items-center mt-1"><Image size={12} className="mr-1" /> View Proof</a>)}</div>)) : <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>}</div><div className="flex space-x-2"><input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Add a comment..." className="flex-grow input-style" /><button onClick={handleAddComment} className="button-primary px-4"><Plus size={16}/></button></div></div>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-6 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                        <button onClick={handleDelete} className="text-sm font-semibold text-red-600 hover:text-red-500 flex items-center"><Trash2 size={14} className="mr-1.5"/> Delete Task</button>
+                        <button onClick={onClose} className="button-primary">Close</button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 
-// --- NEW: Reusable Inline Editing Components ---
 const InlineSelect = ({ label, value, options, onChange }) => (
     <div>
         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">{label}</label>
@@ -369,7 +389,6 @@ const TaskChecklist = ({ items, onToggle }) => {
 
 export const TemplateTaskModal = ({ templates, onClose, onAddTask }) => {
     const [selectedTemplateId, setSelectedTemplateId] = useState('');
-    // --- NEW: State for recurring tasks in template modal ---
     const [isRecurring, setIsRecurring] = useState(false);
     const [recurringFrequency, setRecurringFrequency] = useState('weekly');
 
@@ -395,7 +414,6 @@ export const TemplateTaskModal = ({ templates, onClose, onAddTask }) => {
             templateId: template.id,
             templateName: template.name,
             checklistItems: template.items ? template.items.map(item => ({...item, completed: false})) : [],
-            // --- NEW: Add recurring data ---
             recurring: {
                 enabled: isRecurring,
                 frequency: isRecurring ? recurringFrequency : null
@@ -418,7 +436,6 @@ export const TemplateTaskModal = ({ templates, onClose, onAddTask }) => {
                             {templates.map(template => (<option key={template.id} value={template.id}>{template.name}</option>))}
                         </select>
                     </div>
-                    {/* --- NEW: Recurring options for templates --- */}
                     <div className="pt-4 border-t dark:border-gray-600 space-y-3">
                         <div className="flex items-center">
                             <input id="recurring-template-checkbox" type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
