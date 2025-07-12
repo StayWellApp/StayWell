@@ -5,7 +5,7 @@ import ChatSidebar from './ChatSidebar';
 import ChatMessageView from './ChatMessageView';
 import { usePresence } from '../hooks/usePresence';
 
-const ChatLayout = ({ onClose }) => {
+const ChatLayout = ({ onClose, userData }) => {
     usePresence(); // Hook to manage user's online status
 
     const [chats, setChats] = useState([]);
@@ -33,6 +33,7 @@ const ChatLayout = ({ onClose }) => {
             <ChatSidebar 
                 chats={chats} 
                 currentUser={currentUser}
+                userData={userData} // Pass userData to the sidebar
                 activeChat={activeChat}
                 setActiveChat={setActiveChat}
             />
@@ -41,13 +42,14 @@ const ChatLayout = ({ onClose }) => {
                     <ChatMessageView 
                         chat={activeChat}
                         currentUser={currentUser} 
-                        onClose={onClose}
+                        // When closing a message view, just return to the chat list
+                        onClose={() => setActiveChat(null)} 
                     />
                 ) : (
                     <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-800">
                         <div className="text-center">
                             <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300">Welcome to Chat</h2>
-                            <p className="text-gray-500">Select a conversation to start messaging.</p>
+                            <p className="text-gray-500">Select a conversation or start a new one.</p>
                              <button onClick={onClose} className="mt-4 button-secondary">Close Chat</button>
                         </div>
                     </div>
