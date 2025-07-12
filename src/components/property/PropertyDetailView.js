@@ -1,6 +1,6 @@
 // src/components/property/PropertyDetailView.js
 // This is the main container for viewing the details of a single property.
-// MODIFIED to use the new GuestInfoForm component.
+// MODIFIED to use the new GuestInfoForm and SettingsView components.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
@@ -10,7 +10,7 @@ import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as Ima
 
 // Import the refactored components
 import { PropertyForm } from './PropertyForm';
-import { GuestInfoForm } from './GuestInfoForm'; // --- NEW ---
+import { GuestInfoForm } from './GuestInfoForm';
 import { TasksView } from './PropertyTasksView';
 import { CalendarView } from './PropertyCalendarView';
 import { AnalyticsView } from './PropertyAnalyticsView';
@@ -74,7 +74,7 @@ const LinkedTemplatesView = ({ property, user }) => {
 export const PropertyDetailView = ({ property, onBack, user }) => {
     const [activeTab, setActiveTab] = useState('overview');
     const [isEditing, setIsEditing] = useState(false);
-    const [isEditingGuestInfo, setIsEditingGuestInfo] = useState(false); // --- NEW ---
+    const [isEditingGuestInfo, setIsEditingGuestInfo] = useState(false);
     const [liveProperty, setLiveProperty] = useState(property);
 
     useEffect(() => {
@@ -106,10 +106,8 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         }
     };
 
-    // --- NEW: Handler for the guest info form ---
     const handleUpdateGuestInfo = async (guestData) => {
         const propertyRef = doc(db, "properties", property.id);
-        // The onSave in the form will show its own toasts, so we just call the update.
         await updateDoc(propertyRef, guestData);
     };
 
@@ -222,7 +220,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                                 <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Home size={16} className="mr-2"/> House Rules</h4>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">{liveProperty.houseRules || 'No rules specified.'}</p>
                            </div>
-                           {/* --- NEW: Display custom info fields --- */}
                            {customInfo.length > 0 && (
                                <div>
                                    <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Info size={16} className="mr-2"/> Additional Info</h4>
@@ -250,7 +247,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                     {isEditing ? '← Back to Property Details' : '← Back to All Properties'}
                 </button>
                 
-                {/* --- NEW: Conditionally render the new GuestInfoForm modal --- */}
                 {isEditingGuestInfo && (
                     <GuestInfoForm 
                         property={liveProperty} 
@@ -281,7 +277,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                             {activeTab === 'inventory' && <InventoryView property={liveProperty} user={user} />}
                             {activeTab === 'calendar' && <CalendarView property={liveProperty} user={user} />}
                             {activeTab === 'analytics' && <AnalyticsView property={liveProperty} />}
-                            {activeTab === 'settings' && <SettingsView property={liveProperty} />}
+                            {activeTab === 'settings' && <SettingsView property={liveProperty} user={user} onBack={onBack} />}
                         </div>
                     </>
                 )}
