@@ -6,7 +6,12 @@
       "https://qa.staywellapp.com",
       "https://staywellapp.com"
     ],
-    "method": ["GET", "POST", "PUT"],
+    "method": [
+      "GET",
+      "POST",
+      "PUT",
+      "OPTIONS"
+    ],
     "responseHeader": [
       "Content-Type",
       "x-goog-resumable"
