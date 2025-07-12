@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { db, storage } from '../firebase-config';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -8,26 +8,29 @@ import { useDebounce } from 'use-debounce';
 const ChatMessageInput = ({ chatId, currentUser }) => {
     const [text, setText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [debouncedIsTyping] = useDebounce(isTyping, 1000); // Debounce typing status
-    const chatRef = doc(db, 'chats', chatId);
+    const [debouncedIsTyping] = useDebounce(isTyping, 1000);
 
-    const handleTyping = async (typing) => {
-        if (typing) {
-            await updateDoc(chatRef, { typing: arrayUnion(currentUser.displayName) });
-        } else {
-            await updateDoc(chatRef, { typing: arrayRemove(currentUser.displayName) });
-        }
-    };
+    // Memoize the handleTyping function to stabilize it
+    const handleTyping = useCallback(async (typing) => {
+        const chatRef = doc(db, 'chats', chatId);
+        const update = {
+            typing: typing 
+                ? arrayUnion(currentUser.displayName) 
+                : arrayRemove(currentUser.displayName)
+        };
+        await updateDoc(chatRef, update);
+    }, [chatId, currentUser.displayName]);
     
-    // Call handleTyping based on debounced value
-    React.useEffect(() => {
+    // This useEffect now correctly includes its dependency
+    useEffect(() => {
         handleTyping(debouncedIsTyping);
-    }, [debouncedIsTyping]);
+    }, [debouncedIsTyping, handleTyping]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (text.trim() === '') return;
         
+        const chatRef = doc(db, 'chats', chatId);
         const messageData = {
             text: text,
             senderId: currentUser.uid,
@@ -46,6 +49,7 @@ const ChatMessageInput = ({ chatId, currentUser }) => {
         const file = e.target.files[0];
         if (!file) return;
 
+        const chatRef = doc(db, 'chats', chatId);
         const storageRef = ref(storage, `chat_images/${chatId}/${Date.now()}_${file.name}`);
         await uploadBytes(storageRef, file);
         const imageUrl = await getDownloadURL(storageRef);
@@ -59,7 +63,7 @@ const ChatMessageInput = ({ chatId, currentUser }) => {
         };
 
         await addDoc(collection(db, 'chats', chatId, 'messages'), messageData);
-         await updateDoc(chatRef, { lastMessage: { text: 'Image' , ...messageData } });
+        await updateDoc(chatRef, { lastMessage: { text: 'Image' , ...messageData } });
     };
 
     return (

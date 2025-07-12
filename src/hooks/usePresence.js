@@ -6,6 +6,9 @@ import { auth, db } from '../firebase-config';
 // NOTE: This requires enabling Firebase Realtime Database in your project.
 export const usePresence = () => {
     useEffect(() => {
+        // This effect should only run once when the component mounts.
+        // The onAuthStateChanged listener in App.js ensures this hook is
+        // only active when a user is logged in.
         if (!auth.currentUser) return;
 
         const uid = auth.currentUser.uid;
@@ -34,7 +37,7 @@ export const usePresence = () => {
         };
 
         const conRef = ref(db_rt, '.info/connected');
-        onValue(conRef, (snapshot) => {
+        const unsubscribe = onValue(conRef, (snapshot) => {
             if (snapshot.val() === false) {
                 // If not connected, update firestore status
                  updateDoc(userStatusFirestoreRef, isOfflineForFirestore);
@@ -48,5 +51,7 @@ export const usePresence = () => {
             });
         });
 
-    }, [auth.currentUser]);
+        // Cleanup the listener when the component unmounts
+        return () => unsubscribe();
+    }, []); // Empty dependency array ensures this runs only once.
 };
