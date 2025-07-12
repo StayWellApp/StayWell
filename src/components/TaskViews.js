@@ -1,11 +1,9 @@
-// --- src/components/TaskViews.js ---
-// This file provides the modals needed for viewing, editing, and adding tasks.
-
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../firebase-config'; // --- MODIFIED: Added storage
+import { db, storage } from '../firebase-config';
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // --- NEW ---
-import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks, Info, Image, ChevronDown, Upload } from 'lucide-react'; // --- MODIFIED: Added Upload icon
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks, Info, Image, ChevronDown, Upload } from 'lucide-react';
+import { toast } from 'react-toastify'; // --- NEW ---
 
 export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, preselectedDate }) => {
     const [taskName, setTaskName] = useState('');
@@ -19,7 +17,8 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!taskName) {
-            alert("Please enter a task name.");
+            // --- MODIFIED: Replaced alert with toast ---
+            toast.error("Please enter a task name.");
             return;
         }
         const assignedToEmail = team.find(member => member.uid === assignedTo)?.email || '';
@@ -109,83 +108,129 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [checklist, setChecklist] = useState([]);
-    const [proofFile, setProofFile] = useState(null); // --- NEW ---
-    const [isUploadingProof, setIsUploadingProof] = useState(false); // --- NEW ---
+    const [proofFile, setProofFile] = useState(null);
+    const [isUploadingProof, setIsUploadingProof] = useState(false);
 
     useEffect(() => {
         setEditedTask(task);
         setChecklist(task.checklistItems || []);
 
         const commentsQuery = query(collection(db, `tasks/${task.id}/comments`));
+        // --- MODIFIED: Added error handling to snapshot ---
         const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
             const fetchedComments = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-            // Sort comments with newest first
             fetchedComments.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
             setComments(fetchedComments);
+        }, (error) => {
+            console.error("Error fetching comments:", error);
+            toast.error("Could not load comments.");
         });
         return unsubscribe;
     }, [task]);
     
-    // --- NEW: Function to handle file selection ---
     const handleProofFileChange = (e) => {
         if (e.target.files[0]) {
             setProofFile(e.target.files[0]);
         }
     };
 
-    // --- NEW: Function to handle file upload ---
+    // --- MODIFIED: Full error handling implementation ---
     const handleProofUpload = async () => {
         if (!proofFile) {
-            alert("Please select a file to upload.");
+            toast.error("Please select a file to upload.");
             return;
         }
+        
         setIsUploadingProof(true);
+        const toastId = toast.loading("Uploading proof of completion...");
+
         try {
-            // Create a reference in Firebase Storage
             const proofRef = ref(storage, `proofs/${task.id}/${Date.now()}-${proofFile.name}`);
-            
-            // Upload the file
             const uploadResult = await uploadBytes(proofRef, proofFile);
-            
-            // Get the download URL
             const proofURL = await getDownloadURL(uploadResult.ref);
 
-            // Add the proof URL as a comment for historical record
             await addDoc(collection(db, `tasks/${task.id}/comments`), {
                 text: `Proof of completion uploaded.`,
-                author: "System", // Or current user's name
+                author: "System",
                 createdAt: serverTimestamp(),
                 isProof: true,
                 proofURL: proofURL
             });
             
-            // Also update the task itself with the latest proof URL, if you want a direct link
             await updateDoc(doc(db, 'tasks', task.id), {
                 lastProofURL: proofURL,
-                status: 'Completed' // Optionally update status upon proof upload
+                status: 'Completed'
             });
 
-            alert('Proof uploaded successfully!');
+            toast.update(toastId, { 
+                render: "Proof uploaded successfully!", 
+                type: "success", 
+                isLoading: false, 
+                autoClose: 3000 
+            });
+
         } catch (error) {
             console.error("Error uploading proof:", error);
-            alert("Failed to upload proof. See console for details.");
+            toast.update(toastId, { 
+                render: "Failed to upload proof. Please try again.", 
+                type: "error", 
+                isLoading: false, 
+                autoClose: 5000 
+            });
         } finally {
             setIsUploadingProof(false);
             setProofFile(null);
         }
     };
 
+    // --- MODIFIED with Error Handling ---
     const handleUpdate = async () => {
-        const taskRef = doc(db, 'tasks', task.id);
-        const assignedToEmail = team.find(member => member.uid === editedTask.assignedTo)?.email || '';
-        await updateDoc(taskRef, { ...editedTask, assignedToEmail });
-        setIsEditing(false);
+        const toastId = toast.loading("Saving changes...");
+        try {
+            const taskRef = doc(db, 'tasks', task.id);
+            const assignedToEmail = team.find(member => member.uid === editedTask.assignedTo)?.email || '';
+            await updateDoc(taskRef, { ...editedTask, assignedToEmail });
+            
+            toast.update(toastId, { 
+                render: "Task updated!", 
+                type: "success", 
+                isLoading: false, 
+                autoClose: 3000 
+            });
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Error updating task:", error);
+            toast.update(toastId, { 
+                render: "Failed to save changes.", 
+                type: "error", 
+                isLoading: false, 
+                autoClose: 5000 
+            });
+        }
     };
     
+    // --- MODIFIED with Error Handling ---
     const handleDelete = async () => {
-        if (window.confirm("Are you sure you want to delete this task?")) {
-            await deleteDoc(doc(db, 'tasks', task.id));
-            onClose();
+        if (window.confirm("Are you sure you want to delete this task? This action cannot be undone.")) {
+            const toastId = toast.loading("Deleting task...");
+            try {
+                await deleteDoc(doc(db, 'tasks', task.id));
+                toast.update(toastId, { 
+                    render: "Task deleted.", 
+                    type: "success", 
+                    isLoading: false, 
+                    autoClose: 3000 
+                });
+                onClose();
+            } catch (error) {
+                console.error("Error deleting task:", error);
+                toast.update(toastId, { 
+                    render: "Failed to delete task.", 
+                    type: "error", 
+                    isLoading: false, 
+                    autoClose: 5000 
+                });
+            }
         }
     };
 
@@ -193,23 +238,38 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
         setEditedTask(prev => ({ ...prev, [field]: value }));
     };
     
+    // --- MODIFIED with Error Handling ---
     const handleAddComment = async () => {
         if (!newComment.trim()) return;
-        await addDoc(collection(db, `tasks/${task.id}/comments`), {
-            text: newComment,
-            author: "Admin", // Replace with actual user name
-            createdAt: serverTimestamp()
-        });
-        setNewComment('');
+        try {
+            await addDoc(collection(db, `tasks/${task.id}/comments`), {
+                text: newComment,
+                author: "Admin", // Replace with actual user name
+                createdAt: serverTimestamp()
+            });
+            setNewComment('');
+        } catch (error) {
+            console.error("Error adding comment:", error);
+            toast.error("Could not add comment.");
+        }
     };
 
+    // --- MODIFIED with Error Handling ---
     const handleToggleChecklistItem = async (index) => {
         const newChecklist = [...checklist];
         newChecklist[index].completed = !newChecklist[index].completed;
         setChecklist(newChecklist);
         
-        const taskRef = doc(db, 'tasks', task.id);
-        await updateDoc(taskRef, { checklistItems: newChecklist });
+        try {
+            const taskRef = doc(db, 'tasks', task.id);
+            await updateDoc(taskRef, { checklistItems: newChecklist });
+        } catch (error) {
+            console.error("Error updating checklist:", error);
+            toast.error("Could not save checklist change. Please try again.");
+            // Revert UI change on failure
+            newChecklist[index].completed = !newChecklist[index].completed;
+            setChecklist(newChecklist);
+        }
     };
 
     return (
@@ -255,7 +315,6 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
                         </div>
                     )}
                     
-                    {/* --- NEW: Proof of Completion Section --- */}
                     <div className="mt-6 pt-4 border-t dark:border-gray-700">
                          <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><Upload size={18} className="mr-2"/>Proof of Completion</h4>
                          <div className="flex items-center space-x-2">
@@ -274,7 +333,6 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
                                 <div key={comment.id} className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg">
                                     <p className="text-gray-800 dark:text-gray-200">{comment.text}</p>
                                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">- {comment.author}</p>
-                                    {/* --- MODIFIED: Show link to proof --- */}
                                     {comment.isProof && comment.proofURL && (
                                         <a href={comment.proofURL} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline flex items-center mt-1">
                                             <Image size={12} className="mr-1" /> View Proof
