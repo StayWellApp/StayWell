@@ -1,4 +1,4 @@
-// --- src/components/Auth.js ---
+// --- src/components/Auth.js test ---
 
 import React, { useState } from 'react';
 import { auth, db } from '../firebase-config';
