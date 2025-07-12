@@ -50,7 +50,7 @@ export const TasksView = ({ property, user }) => {
     const [statusFilter, setStatusFilter] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
     const [showRecurring, setShowRecurring] = useState(false);
-    const [activatingTask, setActivatingTask] = useState(null); // --- NEW ---
+    const [activatingTask, setActivatingTask] = useState(null);
 
     useEffect(() => {
         const tasksQuery = query(collection(db, "tasks"), where("propertyId", "==", property.id));
@@ -87,11 +87,9 @@ export const TasksView = ({ property, user }) => {
         }
     };
 
-    // --- NEW: Handler to activate a recurring task prototype ---
     const handleActivateRecurringTask = async (prototypeTask, assignment) => {
         const toastId = toast.loading("Activating task...");
         try {
-            // 1. Create the new active task
             const { recurring, ...originalTaskData } = prototypeTask;
             const assignedToEmail = team.find(member => member.uid === assignment.assignedTo)?.email || '';
             const newTask = {
@@ -101,12 +99,11 @@ export const TasksView = ({ property, user }) => {
                 scheduledDate: assignment.scheduledDate,
                 status: 'Pending',
                 createdAt: serverTimestamp(),
-                recurring: { ...recurring, isPrototype: false } // Mark as an active instance
+                recurring: { ...recurring, isPrototype: false }
             };
-            delete newTask.id; // Ensure it's a new document
+            delete newTask.id;
             await addDoc(collection(db, "tasks"), newTask);
 
-            // 2. Update the prototype's next due date
             let nextDueDate = new Date(assignment.scheduledDate + 'T00:00:00');
             const interval = recurring.interval || 1;
             if (recurring.frequency === 'daily') nextDueDate.setDate(nextDueDate.getDate() + interval);
