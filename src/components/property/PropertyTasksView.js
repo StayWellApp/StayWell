@@ -1,6 +1,6 @@
 // src/components/property/PropertyTasksView.js
 // This component displays the tasks for a specific property.
-// MODIFIED to include search, filtering, and a Kanban-style board view.
+// MODIFIED to show due dates on task cards.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../firebase-config';
@@ -9,7 +9,7 @@ import { toast } from 'react-toastify';
 import { Plus, ListChecks, Search, Repeat, ChevronDown, Calendar } from 'lucide-react';
 import { AddTaskForm, TaskDetailModal, TemplateTaskModal } from './TaskComponents';
 
-// --- NEW: Task Card Component ---
+// --- MODIFIED: Task Card Component to show due date ---
 const TaskCard = ({ task, onClick }) => {
     const priorityColors = {
         High: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
@@ -24,7 +24,16 @@ const TaskCard = ({ task, onClick }) => {
                 {task.recurring?.enabled && <Repeat size={14} className="text-gray-400 flex-shrink-0" title={`Repeats ${task.recurring.frequency}`} />}
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{task.taskType}</p>
-            <div className="mt-3 flex justify-between items-center">
+            
+            {/* --- NEW: Due Date Display --- */}
+            {task.scheduledDate && (
+                <div className="mt-3 text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                    <Calendar size={14} className="mr-1.5" />
+                    <span>Due: {new Date(task.scheduledDate).toLocaleDateString()}</span>
+                </div>
+            )}
+
+            <div className="mt-3 flex justify-between items-center pt-3 border-t dark:border-gray-700">
                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${priorityColors[task.priority]}`}>{task.priority} Priority</span>
                 <span className="text-xs text-gray-400 dark:text-gray-500">{task.assignedToEmail || 'Unassigned'}</span>
             </div>
@@ -32,7 +41,6 @@ const TaskCard = ({ task, onClick }) => {
     );
 };
 
-// --- NEW: Kanban Column Component ---
 const KanbanColumn = ({ title, tasks, onTaskClick }) => {
     const statusStyles = {
         Pending: "border-yellow-500",
@@ -43,7 +51,7 @@ const KanbanColumn = ({ title, tasks, onTaskClick }) => {
     return (
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 flex-1 flex flex-col">
             <h4 className={`font-semibold text-lg text-gray-800 dark:text-gray-200 mb-4 pb-2 border-b-2 ${statusStyles[title]}`}>{title}</h4>
-            <div className="space-y-3 flex-grow overflow-y-auto">
+            <div className="space-y-3 flex-grow overflow-y-auto pr-2">
                 {tasks.length > 0 ? (
                     tasks.map(task => <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task)} />)
                 ) : (
