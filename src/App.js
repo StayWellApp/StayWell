@@ -141,7 +141,7 @@ function App() {
             )}
             
             {/* The full-screen chat layout is rendered when isChatOpen is true */}
-            {isChatOpen && <ChatLayout onClose={() => setIsChatOpen(false)} />}
+            {isChatOpen && <ChatLayout onClose={() => setIsChatOpen(false)} userData={userData} />}
         </ThemeProvider>
     );
 }
