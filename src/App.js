@@ -28,7 +28,7 @@ function App() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
-    const [isChatOpen, setIsChatOpen] = useState(false);
+    // isChatOpen state is no longer needed
 
     const { hasPermission, loadingPermissions } = usePermissions(userData);
 
@@ -37,7 +37,6 @@ function App() {
             if (currentUser) {
                 setUser(currentUser);
             } else {
-                // If there's no user, stop loading and clear data.
                 setUser(null);
                 setUserData(null);
                 setIsLoading(false);
@@ -47,29 +46,22 @@ function App() {
     }, []);
 
     useEffect(() => {
-        // Only run this effect if we have a user object.
         if (user) {
             const userDocRef = doc(db, "users", user.uid);
             const unsubscribeSnapshot = onSnapshot(userDocRef, 
                 (doc) => {
-                    // This is the success callback.
                     if (doc.exists()) {
                         setUserData(doc.data());
                     } else {
-                        // Handle case where user exists in Auth but not Firestore.
                         setUserData(null);
                     }
-                    // We have our answer (or lack thereof), so we can stop loading.
                     setIsLoading(false);
                 },
                 (error) => {
-                    // This is the error callback.
-                    console.error("A Firestore permission error occurred. This is likely due to security rules. Please ensure they are deployed correctly.", error);
-                    // Stop loading even on error to prevent the app from getting stuck.
+                    console.error("Firestore snapshot error:", error);
                     setIsLoading(false);
                 }
             );
-            // Cleanup the listener when the component unmounts or user changes.
             return () => unsubscribeSnapshot();
         }
     }, [user]);
@@ -109,6 +101,8 @@ function App() {
                     : <StaffDashboard user={user} userData={userData} />;
             case 'properties':
                 return <PropertiesView onSelectProperty={handleSelectProperty} user={user} userData={userData} hasPermission={hasPermission} />;
+            case 'chat': // Add case for chat view
+                return <ChatLayout userData={userData} />;
             case 'team':
                 return hasPermission('team_manage') ? <TeamView user={user} /> : null;
             case 'templates':
@@ -126,12 +120,10 @@ function App() {
         }
     };
 
-    // First loading screen: waits for auth and initial data fetch attempt.
     if (isLoading) {
         return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading StayWell...</p></div>;
     }
 
-    // If not loading and still no user, show login page.
     if (!user) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
@@ -146,8 +138,6 @@ function App() {
         );
     }
     
-    // Final check: If we have a user but no userData, something is wrong with their profile.
-    // Also wait for permissions to be calculated.
     if (loadingPermissions || !userData) {
         return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading User Profile...</p></div>;
     }
@@ -160,16 +150,13 @@ function App() {
                 {renderActiveView()}
             </Layout>
             
-            {!isChatOpen && (
-                <div className="fixed bottom-4 right-4 z-50">
-                    <button onClick={() => setIsChatOpen(true)} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
-                        <MessageSquare size={24} />
-                    </button>
-                </div>
-            )}
+            {/* Floating button now sets the active view to 'chat' */}
+            <div className="fixed bottom-4 right-4 z-50">
+                <button onClick={() => setActiveView('chat')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
+                    <MessageSquare size={24} />
+                </button>
+            </div>
             
-            {/* Only render the chat layout if we have the necessary user data */}
-            {isChatOpen && userData && <ChatLayout onClose={() => setIsChatOpen(false)} userData={userData} />}
         </ThemeProvider>
     );
 }
