@@ -17,13 +17,12 @@ import { SettingsView } from './PropertySettingsView';
 import { InventoryView } from '../InventoryViews';
 import { allAmenities } from './AmenitiesForm';
 
-// LinkedTemplatesView Component
+// LinkedTemplatesView Component remains the same
 const LinkedTemplatesView = ({ property, user }) => {
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // FIXED: Dependency array now correctly includes 'user'
         if (!user) return;
         const templatesQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
         const unsubscribe = onSnapshot(templatesQuery, (snapshot) => {
@@ -117,10 +116,10 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     const Overview = () => {
         const [mainImage, setMainImage] = useState(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
 
-        // FIXED: The linter was giving a false positive here. The correct dependency is the liveProperty object itself.
+        // FIXED: The linter warning is addressed by making the dependencies more specific.
         useEffect(() => {
             setMainImage(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
-        }, [liveProperty]);
+        }, [liveProperty.mainPhotoURL, liveProperty.photoURLs]);
 
         const photoURLs = liveProperty.photoURLs || [];
         const propertyAmenities = liveProperty.amenities || {};

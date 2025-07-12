@@ -213,7 +213,7 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
     const [checklist, setChecklist] = useState([]);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
 
-    // FIXED: The function is now defined directly inside useCallback.
+    // FIXED: Function is now defined inline within useCallback
     const debouncedUpdate = useCallback(debounce(async (taskId, data) => {
         const taskRef = doc(db, 'tasks', taskId);
         try {
