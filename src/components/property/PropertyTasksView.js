@@ -1,12 +1,59 @@
 // src/components/property/PropertyTasksView.js
 // This component displays the tasks for a specific property.
+// MODIFIED to include search, filtering, and a Kanban-style board view.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../firebase-config';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { Plus, ListChecks } from 'lucide-react';
+import { Plus, ListChecks, Search, Repeat } from 'lucide-react';
 import { AddTaskForm, TaskDetailModal, TemplateTaskModal } from './TaskComponents';
+
+// --- NEW: Task Card Component ---
+const TaskCard = ({ task, onClick }) => {
+    const priorityColors = {
+        High: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
+        Medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+        Low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+    };
+
+    return (
+        <div onClick={onClick} className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all">
+            <div className="flex justify-between items-start">
+                <p className="font-semibold text-gray-900 dark:text-gray-100 text-base">{task.taskName}</p>
+                {task.recurring?.enabled && <Repeat size={14} className="text-gray-400 flex-shrink-0" title="Recurring Task" />}
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{task.taskType}</p>
+            <div className="mt-3 flex justify-between items-center">
+                <span className={`text-xs font-bold px-2 py-1 rounded-full ${priorityColors[task.priority]}`}>{task.priority} Priority</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{task.assignedToEmail || 'Unassigned'}</span>
+            </div>
+        </div>
+    );
+};
+
+// --- NEW: Kanban Column Component ---
+const KanbanColumn = ({ title, tasks, onTaskClick }) => {
+    const statusStyles = {
+        Pending: "border-yellow-500",
+        "In Progress": "border-blue-500",
+        Completed: "border-green-500",
+    };
+
+    return (
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 flex-1">
+            <h4 className={`font-semibold text-lg text-gray-800 dark:text-gray-200 mb-4 pb-2 border-b-2 ${statusStyles[title]}`}>{title}</h4>
+            <div className="space-y-3 h-full overflow-y-auto">
+                {tasks.length > 0 ? (
+                    tasks.map(task => <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task)} />)
+                ) : (
+                    <p className="text-sm text-center text-gray-500 dark:text-gray-400 pt-4">No tasks in this status.</p>
+                )}
+            </div>
+        </div>
+    );
+};
+
 
 export const TasksView = ({ property, user }) => {
     const [tasks, setTasks] = useState([]);
@@ -16,6 +63,10 @@ export const TasksView = ({ property, user }) => {
     const [selectedTask, setSelectedTask] = useState(null);
     const [team, setTeam] = useState([]);
     const [checklistTemplates, setChecklistTemplates] = useState([]);
+
+    // --- NEW: State for filtering and search ---
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         const tasksQuery = query(collection(db, "tasks"), where("propertyId", "==", property.id));
@@ -73,60 +124,89 @@ export const TasksView = ({ property, user }) => {
                 status: 'Pending', 
                 createdAt: serverTimestamp() 
             });
-            toast.update(toastId, { 
-                render: "Task added successfully!", 
-                type: "success", 
-                isLoading: false, 
-                autoClose: 3000 
-            });
+            toast.update(toastId, { render: "Task added successfully!", type: "success", isLoading: false, autoClose: 3000 });
             setShowAddTaskForm(false);
             setShowTemplateModal(false);
         } catch (error) {
             console.error("Error adding task: ", error);
-            toast.update(toastId, { 
-                render: "Failed to add task.", 
-                type: "error", 
-                isLoading: false, 
-                autoClose: 5000 
-            });
+            toast.update(toastId, { render: "Failed to add task.", type: "error", isLoading: false, autoClose: 5000 });
         }
     };
 
+    // --- NEW: Memoized filtered tasks ---
+    const filteredTasks = useMemo(() => {
+        return tasks
+            .filter(task => statusFilter === 'All' || task.status === statusFilter)
+            .filter(task => task.taskName.toLowerCase().includes(searchTerm.toLowerCase()));
+    }, [tasks, statusFilter, searchTerm]);
+
+    const groupedTasks = {
+        Pending: filteredTasks.filter(t => t.status === 'Pending'),
+        'In Progress': filteredTasks.filter(t => t.status === 'In Progress'),
+        Completed: filteredTasks.filter(t => t.status === 'Completed'),
+    };
+
+    const FilterButton = ({ status }) => (
+        <button
+            onClick={() => setStatusFilter(status)}
+            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${statusFilter === status ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+        >
+            {status}
+        </button>
+    );
+
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Tasks</h3>
-                <div className="flex items-center space-x-2">
-                    <button onClick={() => setShowTemplateModal(true)} className="button-secondary">
-                        <ListChecks size={16} className="mr-2" />
-                        Add from Template
-                    </button>
-                    <button onClick={() => setShowAddTaskForm(true)} className="button-primary">
-                        <Plus size={18} className="mr-2" />
-                        Add New Task
-                    </button>
+        <div className="flex flex-col h-full">
+            <div className="flex-shrink-0">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Task Board</h3>
+                    <div className="flex items-center space-x-2">
+                        <button onClick={() => setShowTemplateModal(true)} className="button-secondary">
+                            <ListChecks size={16} className="mr-2" /> Add from Template
+                        </button>
+                        <button onClick={() => setShowAddTaskForm(true)} className="button-primary">
+                            <Plus size={18} className="mr-2" /> Add New Task
+                        </button>
+                    </div>
+                </div>
+                
+                {showAddTaskForm && <AddTaskForm onAddTask={handleAddTask} onCancel={() => setShowAddTaskForm(false)} checklistTemplates={checklistTemplates} team={team} />}
+                {showTemplateModal && <TemplateTaskModal templates={checklistTemplates} onClose={() => setShowTemplateModal(false)} onAddTask={handleAddTask} />}
+
+                {/* --- NEW: Filter and Search Controls --- */}
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 p-4 bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm">
+                    <div className="relative w-full md:w-1/3 mb-4 md:mb-0">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                            type="text"
+                            placeholder="Search tasks by name..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="input-style pl-10 w-full"
+                        />
+                    </div>
+                    <div className="flex items-center space-x-2 p-1 bg-gray-100 dark:bg-gray-900 rounded-lg">
+                        <FilterButton status="All" />
+                        <FilterButton status="Pending" />
+                        <FilterButton status="In Progress" />
+                        <FilterButton status="Completed" />
+                    </div>
                 </div>
             </div>
             
-            {showAddTaskForm && <AddTaskForm onAddTask={handleAddTask} onCancel={() => setShowAddTaskForm(false)} checklistTemplates={checklistTemplates} team={team} />}
-            {showTemplateModal && <TemplateTaskModal templates={checklistTemplates} onClose={() => setShowTemplateModal(false)} onAddTask={handleAddTask} />}
-
-            <div className="mt-4 border-t border-gray-200 dark:border-gray-700">
-                {loadingTasks ? <p className="text-center py-8 text-gray-500 dark:text-gray-400">Loading tasks...</p> : (
-                    <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {tasks.length > 0 ? tasks.map(task => (
-                            <li key={task.id} onClick={() => setSelectedTask(task)} className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                <div>
-                                    <p className="font-semibold text-gray-900 dark:text-gray-100">{task.taskName}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{task.taskType} {task.templateName && `- ${task.templateName}`}</p>
-                                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{task.assignedToEmail ? `Assigned to: ${task.assignedToEmail}`: 'Unassigned'}</p>
-                                </div>
-                                <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${task.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : task.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'}`}>{task.status}</span>
-                            </li>
-                        )) : <p className="text-center py-8 text-gray-500 dark:text-gray-400">No tasks for this property yet.</p>}
-                    </ul>
+            {/* --- NEW: Kanban Board Layout --- */}
+            <div className="flex-grow min-h-0">
+                {loadingTasks ? (
+                    <p className="text-center py-8 text-gray-500 dark:text-gray-400">Loading tasks...</p>
+                ) : (
+                    <div className="flex flex-col md:flex-row gap-6 h-full">
+                        <KanbanColumn title="Pending" tasks={groupedTasks.Pending} onTaskClick={setSelectedTask} />
+                        <KanbanColumn title="In Progress" tasks={groupedTasks['In Progress']} onTaskClick={setSelectedTask} />
+                        <KanbanColumn title="Completed" tasks={groupedTasks.Completed} onTaskClick={setSelectedTask} />
+                    </div>
                 )}
             </div>
+            
             {selectedTask && <TaskDetailModal task={selectedTask} team={team} onClose={() => setSelectedTask(null)} />}
         </div>
     );
