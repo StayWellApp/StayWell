@@ -1,6 +1,6 @@
 // src/components/property/TaskComponents.js
 // This file contains smaller, reusable components related to tasks.
-// MODIFIED to improve the task editing experience and use real usernames for comments.
+// MODIFIED to add advanced recurring task settings.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { db, storage } from '../../firebase-config';
@@ -9,6 +9,77 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks, Info, Image, ChevronDown, Upload, Repeat, Edit, X, ShieldCheck, Paperclip } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
+
+// --- NEW: Advanced Recurring Settings Component ---
+const RecurringSettings = ({ recurringConfig, setRecurringConfig }) => {
+    const handleFrequencyChange = (e) => {
+        const newFrequency = e.target.value;
+        setRecurringConfig(prev => ({
+            ...prev,
+            frequency: newFrequency,
+            // Reset specific day settings when frequency changes
+            daysOfWeek: newFrequency === 'weekly' ? { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false } : prev.daysOfWeek,
+        }));
+    };
+
+    const handleIntervalChange = (e) => {
+        setRecurringConfig(prev => ({ ...prev, interval: parseInt(e.target.value) || 1 }));
+    };
+
+    const handleDayOfWeekToggle = (day) => {
+        setRecurringConfig(prev => ({
+            ...prev,
+            daysOfWeek: {
+                ...prev.daysOfWeek,
+                [day]: !prev.daysOfWeek[day]
+            }
+        }));
+    };
+    
+    const DayButton = ({ day, label }) => (
+        <button
+            type="button"
+            onClick={() => handleDayOfWeekToggle(day)}
+            className={`px-2 py-1 text-xs rounded-full border ${recurringConfig.daysOfWeek[day] ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-gray-700 hover:border-blue-400'}`}
+        >
+            {label}
+        </button>
+    );
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center gap-4">
+                <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Repeat every</label>
+                    <input type="number" min="1" value={recurringConfig.interval} onChange={handleIntervalChange} className="mt-1 w-full input-style" />
+                </div>
+                <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Frequency</label>
+                    <select value={recurringConfig.frequency} onChange={handleFrequencyChange} className="mt-1 w-full input-style">
+                        <option value="daily">Day(s)</option>
+                        <option value="weekly">Week(s)</option>
+                        <option value="monthly">Month(s)</option>
+                    </select>
+                </div>
+            </div>
+            {recurringConfig.frequency === 'weekly' && (
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">On these days</label>
+                    <div className="flex flex-wrap gap-2">
+                        <DayButton day="sun" label="S" />
+                        <DayButton day="mon" label="M" />
+                        <DayButton day="tue" label="T" />
+                        <DayButton day="wed" label="W" />
+                        <DayButton day="thu" label="T" />
+                        <DayButton day="fri" label="F" />
+                        <DayButton day="sat" label="S" />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, preselectedDate }) => {
     const [taskName, setTaskName] = useState('');
@@ -19,7 +90,13 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
     const [assignedTo, setAssignedTo] = useState('');
     const [templateId, setTemplateId] = useState('');
     const [isRecurring, setIsRecurring] = useState(false);
-    const [recurringFrequency, setRecurringFrequency] = useState('weekly');
+    
+    // --- NEW: Advanced recurring state ---
+    const [recurringConfig, setRecurringConfig] = useState({
+        frequency: 'weekly',
+        interval: 1,
+        daysOfWeek: { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }
+    });
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -43,8 +120,8 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
             checklistItems: selectedTemplate ? selectedTemplate.items.map(item => ({ ...item, completed: false, proofUrl: '' })) : [],
             recurring: {
                 enabled: isRecurring,
-                frequency: isRecurring ? recurringFrequency : null,
-                isPrototype: isRecurring, // Mark this as the prototype for recurring series
+                isPrototype: isRecurring,
+                ...recurringConfig
             }
         };
 
@@ -56,6 +133,7 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 animate-fade-in-down">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Add New Task</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
+                {/* ... other form fields ... */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Name</label>
@@ -111,12 +189,7 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
                     </div>
                     {isRecurring && (
                         <div className="pl-6 animate-fade-in-down">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Repeat every</label>
-                            <select value={recurringFrequency} onChange={e => setRecurringFrequency(e.target.value)} className="mt-1 w-full md:w-1/2 input-style">
-                                <option value="daily">Day</option>
-                                <option value="weekly">Week</option>
-                                <option value="monthly">Month</option>
-                            </select>
+                           <RecurringSettings recurringConfig={recurringConfig} setRecurringConfig={setRecurringConfig} />
                         </div>
                     )}
                 </div>
@@ -192,11 +265,18 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
     const createNextRecurringTask = async (completedTask) => {
         const { recurring, ...originalTaskData } = completedTask;
         if (!recurring?.enabled || !originalTaskData.scheduledDate) return;
-        let nextDueDate = new Date(originalTaskData.scheduledDate);
+        let nextDueDate = new Date(originalTaskData.scheduledDate + 'T00:00:00'); // Ensure correct date parsing
         if (isNaN(nextDueDate.getTime())) { console.warn("Cannot create recurring task: invalid original due date."); return; }
-        if (recurring.frequency === 'daily') nextDueDate.setDate(nextDueDate.getDate() + 1);
-        else if (recurring.frequency === 'weekly') nextDueDate.setDate(nextDueDate.getDate() + 7);
-        else if (recurring.frequency === 'monthly') nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+
+        const interval = recurring.interval || 1;
+        if (recurring.frequency === 'daily') {
+            nextDueDate.setDate(nextDueDate.getDate() + interval);
+        } else if (recurring.frequency === 'weekly') {
+            nextDueDate.setDate(nextDueDate.getDate() + (interval * 7));
+        } else if (recurring.frequency === 'monthly') {
+            nextDueDate.setMonth(nextDueDate.getMonth() + interval);
+        }
+
         const newTask = { ...originalTaskData, status: 'Pending', scheduledDate: nextDueDate.toISOString().split('T')[0], createdAt: serverTimestamp(), lastProofURL: null, checklistItems: originalTaskData.checklistItems.map(item => ({ ...item, completed: false, proofUrl: '' })), recurring: { ...recurring, isPrototype: false } };
         delete newTask.id;
         try {
@@ -315,7 +395,7 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[90vh] flex flex-col">
                     <div className="flex justify-between items-center mb-4 pb-4 border-b dark:border-gray-700">
                         <div className="flex items-center gap-3">
-                            {liveTask.recurring?.enabled && <Repeat size={18} className="text-gray-400" title={`Repeats ${liveTask.recurring.frequency}`} />}
+                            {liveTask.recurring?.enabled && <Repeat size={18} className="text-gray-400" title={`Repeats every ${liveTask.recurring.interval} ${liveTask.recurring.frequency}`} />}
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{liveTask.taskName}</h3>
                             <button onClick={() => setIsEditingDetails(true)} className="text-gray-400 hover:text-blue-500"><Edit size={16} /></button>
                         </div>
@@ -363,16 +443,23 @@ const TaskChecklist = ({ items, onUpdate, onProofUpload }) => {
 export const TemplateTaskModal = ({ templates, onClose, onAddTask }) => {
     const [selectedTemplateId, setSelectedTemplateId] = useState('');
     const [isRecurring, setIsRecurring] = useState(false);
-    const [recurringFrequency, setRecurringFrequency] = useState('weekly');
+    
+    // --- NEW: Advanced recurring state ---
+    const [recurringConfig, setRecurringConfig] = useState({
+        frequency: 'weekly',
+        interval: 1,
+        daysOfWeek: { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }
+    });
+
     const handleCreateTaskFromTemplate = () => {
         if (!selectedTemplateId) { toast.error('Please select a template.'); return; }
         const template = templates.find(t => t.id === selectedTemplateId);
         if (!template) { toast.error('Selected template not found.'); return; }
-        const taskData = { taskName: template.name, taskType: template.taskType || 'Cleaning', description: `Task created from template: ${template.name}`, priority: 'Medium', scheduledDate: '', assignedTo: '', assignedToEmail: '', templateId: template.id, templateName: template.name, checklistItems: template.items ? template.items.map(item => ({...item, completed: false, proofUrl: ''})) : [], recurring: { enabled: isRecurring, frequency: isRecurring ? recurringFrequency : null, isPrototype: isRecurring } };
+        const taskData = { taskName: template.name, taskType: template.taskType || 'Cleaning', description: `Task created from template: ${template.name}`, priority: 'Medium', scheduledDate: '', assignedTo: '', assignedToEmail: '', templateId: template.id, templateName: template.name, checklistItems: template.items ? template.items.map(item => ({...item, completed: false, proofUrl: ''})) : [], recurring: { enabled: isRecurring, isPrototype: isRecurring, ...recurringConfig } };
         onAddTask(taskData);
         onClose();
     };
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in"><div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700"><h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Task from Template</h3><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Select a Template</label><select value={selectedTemplateId} onChange={e => setSelectedTemplateId(e.target.value)} className="mt-1 w-full input-style"><option value="">-- Choose a template --</option>{templates.map(template => (<option key={template.id} value={template.id}>{template.name}</option>))}</select></div><div className="pt-4 border-t dark:border-gray-600 space-y-3"><div className="flex items-center"><input id="recurring-template-checkbox" type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" /><label htmlFor="recurring-template-checkbox" className="ml-2 block text-sm font-medium text-gray-900 dark:text-gray-200">Make this a recurring task</label></div>{isRecurring && (<div className="pl-6 animate-fade-in-down"><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Repeat every</label><select value={recurringFrequency} onChange={e => setRecurringFrequency(e.target.value)} className="mt-1 w-full md:w-1/2 input-style"><option value="daily">Day</option><option value="weekly">Week</option><option value="monthly">Month</option></select></div>)}</div></div><div className="flex justify-end space-x-2 pt-6 mt-4 border-t dark:border-gray-700"><button type="button" onClick={onClose} className="button-secondary">Cancel</button><button type="button" onClick={handleCreateTaskFromTemplate} className="button-primary">Create Task</button></div></div></div>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in"><div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700"><h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Task from Template</h3><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Select a Template</label><select value={selectedTemplateId} onChange={e => setSelectedTemplateId(e.target.value)} className="mt-1 w-full input-style"><option value="">-- Choose a template --</option>{templates.map(template => (<option key={template.id} value={template.id}>{template.name}</option>))}</select></div><div className="pt-4 border-t dark:border-gray-600 space-y-3"><div className="flex items-center"><input id="recurring-template-checkbox" type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" /><label htmlFor="recurring-template-checkbox" className="ml-2 block text-sm font-medium text-gray-900 dark:text-gray-200">Make this a recurring task</label></div>{isRecurring && (<div className="pl-6 animate-fade-in-down"><RecurringSettings recurringConfig={recurringConfig} setRecurringConfig={setRecurringConfig} /></div>)}</div></div><div className="flex justify-end space-x-2 pt-6 mt-4 border-t dark:border-gray-700"><button type="button" onClick={onClose} className="button-secondary">Cancel</button><button type="button" onClick={handleCreateTaskFromTemplate} className="button-primary">Create Task</button></div></div></div>
     );
 };
