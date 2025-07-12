@@ -1,6 +1,11 @@
 [
   {
-    "origin": ["http://localhost:3000"],
+    "origin": [
+      "http://localhost:3000",
+      "https://dev.staywellapp.com",
+      "https://qa.staywellapp.com",
+      "https://staywellapp.com"
+    ],
     "method": ["GET", "POST", "PUT"],
     "responseHeader": [
       "Content-Type",
