@@ -1,6 +1,5 @@
 // src/components/property/PropertyDetailView.js
-// This is the main container for viewing the details of a single property.
-// MODIFIED to use the new GuestInfoForm and SettingsView components.
+// MODIFIED to replace Analytics with the new Performance tab.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
@@ -8,18 +7,19 @@ import { doc, onSnapshot, updateDoc, collection, query, where } from 'firebase/f
 import { toast } from 'react-toastify';
 import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building, Tag, Key, Wifi, ParkingSquare, Info, ListChecks, FileText } from 'lucide-react';
 
-// Import the refactored components
+// Import the refactored and NEW components
 import { PropertyForm } from './PropertyForm';
 import { GuestInfoForm } from './GuestInfoForm';
 import { TasksView } from './PropertyTasksView';
 import { CalendarView } from './PropertyCalendarView';
-import { AnalyticsView } from './PropertyAnalyticsView';
+import { PerformanceView } from './PropertyPerformanceView'; // <-- NEW
 import { SettingsView } from './PropertySettingsView';
 import { InventoryView } from '../InventoryViews';
 import { allAmenities } from './AmenitiesForm';
 
-
+// LinkedTemplatesView Component remains the same
 const LinkedTemplatesView = ({ property, user }) => {
+    // ... no changes here
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -85,15 +85,12 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
             } else {
                 toast.error("Property data could not be found.");
             }
-        }, (error) => {
-            console.error("Error fetching live property data:", error);
-            toast.error("Could not load live property data.");
         });
         return () => unsubscribe();
     }, [property.id]);
 
     const handleUpdateProperty = async (propertyData) => {
-        // This function now only handles the main property form
+        // ... no changes here
         const toastId = toast.loading("Updating property...");
         try {
             const propertyRef = doc(db, "properties", property.id);
@@ -118,7 +115,9 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         </button>
     );
     
+    // Overview component remains the same
     const Overview = () => {
+        // ... no changes here
         const [mainImage, setMainImage] = useState(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
 
         useEffect(() => {
@@ -214,7 +213,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                                     <p><strong>Wi-Fi Password:</strong> {accessInfo.wifiPassword || 'N/A'}</p>
                                     <p><strong>Lockbox:</strong> {accessInfo.lockboxCode || 'N/A'}</p>
                                     <p><strong>Parking:</strong> {accessInfo.parkingInstructions || 'N/A'}</p>
-                                </div>
+                                 </div>
                            </div>
                            <div>
                                 <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Home size={16} className="mr-2"/> House Rules</h4>
@@ -266,7 +265,8 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                                 <TabButton tabName="templates" label="Templates" icon={<ListChecks size={18}/>} />
                                 <TabButton tabName="inventory" label="Inventory" icon={<Archive size={18}/>} />
                                 <TabButton tabName="calendar" label="Calendar" icon={<Calendar size={18}/>} />
-                                <TabButton tabName="analytics" label="Analytics" icon={<BarChart2 size={18}/>} />
+                                {/* --- MODIFIED TAB --- */}
+                                <TabButton tabName="performance" label="Performance" icon={<BarChart2 size={18}/>} />
                                 <TabButton tabName="settings" label="Settings" icon={<Settings size={18}/>} />
                             </div>
                         </div>
@@ -276,7 +276,8 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                             {activeTab === 'templates' && <LinkedTemplatesView property={liveProperty} user={user} />}
                             {activeTab === 'inventory' && <InventoryView property={liveProperty} user={user} />}
                             {activeTab === 'calendar' && <CalendarView property={liveProperty} user={user} />}
-                            {activeTab === 'analytics' && <AnalyticsView property={liveProperty} />}
+                            {/* --- MODIFIED RENDER --- */}
+                            {activeTab === 'performance' && <PerformanceView property={liveProperty} />}
                             {activeTab === 'settings' && <SettingsView property={liveProperty} user={user} onBack={onBack} />}
                         </div>
                     </>
