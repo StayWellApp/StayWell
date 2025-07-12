@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { doc, onSnapshot, updateDoc, collection, query, where } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building, Tag, Key, Wifi, ParkingSquare, Info, ListChecks, FileText } from 'lucide-react';
+import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building, Tag, Key, Info, ListChecks, FileText } from 'lucide-react';
 
 // Import the refactored and NEW components
 import { PropertyForm } from './PropertyForm';
