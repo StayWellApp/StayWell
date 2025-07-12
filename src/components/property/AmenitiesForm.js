@@ -1,13 +1,14 @@
 // src/components/property/AmenitiesForm.js
 // This component displays the form for selecting property amenities.
-// MODIFIED to include a much larger list of amenities and a custom add feature.
+// MODIFIED to fix the icon import name.
 
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import {
     Wifi, Tv, Utensils, Droplet, Wind, Building, Sun, CookingPot, Flame, Tent, Bandage, Siren,
-    Thermometer, Bath, Dumbbell, Waves, Baby, ToyBrick, Chair, Refrigerator, Microwave, Disc,
-    Key, Box, Sparkles, MountainSnow, Sailboat, Plus, Tag
+    Thermometer, Bath, Dumbbell, Waves, Baby, ToyBrick, Refrigerator, Microwave, Disc,
+    Key, Box, Sparkles, MountainSnow, Sailboat, Plus, Tag,
+    Armchair // --- FIXED: Changed from 'Chair' to 'Armchair' ---
 } from 'lucide-react';
 
 // --- EXPANDED AMENITY LIST ---
@@ -55,7 +56,8 @@ export const amenityCategories = {
         title: "Family",
         items: {
             crib: { label: "Crib", icon: <Baby size={18} /> },
-            highChair: { label: "High Chair", icon: <Chair size={18} /> },
+            // --- FIXED: Used the correct 'Armchair' icon name ---
+            highChair: { label: "High Chair", icon: <Armchair size={18} /> },
             toys: { label: "Toys & Games", icon: <ToyBrick size={18} /> },
             packNPlay: { label: "Pack 'n Play", icon: <Box size={18} /> },
         }
