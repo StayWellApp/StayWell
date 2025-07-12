@@ -17,6 +17,11 @@ import SettingsView from './components/SettingsView';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
 
+// --- 1. Import Toastify ---
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+
 function App() {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
@@ -102,6 +107,18 @@ function App() {
                     <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-4 text-center text-sm text-blue-600 dark:text-blue-400 hover:underline">
                         {isRegistering ? 'Already have an account? Log in.' : "Don't have an account? Sign up."}
                     </button>
+                    {/* --- 2. Add ToastContainer for login/signup errors --- */}
+                    <ToastContainer
+                        position="bottom-center"
+                        autoClose={5000}
+                        hideProgressBar={false}
+                        newestOnTop={false}
+                        closeOnClick
+                        rtl={false}
+                        pauseOnFocusLoss
+                        draggable
+                        pauseOnHover
+                    />
                 </div>
             </div>
         );
@@ -109,6 +126,18 @@ function App() {
 
     return (
         <ThemeProvider>
+            {/* --- 3. Add ToastContainer for general app notifications --- */}
+            <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+            />
             <Layout user={user} userData={userData} activeView={activeView} setActiveView={setActiveView} hasPermission={hasPermission}>
                 {renderActiveView()}
             </Layout>
