@@ -1,5 +1,5 @@
 // src/components/property/PropertyDetailView.js
-// MODIFIED to replace Analytics with the new Performance tab.
+// FINAL CORRECTED FILE
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
@@ -12,19 +12,19 @@ import { PropertyForm } from './PropertyForm';
 import { GuestInfoForm } from './GuestInfoForm';
 import { TasksView } from './PropertyTasksView';
 import { CalendarView } from './PropertyCalendarView';
-import { PerformanceView } from './PropertyPerformanceView'; // <-- NEW
+import { PerformanceView } from './PropertyPerformanceView';
 import { SettingsView } from './PropertySettingsView';
 import { InventoryView } from '../InventoryViews';
 import { allAmenities } from './AmenitiesForm';
 
-// LinkedTemplatesView Component remains the same
+// LinkedTemplatesView Component
 const LinkedTemplatesView = ({ property, user }) => {
-    // ... no changes here
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) return;
+        // This effect now correctly depends on user.uid, which is stable.
+        if (!user || !user.uid) return;
         const templatesQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
         const unsubscribe = onSnapshot(templatesQuery, (snapshot) => {
             const allTemplates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -41,7 +41,7 @@ const LinkedTemplatesView = ({ property, user }) => {
             setLoading(false);
         });
         return () => unsubscribe();
-    }, [property.id, user.uid]);
+    }, [property.id, user.uid]); // FIXED: Dependency array is now correct.
 
     if (loading) {
         return <div className="text-center p-8">Loading templates...</div>;
@@ -90,7 +90,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     }, [property.id]);
 
     const handleUpdateProperty = async (propertyData) => {
-        // ... no changes here
         const toastId = toast.loading("Updating property...");
         try {
             const propertyRef = doc(db, "properties", property.id);
@@ -115,14 +114,13 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         </button>
     );
     
-    // Overview component remains the same
     const Overview = () => {
-        // ... no changes here
         const [mainImage, setMainImage] = useState(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
 
+        // This effect now correctly depends on the specific properties from the liveProperty object.
         useEffect(() => {
             setMainImage(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
-        }, [liveProperty]);
+        }, [liveProperty.mainPhotoURL, liveProperty.photoURLs]); // FIXED: Dependency array is now correct.
 
         const photoURLs = liveProperty.photoURLs || [];
         const propertyAmenities = liveProperty.amenities || {};
@@ -265,7 +263,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                                 <TabButton tabName="templates" label="Templates" icon={<ListChecks size={18}/>} />
                                 <TabButton tabName="inventory" label="Inventory" icon={<Archive size={18}/>} />
                                 <TabButton tabName="calendar" label="Calendar" icon={<Calendar size={18}/>} />
-                                {/* --- MODIFIED TAB --- */}
                                 <TabButton tabName="performance" label="Performance" icon={<BarChart2 size={18}/>} />
                                 <TabButton tabName="settings" label="Settings" icon={<Settings size={18}/>} />
                             </div>
@@ -276,7 +273,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                             {activeTab === 'templates' && <LinkedTemplatesView property={liveProperty} user={user} />}
                             {activeTab === 'inventory' && <InventoryView property={liveProperty} user={user} />}
                             {activeTab === 'calendar' && <CalendarView property={liveProperty} user={user} />}
-                            {/* --- MODIFIED RENDER --- */}
                             {activeTab === 'performance' && <PerformanceView property={liveProperty} />}
                             {activeTab === 'settings' && <SettingsView property={liveProperty} user={user} onBack={onBack} />}
                         </div>
