@@ -1,6 +1,6 @@
 // src/components/property/PropertyDetailView.js
 // This is the main container for viewing the details of a single property.
-// MODIFIED to display House Rules, Access Info, and Linked Templates.
+// MODIFIED to use the new GuestInfoForm component.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
@@ -10,6 +10,7 @@ import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as Ima
 
 // Import the refactored components
 import { PropertyForm } from './PropertyForm';
+import { GuestInfoForm } from './GuestInfoForm'; // --- NEW ---
 import { TasksView } from './PropertyTasksView';
 import { CalendarView } from './PropertyCalendarView';
 import { AnalyticsView } from './PropertyAnalyticsView';
@@ -18,30 +19,20 @@ import { InventoryView } from '../InventoryViews';
 import { allAmenities } from './AmenitiesForm';
 
 
-// --- NEW: Linked Templates View Component ---
 const LinkedTemplatesView = ({ property, user }) => {
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!user) return;
-        
-        // Query for templates linked to this specific property OR globally available templates
-        const templatesQuery = query(
-            collection(db, "checklistTemplates"),
-            where("ownerId", "==", user.uid)
-        );
-
+        const templatesQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
         const unsubscribe = onSnapshot(templatesQuery, (snapshot) => {
             const allTemplates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // Filter templates that are either not linked to any property or are linked to this one
             const linked = allTemplates.filter(template => 
                 !template.linkedProperties || 
                 template.linkedProperties.length === 0 || 
                 template.linkedProperties.includes(property.id)
             );
-
             setTemplates(linked);
             setLoading(false);
         }, (error) => {
@@ -49,7 +40,6 @@ const LinkedTemplatesView = ({ property, user }) => {
             toast.error("Could not load linked templates.");
             setLoading(false);
         });
-
         return () => unsubscribe();
     }, [property.id, user.uid]);
 
@@ -60,9 +50,7 @@ const LinkedTemplatesView = ({ property, user }) => {
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Linked Checklist Templates</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-                This is a read-only view of all global and property-specific templates. To manage templates, use the main "Templates" tab.
-            </p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">This is a read-only view of all global and property-specific templates. To manage templates, use the main "Templates" tab.</p>
             {templates.length > 0 ? (
                 <ul className="space-y-3">
                     {templates.map(template => (
@@ -86,6 +74,7 @@ const LinkedTemplatesView = ({ property, user }) => {
 export const PropertyDetailView = ({ property, onBack, user }) => {
     const [activeTab, setActiveTab] = useState('overview');
     const [isEditing, setIsEditing] = useState(false);
+    const [isEditingGuestInfo, setIsEditingGuestInfo] = useState(false); // --- NEW ---
     const [liveProperty, setLiveProperty] = useState(property);
 
     useEffect(() => {
@@ -104,26 +93,24 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     }, [property.id]);
 
     const handleUpdateProperty = async (propertyData) => {
+        // This function now only handles the main property form
         const toastId = toast.loading("Updating property...");
         try {
             const propertyRef = doc(db, "properties", property.id);
             await updateDoc(propertyRef, propertyData);
-            toast.update(toastId, { 
-                render: "Property updated successfully!", 
-                type: "success", 
-                isLoading: false, 
-                autoClose: 3000 
-            });
+            toast.update(toastId, { render: "Property updated successfully!", type: "success", isLoading: false, autoClose: 3000 });
             setIsEditing(false);
         } catch (error) {
             console.error("Error updating property:", error);
-            toast.update(toastId, { 
-                render: "Failed to update property.", 
-                type: "error", 
-                isLoading: false, 
-                autoClose: 5000 
-            });
+            toast.update(toastId, { render: "Failed to update property.", type: "error", isLoading: false, autoClose: 5000 });
         }
+    };
+
+    // --- NEW: Handler for the guest info form ---
+    const handleUpdateGuestInfo = async (guestData) => {
+        const propertyRef = doc(db, "properties", property.id);
+        // The onSave in the form will show its own toasts, so we just call the update.
+        await updateDoc(propertyRef, guestData);
     };
 
     const TabButton = ({ tabName, label, icon }) => (
@@ -151,6 +138,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
             }));
         
         const accessInfo = liveProperty.accessInfo || {};
+        const customInfo = liveProperty.customInfo || [];
 
         return (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -214,9 +202,12 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                         </div>
                         <p className="text-gray-600 dark:text-gray-300">{liveProperty.description}</p>
                     </div>
-                    {/* --- NEW: Access Info & House Rules Card --- */}
+                    {/* Access Info & House Rules Card */}
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Guest Information</h3>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Guest Information</h3>
+                            <button onClick={() => setIsEditingGuestInfo(true)} className="button-secondary text-xs">Edit</button>
+                        </div>
                         <div className="space-y-4">
                            <div>
                                 <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Key size={16} className="mr-2"/> Access Details</h4>
@@ -231,6 +222,17 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                                 <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Home size={16} className="mr-2"/> House Rules</h4>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">{liveProperty.houseRules || 'No rules specified.'}</p>
                            </div>
+                           {/* --- NEW: Display custom info fields --- */}
+                           {customInfo.length > 0 && (
+                               <div>
+                                   <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Info size={16} className="mr-2"/> Additional Info</h4>
+                                   <div className="text-sm space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">
+                                       {customInfo.map((item, index) => (
+                                           <p key={index}><strong>{item.label}:</strong> {item.value}</p>
+                                       ))}
+                                   </div>
+                               </div>
+                           )}
                         </div>
                     </div>
                 </div>
@@ -248,6 +250,15 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                     {isEditing ? '← Back to Property Details' : '← Back to All Properties'}
                 </button>
                 
+                {/* --- NEW: Conditionally render the new GuestInfoForm modal --- */}
+                {isEditingGuestInfo && (
+                    <GuestInfoForm 
+                        property={liveProperty} 
+                        onSave={handleUpdateGuestInfo}
+                        onCancel={() => setIsEditingGuestInfo(false)}
+                    />
+                )}
+
                 {isEditing ? (
                      <PropertyForm existingProperty={liveProperty} onSave={handleUpdateProperty} onCancel={() => setIsEditing(false)} />
                 ) : (
