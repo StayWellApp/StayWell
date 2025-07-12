@@ -1,12 +1,12 @@
 // src/components/property/PropertyDetailView.js
 // This is the main container for viewing the details of a single property.
-// MODIFIED to show an image gallery and fix navigation logic.
+// MODIFIED to display House Rules, Access Info, and Linked Templates.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, collection, query, where } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building, Tag } from 'lucide-react';
+import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building, Tag, Key, Wifi, ParkingSquare, Info, ListChecks, FileText } from 'lucide-react';
 
 // Import the refactored components
 import { PropertyForm } from './PropertyForm';
@@ -14,9 +14,73 @@ import { TasksView } from './PropertyTasksView';
 import { CalendarView } from './PropertyCalendarView';
 import { AnalyticsView } from './PropertyAnalyticsView';
 import { SettingsView } from './PropertySettingsView';
-import { ChecklistsView } from './PropertyChecklistsView';
-import { InventoryView } from '../InventoryViews'; // Assuming this is in a separate file
+import { InventoryView } from '../InventoryViews';
 import { allAmenities } from './AmenitiesForm';
+
+
+// --- NEW: Linked Templates View Component ---
+const LinkedTemplatesView = ({ property, user }) => {
+    const [templates, setTemplates] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) return;
+        
+        // Query for templates linked to this specific property OR globally available templates
+        const templatesQuery = query(
+            collection(db, "checklistTemplates"),
+            where("ownerId", "==", user.uid)
+        );
+
+        const unsubscribe = onSnapshot(templatesQuery, (snapshot) => {
+            const allTemplates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // Filter templates that are either not linked to any property or are linked to this one
+            const linked = allTemplates.filter(template => 
+                !template.linkedProperties || 
+                template.linkedProperties.length === 0 || 
+                template.linkedProperties.includes(property.id)
+            );
+
+            setTemplates(linked);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching linked templates:", error);
+            toast.error("Could not load linked templates.");
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [property.id, user.uid]);
+
+    if (loading) {
+        return <div className="text-center p-8">Loading templates...</div>;
+    }
+
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Linked Checklist Templates</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                This is a read-only view of all global and property-specific templates. To manage templates, use the main "Templates" tab.
+            </p>
+            {templates.length > 0 ? (
+                <ul className="space-y-3">
+                    {templates.map(template => (
+                        <li key={template.id} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg flex items-center">
+                            <FileText className="text-blue-500 mr-4" size={20} />
+                            <div>
+                                <p className="font-semibold text-gray-900 dark:text-gray-100">{template.name}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{template.items?.length || 0} items</p>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-center py-8 text-gray-500 dark:text-gray-400">No templates are linked to this property.</p>
+            )}
+        </div>
+    );
+};
 
 
 export const PropertyDetailView = ({ property, onBack, user }) => {
@@ -69,7 +133,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         </button>
     );
     
-    // --- MODIFIED: Overview component to display custom amenities ---
     const Overview = () => {
         const [mainImage, setMainImage] = useState(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
 
@@ -78,8 +141,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         }, [liveProperty]);
 
         const photoURLs = liveProperty.photoURLs || [];
-        
-        // --- NEW: Logic to separate and format custom amenities ---
         const propertyAmenities = liveProperty.amenities || {};
         const customAmenitiesToDisplay = Object.entries(propertyAmenities)
             .filter(([key, value]) => key.startsWith('custom_') && value)
@@ -88,12 +149,14 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                 label: key.replace('custom_', '').replace(/_/g, ' '),
                 icon: <Tag size={18} />
             }));
-
+        
+        const accessInfo = liveProperty.accessInfo || {};
 
         return (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Image Gallery Column */}
-                <div className="lg:col-span-2">
+                {/* Left Column */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Gallery */}
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                         <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><ImageIcon size={20} className="mr-2"/> Gallery</h3>
                         <div className="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden mb-4">
@@ -115,12 +178,33 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                             </div>
                         )}
                     </div>
+                    {/* Amenities */}
+                     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">What this place offers</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                            {Object.entries(allAmenities).map(([key, { label, icon }]) => 
+                                propertyAmenities[key] && (
+                                    <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm">
+                                        <div className="text-blue-600 dark:text-blue-400">{icon}</div>
+                                        <span>{label}</span>
+                                    </div>
+                                )
+                            )}
+                            {customAmenitiesToDisplay.map(({ key, label, icon }) => (
+                                <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm capitalize">
+                                    <div className="text-green-500">{icon}</div>
+                                    <span>{label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Details Column */}
-                <div className="lg:col-span-1">
+                {/* Right Column */}
+                <div className="lg:col-span-1 space-y-8">
+                    {/* Details Card */}
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-start mb-4">
                             <div>
                                 <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{liveProperty.propertyType}</p>
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{liveProperty.propertyName}</h2>
@@ -128,28 +212,25 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                             </div>
                             <button onClick={() => setIsEditing(true)} className="button-secondary flex-shrink-0">Edit</button>
                         </div>
-                        <p className="text-gray-600 dark:text-gray-300 mt-4">{liveProperty.description}</p>
-                        
-                        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">What this place offers</h3>
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                {/* --- MODIFIED: Render predefined amenities --- */}
-                                {Object.entries(allAmenities).map(([key, { label, icon }]) => 
-                                    propertyAmenities[key] && (
-                                        <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm">
-                                            <div className="text-blue-600 dark:text-blue-400">{icon}</div>
-                                            <span>{label}</span>
-                                        </div>
-                                    )
-                                )}
-                                {/* --- NEW: Render custom amenities --- */}
-                                {customAmenitiesToDisplay.map(({ key, label, icon }) => (
-                                    <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm capitalize">
-                                        <div className="text-green-500">{icon}</div>
-                                        <span>{label}</span>
-                                    </div>
-                                ))}
-                            </div>
+                        <p className="text-gray-600 dark:text-gray-300">{liveProperty.description}</p>
+                    </div>
+                    {/* --- NEW: Access Info & House Rules Card --- */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Guest Information</h3>
+                        <div className="space-y-4">
+                           <div>
+                                <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Key size={16} className="mr-2"/> Access Details</h4>
+                                <div className="text-sm space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">
+                                    <p><strong>Door Code:</strong> {accessInfo.doorCode || 'N/A'}</p>
+                                    <p><strong>Wi-Fi Password:</strong> {accessInfo.wifiPassword || 'N/A'}</p>
+                                    <p><strong>Lockbox:</strong> {accessInfo.lockboxCode || 'N/A'}</p>
+                                    <p><strong>Parking:</strong> {accessInfo.parkingInstructions || 'N/A'}</p>
+                                </div>
+                           </div>
+                           <div>
+                                <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Home size={16} className="mr-2"/> House Rules</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">{liveProperty.houseRules || 'No rules specified.'}</p>
+                           </div>
                         </div>
                     </div>
                 </div>
@@ -175,7 +256,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                             <div className="flex space-x-2 sm:space-x-4 overflow-x-auto">
                                 <TabButton tabName="overview" label="Overview" icon={<Home size={18}/>} />
                                 <TabButton tabName="tasks" label="Tasks" icon={<CheckSquare size={18}/>} />
-                                <TabButton tabName="checklists" label="Templates" icon={<CheckSquare size={18}/>} />
+                                <TabButton tabName="templates" label="Templates" icon={<ListChecks size={18}/>} />
                                 <TabButton tabName="inventory" label="Inventory" icon={<Archive size={18}/>} />
                                 <TabButton tabName="calendar" label="Calendar" icon={<Calendar size={18}/>} />
                                 <TabButton tabName="analytics" label="Analytics" icon={<BarChart2 size={18}/>} />
@@ -185,7 +266,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                         <div>
                             {activeTab === 'overview' && <Overview />}
                             {activeTab === 'tasks' && <TasksView property={liveProperty} user={user} />}
-                            {activeTab === 'checklists' && <ChecklistsView user={user} />}
+                            {activeTab === 'templates' && <LinkedTemplatesView property={liveProperty} user={user} />}
                             {activeTab === 'inventory' && <InventoryView property={liveProperty} user={user} />}
                             {activeTab === 'calendar' && <CalendarView property={liveProperty} user={user} />}
                             {activeTab === 'analytics' && <AnalyticsView property={liveProperty} />}

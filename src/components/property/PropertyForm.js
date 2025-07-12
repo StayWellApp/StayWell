@@ -1,13 +1,13 @@
 // src/components/property/PropertyForm.js
 // This component handles the form for adding or editing a property.
-// MODIFIED to support multiple image uploads.
+// MODIFIED to include fields for House Rules and Access Information.
 
 import React, { useState, useEffect } from 'react';
 import { storage } from '../../firebase-config';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from 'react-toastify';
 import { AmenitiesForm, initialAmenitiesState } from './AmenitiesForm';
-import { UploadCloud, X } from 'lucide-react';
+import { UploadCloud, X, Key, Wifi, ParkingSquare, Info, Home } from 'lucide-react';
 
 const propertyTypes = ["House", "Apartment", "Guesthouse", "Hotel", "Cabin", "Barn", "Bed & Breakfast", "Boat", "Camper/RV", "Castle", "Tiny Home", "Treehouse"];
 
@@ -21,11 +21,18 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
     const [guests, setGuests] = useState(2);
     const [amenities, setAmenities] = useState(initialAmenitiesState);
     
-    // --- NEW: State for multiple photos ---
-    const [imageFiles, setImageFiles] = useState([]); // Holds new files to be uploaded
-    const [existingImageUrls, setExistingImageUrls] = useState([]); // Holds URLs from DB
-    const [imagePreviews, setImagePreviews] = useState([]); // Holds URLs for display (both existing and new previews)
+    // --- NEW: State for House Rules and Access Info ---
+    const [houseRules, setHouseRules] = useState('');
+    const [accessInfo, setAccessInfo] = useState({
+        doorCode: '',
+        wifiPassword: '',
+        lockboxCode: '',
+        parkingInstructions: ''
+    });
 
+    const [imageFiles, setImageFiles] = useState([]);
+    const [existingImageUrls, setExistingImageUrls] = useState([]);
+    const [imagePreviews, setImagePreviews] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -39,38 +46,35 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
             setGuests(existingProperty.guests || 2);
             setAmenities(existingProperty.amenities || initialAmenitiesState);
             
-            // --- NEW: Populate image states ---
+            // --- NEW: Populate new fields ---
+            setHouseRules(existingProperty.houseRules || '');
+            setAccessInfo(existingProperty.accessInfo || { doorCode: '', wifiPassword: '', lockboxCode: '', parkingInstructions: '' });
+
             const urls = existingProperty.photoURLs || [];
             setExistingImageUrls(urls);
             setImagePreviews(urls);
         }
     }, [existingProperty]);
 
-    // --- NEW: Handle multiple file selection ---
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
         setImageFiles(prev => [...prev, ...files]);
-
         const newPreviews = files.map(file => URL.createObjectURL(file));
         setImagePreviews(prev => [...prev, ...newPreviews]);
     };
     
-    // --- NEW: Remove an image before upload ---
     const handleRemoveImage = (indexToRemove) => {
-        // Create a copy of the previews to find the URL to remove
         const urlToRemove = imagePreviews[indexToRemove];
-
-        // Filter out the preview
         setImagePreviews(previews => previews.filter((_, i) => i !== indexToRemove));
-
-        // Check if the removed URL was an existing one or a new file preview
         if (existingImageUrls.includes(urlToRemove)) {
-            // If it was an existing URL, remove it from that list
             setExistingImageUrls(urls => urls.filter(url => url !== urlToRemove));
         } else {
-            // If it was a new file, find its corresponding blob URL and remove the file
             setImageFiles(files => files.filter(file => URL.createObjectURL(file) !== urlToRemove));
         }
+    };
+
+    const handleAccessInfoChange = (field, value) => {
+        setAccessInfo(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSubmit = async (e) => {
@@ -84,7 +88,6 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
         const toastId = toast.loading("Saving property...");
 
         try {
-            // --- NEW: Upload multiple new images ---
             const newImageUrls = await Promise.all(
                 imageFiles.map(async (file) => {
                     const photoRef = ref(storage, `property_photos/${existingProperty.id || Date.now()}/${Date.now()}_${file.name}`);
@@ -93,7 +96,6 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
                 })
             );
 
-            // Combine old and newly uploaded URLs
             const allPhotoURLs = [...existingImageUrls, ...newImageUrls];
 
             const propertyData = {
@@ -105,10 +107,11 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
                 bathrooms,
                 guests,
                 amenities,
-                // --- NEW: Save array of URLs ---
                 photoURLs: allPhotoURLs,
-                // Set the first image as the main one for card view
                 mainPhotoURL: allPhotoURLs[0] || '',
+                // --- NEW: Save new fields to database ---
+                houseRules,
+                accessInfo,
             };
             
             await onSave(propertyData);
@@ -136,35 +139,54 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
     return (
         <div className="bg-white dark:bg-gray-800 p-8 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 animate-fade-in-down">
             <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">{existingProperty ? 'Edit Property' : 'Add a New Property'}</h3>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* --- Other form fields remain the same --- */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="propertyName">Property Name</label><input type="text" id="propertyName" value={propertyName} onChange={(e) => setPropertyName(e.target.value)} className="input-style" placeholder="e.g., Downtown Loft" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="propertyType">Property Type</label><select id="propertyType" value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className="input-style">{propertyTypes.map(type => <option key={type}>{type}</option>)}</select></div>
+            <form onSubmit={handleSubmit} className="space-y-8">
+                {/* --- Property Details Section --- */}
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="propertyName">Property Name</label><input type="text" id="propertyName" value={propertyName} onChange={(e) => setPropertyName(e.target.value)} className="input-style" placeholder="e.g., Downtown Loft" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="propertyType">Property Type</label><select id="propertyType" value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className="input-style">{propertyTypes.map(type => <option key={type}>{type}</option>)}</select></div>
+                    </div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="address">Address</label><input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="input-style" placeholder="e.g., 123 Main St, Anytown" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="description">Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="input-style" rows="3" placeholder="A brief description of the property..."></textarea></div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="guests">Max Guests</label><input type="number" id="guests" value={guests} min="1" onChange={(e) => setGuests(parseInt(e.target.value))} className="input-style" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="bedrooms">Bedrooms</label><input type="number" id="bedrooms" value={bedrooms} min="0" onChange={(e) => setBedrooms(parseInt(e.target.value))} className="input-style" /></div>
+                        <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="bathrooms">Bathrooms</label><input type="number" id="bathrooms" value={bathrooms} min="1" step="0.5" onChange={(e) => setBathrooms(parseFloat(e.target.value))} className="input-style" /></div>
+                    </div>
                 </div>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="address">Address</label><input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="input-style" placeholder="e.g., 123 Main St, Anytown" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="description">Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="input-style" rows="3" placeholder="A brief description of the property..."></textarea></div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="guests">Max Guests</label><input type="number" id="guests" value={guests} min="1" onChange={(e) => setGuests(parseInt(e.target.value))} className="input-style" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="bedrooms">Bedrooms</label><input type="number" id="bedrooms" value={bedrooms} min="0" onChange={(e) => setBedrooms(parseInt(e.target.value))} className="input-style" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="bathrooms">Bathrooms</label><input type="number" id="bathrooms" value={bathrooms} min="1" step="0.5" onChange={(e) => setBathrooms(parseFloat(e.target.value))} className="input-style" /></div>
+
+                {/* --- NEW: House Rules and Access Info --- */}
+                <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div>
+                        <label className="block text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><Home size={20} className="mr-2"/> House Rules</label>
+                        <textarea value={houseRules} onChange={(e) => setHouseRules(e.target.value)} className="input-style" rows="4" placeholder="e.g., No smoking inside. Quiet hours are from 10 PM to 8 AM..."></textarea>
+                    </div>
+                     <div>
+                        <label className="block text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center"><Key size={20} className="mr-2"/> Access Information</label>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="doorCode">Door Code</label><input type="text" id="doorCode" value={accessInfo.doorCode} onChange={(e) => handleAccessInfoChange('doorCode', e.target.value)} className="input-style" /></div>
+                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="wifiPassword">Wi-Fi Password</label><input type="text" id="wifiPassword" value={accessInfo.wifiPassword} onChange={(e) => handleAccessInfoChange('wifiPassword', e.target.value)} className="input-style" /></div>
+                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="lockboxCode">Lockbox Code</label><input type="text" id="lockboxCode" value={accessInfo.lockboxCode} onChange={(e) => handleAccessInfoChange('lockboxCode', e.target.value)} className="input-style" /></div>
+                            </div>
+                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="parkingInstructions">Parking Instructions</label><textarea id="parkingInstructions" value={accessInfo.parkingInstructions} onChange={(e) => handleAccessInfoChange('parkingInstructions', e.target.value)} className="input-style" rows="2"></textarea></div>
+                        </div>
+                    </div>
                 </div>
-                <AmenitiesForm amenities={amenities} setAmenities={setAmenities} />
+
+                {/* --- Amenities Section --- */}
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <AmenitiesForm amenities={amenities} setAmenities={setAmenities} />
+                </div>
                 
-                {/* --- NEW: Multiple Photo Upload Field --- */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Property Photos</label>
+                {/* --- Photo Upload Section --- */}
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <label className="block text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Property Photos</label>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                         {imagePreviews.map((previewUrl, index) => (
                             <div key={index} className="relative group aspect-square">
                                 <img src={previewUrl} alt={`Preview ${index + 1}`} className="w-full h-full object-cover rounded-lg shadow-md" />
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveImage(index)}
-                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    <X size={12} />
-                                </button>
+                                <button type="button" onClick={() => handleRemoveImage(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
                             </div>
                         ))}
                         <label htmlFor="photo-upload" className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -175,7 +197,7 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
                     </div>
                 </div>
 
-                <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end space-x-4 pt-8 border-t border-gray-200 dark:border-gray-700">
                     <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
                     <button type="submit" className="button-primary" disabled={isLoading}>
                         {isLoading ? 'Saving...' : (existingProperty ? 'Update Property' : 'Save Property')}
