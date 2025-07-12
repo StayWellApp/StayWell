@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from "firebase/firestore";
-import { usePermissions } from './hooks/usePermissions'; // <-- Import the hook
+import { usePermissions } from './hooks/usePermissions';
 import { Login, SignUp } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
@@ -16,11 +16,8 @@ import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
-
-// --- 1. Import Toastify ---
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
 
 function App() {
     const [user, setUser] = useState(null);
@@ -30,7 +27,6 @@ function App() {
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
 
-    // --- Use our new permissions hook ---
     const { hasPermission, loadingPermissions } = usePermissions(userData);
 
     useEffect(() => {
@@ -56,21 +52,36 @@ function App() {
 
     const handleSelectProperty = (property) => {
         setSelectedProperty(property);
-        setActiveView('propertyDetail');
+        setActiveView('propertyDetail'); // Keep track that we are in a detail view
+    };
+    
+    // --- NEW: Wrapped setActiveView to handle navigation from property detail ---
+    const handleSetActiveView = (view) => {
+        // When we use the main navigation, we should always exit the property detail view
+        if (selectedProperty) {
+            setSelectedProperty(null);
+        }
+        setActiveView(view);
     };
     
     const renderActiveView = () => {
+        // --- MODIFIED: Prioritize showing the selected property ---
         if (selectedProperty) {
-            // For now, allow anyone with property access to see details.
-            // This can be refined later with more specific permissions.
-            return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={user} />;
+            return <PropertyDetailView 
+                        property={selectedProperty} 
+                        // This onBack function now correctly returns to the properties list
+                        onBack={() => {
+                            setSelectedProperty(null);
+                            setActiveView('properties');
+                        }} 
+                        user={user} 
+                    />;
         }
         
         switch (activeView) {
             case 'dashboard':
-                // A user with no permissions will see the staff dashboard by default.
                 return hasPermission('properties_view_all') || hasPermission('team_manage')
-                    ? <ClientDashboard user={user} setActiveView={setActiveView} /> 
+                    ? <ClientDashboard user={user} setActiveView={handleSetActiveView} /> 
                     : <StaffDashboard user={user} userData={userData} />;
             case 'properties':
                 return <PropertiesView onSelectProperty={handleSelectProperty} user={user} userData={userData} hasPermission={hasPermission} />;
@@ -79,16 +90,14 @@ function App() {
             case 'templates':
                 return hasPermission('templates_manage') ? <ChecklistsView user={user} /> : null;
             case 'storage':
-                 // Let's say viewing storage is a specific permission now
                 return hasPermission('storage_view') ? <StorageView user={user} ownerId={userData?.ownerId || user.uid} hasPermission={hasPermission} /> : null;
             case 'calendar':
-                // Let's say viewing the master calendar is also a permission
-                return hasPermission('tasks_view_all') ? <MasterCalendarView user={user} userData={userData} /> : <StaffDashboard user={user} userData={userData} />; // Or a personal calendar
+                return hasPermission('tasks_view_all') ? <MasterCalendarView user={user} userData={userData} /> : <StaffDashboard user={user} userData={userData} />;
             case 'settings':
-                 return hasPermission('team_manage') ? <SettingsView user={user} /> : null; // Only show settings to admin-like roles
+                 return hasPermission('team_manage') ? <SettingsView user={user} /> : null;
             default:
                 return hasPermission('properties_view_all')
-                    ? <ClientDashboard user={user} setActiveView={setActiveView} /> 
+                    ? <ClientDashboard user={user} setActiveView={handleSetActiveView} /> 
                     : <StaffDashboard user={user} userData={userData} />;
         }
     };
@@ -107,18 +116,7 @@ function App() {
                     <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-4 text-center text-sm text-blue-600 dark:text-blue-400 hover:underline">
                         {isRegistering ? 'Already have an account? Log in.' : "Don't have an account? Sign up."}
                     </button>
-                    {/* --- 2. Add ToastContainer for login/signup errors --- */}
-                    <ToastContainer
-                        position="bottom-center"
-                        autoClose={5000}
-                        hideProgressBar={false}
-                        newestOnTop={false}
-                        closeOnClick
-                        rtl={false}
-                        pauseOnFocusLoss
-                        draggable
-                        pauseOnHover
-                    />
+                    <ToastContainer position="bottom-center" />
                 </div>
             </div>
         );
@@ -126,19 +124,9 @@ function App() {
 
     return (
         <ThemeProvider>
-            {/* --- 3. Add ToastContainer for general app notifications --- */}
-            <ToastContainer
-                position="top-right"
-                autoClose={5000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-            />
-            <Layout user={user} userData={userData} activeView={activeView} setActiveView={setActiveView} hasPermission={hasPermission}>
+            <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
+            {/* --- MODIFIED: Pass the new handler to Layout --- */}
+            <Layout user={user} userData={userData} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
                 {renderActiveView()}
             </Layout>
         </ThemeProvider>
