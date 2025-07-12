@@ -1,6 +1,6 @@
 // src/components/property/TaskComponents.js
 // This file contains smaller, reusable components related to tasks.
-// MODIFIED to add advanced recurring task settings.
+// MODIFIED to improve recurring tasks, add checklist proof requirements, and use real usernames.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { db, storage } from '../../firebase-config';
@@ -91,7 +91,6 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
     const [templateId, setTemplateId] = useState('');
     const [isRecurring, setIsRecurring] = useState(false);
     
-    // --- NEW: Advanced recurring state ---
     const [recurringConfig, setRecurringConfig] = useState({
         frequency: 'weekly',
         interval: 1,
@@ -133,7 +132,6 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 animate-fade-in-down">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Add New Task</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-                {/* ... other form fields ... */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Name</label>
@@ -206,9 +204,7 @@ const EditDetailsModal = ({ task, onSave, onCancel }) => {
     const [taskName, setTaskName] = useState(task.taskName);
     const [description, setDescription] = useState(task.description);
     const handleSave = () => { onSave({ taskName, description }); };
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60] p-4 animate-fade-in"><div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700"><h3 className="text-xl font-semibold mb-4">Edit Task Details</h3><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Name</label><input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} className="mt-1 w-full input-style" /></div><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="mt-1 w-full input-style" rows="4"></textarea></div></div><div className="flex justify-end space-x-2 pt-6 mt-4 border-t dark:border-gray-700"><button type="button" onClick={onCancel} className="button-secondary">Cancel</button><button type="button" onClick={handleSave} className="button-primary">Save Changes</button></div></div></div>
-    );
+    return (<div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60] p-4 animate-fade-in"><div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700"><h3 className="text-xl font-semibold mb-4">Edit Task Details</h3><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Task Name</label><input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} className="mt-1 w-full input-style" /></div><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="mt-1 w-full input-style" rows="4"></textarea></div></div><div className="flex justify-end space-x-2 pt-6 mt-4 border-t dark:border-gray-700"><button type="button" onClick={onCancel} className="button-secondary">Cancel</button><button type="button" onClick={handleSave} className="button-primary">Save Changes</button></div></div></div>);
 };
 
 export const TaskDetailModal = ({ task, team, user, onClose }) => {
@@ -248,7 +244,7 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
         });
         return () => { unsubscribeTask(); unsubscribeComments(); };
     }, [task.id]);
-
+    
     const addActivityLog = async (text) => {
         try {
             await addDoc(collection(db, `tasks/${task.id}/comments`), {
@@ -265,18 +261,12 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
     const createNextRecurringTask = async (completedTask) => {
         const { recurring, ...originalTaskData } = completedTask;
         if (!recurring?.enabled || !originalTaskData.scheduledDate) return;
-        let nextDueDate = new Date(originalTaskData.scheduledDate + 'T00:00:00'); // Ensure correct date parsing
+        let nextDueDate = new Date(originalTaskData.scheduledDate + 'T00:00:00');
         if (isNaN(nextDueDate.getTime())) { console.warn("Cannot create recurring task: invalid original due date."); return; }
-
         const interval = recurring.interval || 1;
-        if (recurring.frequency === 'daily') {
-            nextDueDate.setDate(nextDueDate.getDate() + interval);
-        } else if (recurring.frequency === 'weekly') {
-            nextDueDate.setDate(nextDueDate.getDate() + (interval * 7));
-        } else if (recurring.frequency === 'monthly') {
-            nextDueDate.setMonth(nextDueDate.getMonth() + interval);
-        }
-
+        if (recurring.frequency === 'daily') nextDueDate.setDate(nextDueDate.getDate() + interval);
+        else if (recurring.frequency === 'weekly') nextDueDate.setDate(nextDueDate.getDate() + (interval * 7));
+        else if (recurring.frequency === 'monthly') nextDueDate.setMonth(nextDueDate.getMonth() + interval);
         const newTask = { ...originalTaskData, status: 'Pending', scheduledDate: nextDueDate.toISOString().split('T')[0], createdAt: serverTimestamp(), lastProofURL: null, checklistItems: originalTaskData.checklistItems.map(item => ({ ...item, completed: false, proofUrl: '' })), recurring: { ...recurring, isPrototype: false } };
         delete newTask.id;
         try {
@@ -338,14 +328,10 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
         const oldItem = newChecklist[index];
         newChecklist[index] = { ...oldItem, ...updatedItemData };
         setChecklist(newChecklist);
-        
         if (updatedItemData.completed !== undefined && updatedItemData.completed !== oldItem.completed) {
-            const logText = updatedItemData.completed 
-                ? `Completed item: "${newChecklist[index].text}"`
-                : `Marked item as incomplete: "${newChecklist[index].text}"`;
+            const logText = updatedItemData.completed ? `Completed item: "${newChecklist[index].text}"` : `Marked item as incomplete: "${newChecklist[index].text}"`;
             addActivityLog(logText);
         }
-
         try {
             await updateDoc(doc(db, 'tasks', task.id), { checklistItems: newChecklist });
         } catch (error) {
@@ -361,14 +347,11 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
             const proofRef = ref(storage, `checklist_proofs/${task.id}/${index}-${Date.now()}-${file.name}`);
             await uploadBytes(proofRef, file);
             const downloadURL = await getDownloadURL(proofRef);
-            
             const newChecklist = [...checklist];
             newChecklist[index].proofUrl = downloadURL;
             setChecklist(newChecklist);
             await updateDoc(doc(db, 'tasks', task.id), { checklistItems: newChecklist });
-            
             addActivityLog(`Uploaded proof for: "${newChecklist[index].text}"`);
-
             toast.update(toastId, { render: "Proof uploaded!", type: "success", isLoading: false, autoClose: 2000 });
         } catch (error) {
             console.error("Checklist proof upload failed:", error);
@@ -443,14 +426,7 @@ const TaskChecklist = ({ items, onUpdate, onProofUpload }) => {
 export const TemplateTaskModal = ({ templates, onClose, onAddTask }) => {
     const [selectedTemplateId, setSelectedTemplateId] = useState('');
     const [isRecurring, setIsRecurring] = useState(false);
-    
-    // --- NEW: Advanced recurring state ---
-    const [recurringConfig, setRecurringConfig] = useState({
-        frequency: 'weekly',
-        interval: 1,
-        daysOfWeek: { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false }
-    });
-
+    const [recurringConfig, setRecurringConfig] = useState({ frequency: 'weekly', interval: 1, daysOfWeek: { mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false } });
     const handleCreateTaskFromTemplate = () => {
         if (!selectedTemplateId) { toast.error('Please select a template.'); return; }
         const template = templates.find(t => t.id === selectedTemplateId);
@@ -461,5 +437,48 @@ export const TemplateTaskModal = ({ templates, onClose, onAddTask }) => {
     };
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in"><div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700"><h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Task from Template</h3><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Select a Template</label><select value={selectedTemplateId} onChange={e => setSelectedTemplateId(e.target.value)} className="mt-1 w-full input-style"><option value="">-- Choose a template --</option>{templates.map(template => (<option key={template.id} value={template.id}>{template.name}</option>))}</select></div><div className="pt-4 border-t dark:border-gray-600 space-y-3"><div className="flex items-center"><input id="recurring-template-checkbox" type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" /><label htmlFor="recurring-template-checkbox" className="ml-2 block text-sm font-medium text-gray-900 dark:text-gray-200">Make this a recurring task</label></div>{isRecurring && (<div className="pl-6 animate-fade-in-down"><RecurringSettings recurringConfig={recurringConfig} setRecurringConfig={setRecurringConfig} /></div>)}</div></div><div className="flex justify-end space-x-2 pt-6 mt-4 border-t dark:border-gray-700"><button type="button" onClick={onClose} className="button-secondary">Cancel</button><button type="button" onClick={handleCreateTaskFromTemplate} className="button-primary">Create Task</button></div></div></div>
+    );
+};
+
+export const ActivateRecurringTaskModal = ({ task, team, onActivate, onCancel }) => {
+    const [assignedTo, setAssignedTo] = useState('');
+    const [scheduledDate, setScheduledDate] = useState(task.scheduledDate || '');
+
+    const handleActivate = () => {
+        if (!assignedTo) {
+            toast.error("Please assign this task to a team member.");
+            return;
+        }
+        if (!scheduledDate) {
+            toast.error("Please set a due date for this task instance.");
+            return;
+        }
+        onActivate(task, { assignedTo, scheduledDate });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60] p-4 animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700">
+                <h3 className="text-xl font-semibold mb-2">Activate Recurring Task</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Assign "{task.taskName}" for the next cycle.</p>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Next Due Date</label>
+                        <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} className="mt-1 w-full input-style" />
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Assign To</label>
+                        <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className="mt-1 w-full input-style">
+                            <option value="">-- Select a team member --</option>
+                            {team.map(member => <option key={member.id} value={member.uid}>{member.email}</option>)}
+                        </select>
+                    </div>
+                </div>
+                <div className="flex justify-end space-x-2 pt-6 mt-4 border-t dark:border-gray-700">
+                    <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
+                    <button type="button" onClick={handleActivate} className="button-primary">Activate & Assign</button>
+                </div>
+            </div>
+        </div>
     );
 };
