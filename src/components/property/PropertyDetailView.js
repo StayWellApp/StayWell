@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building } from 'lucide-react';
+import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building, Tag } from 'lucide-react';
 
 // Import the refactored components
 import { PropertyForm } from './PropertyForm';
@@ -69,16 +69,26 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         </button>
     );
     
-    // --- NEW: Overview component with Image Gallery ---
+    // --- MODIFIED: Overview component to display custom amenities ---
     const Overview = () => {
         const [mainImage, setMainImage] = useState(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
 
         useEffect(() => {
-            // Update main image if property data changes
             setMainImage(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
         }, [liveProperty]);
 
         const photoURLs = liveProperty.photoURLs || [];
+        
+        // --- NEW: Logic to separate and format custom amenities ---
+        const propertyAmenities = liveProperty.amenities || {};
+        const customAmenitiesToDisplay = Object.entries(propertyAmenities)
+            .filter(([key, value]) => key.startsWith('custom_') && value)
+            .map(([key]) => ({
+                key,
+                label: key.replace('custom_', '').replace(/_/g, ' '),
+                icon: <Tag size={18} />
+            }));
+
 
         return (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -123,9 +133,19 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                         <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
                             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">What this place offers</h3>
                             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                                {liveProperty.amenities && Object.entries(allAmenities).map(([key, { label, icon }]) => liveProperty.amenities[key] && (
-                                    <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm">
-                                        <div className="text-blue-600 dark:text-blue-400">{icon}</div>
+                                {/* --- MODIFIED: Render predefined amenities --- */}
+                                {Object.entries(allAmenities).map(([key, { label, icon }]) => 
+                                    propertyAmenities[key] && (
+                                        <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm">
+                                            <div className="text-blue-600 dark:text-blue-400">{icon}</div>
+                                            <span>{label}</span>
+                                        </div>
+                                    )
+                                )}
+                                {/* --- NEW: Render custom amenities --- */}
+                                {customAmenitiesToDisplay.map(({ key, label, icon }) => (
+                                    <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm capitalize">
+                                        <div className="text-green-500">{icon}</div>
                                         <span>{label}</span>
                                     </div>
                                 ))}
@@ -140,7 +160,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     return (
         <div className="p-4 sm:p-6 md:p-8">
             <div className="max-w-7xl mx-auto">
-                {/* --- MODIFIED: Back button logic --- */}
                 <button 
                     onClick={() => isEditing ? setIsEditing(false) : onBack()} 
                     className="mb-6 text-blue-600 dark:text-blue-400 font-semibold hover:underline"
