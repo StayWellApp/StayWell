@@ -8,7 +8,7 @@ import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { toast } from 'react-toastify';
-import { PlusCircle, Trash, X } from 'lucide-react';
+import { Trash, X } from 'lucide-react';
 
 const localizer = momentLocalizer(moment);
 

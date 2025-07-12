@@ -7,7 +7,7 @@ import { db, storage } from '../firebase-config'; // --- MODIFIED: Ensure storag
 import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // --- NEW ---
 import { toast } from 'react-toastify';
-import { Plus, Trash2, ListPlus, Info, Image, ChevronDown, Building, Tag, ShieldCheck, FileText, UploadCloud, X } from 'lucide-react';
+import { Plus, Trash2, ListPlus, Info, Image, ChevronDown, Building, Tag, ShieldCheck, UploadCloud, X } from 'lucide-react';
 
 // --- Pre-generated templates for easy onboarding ---
 const preGeneratedTemplates = [
