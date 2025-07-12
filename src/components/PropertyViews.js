@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../firebase-config'; // --- MODIFIED: Added storage
+import { db, storage } from '../firebase-config';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, arrayUnion, deleteDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // --- NEW ---
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { TaskDetailModal, AddTaskForm } from './TaskViews';
 import { ChecklistTemplateForm } from './ChecklistViews';
 import { InventoryView } from './InventoryViews';
@@ -11,6 +11,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Plus, Building, Bed, Bath, Users, Wifi, Tv, Wind, Utensils, Sun, Droplet, CookingPot, Flame, Tent, Bandage, Siren, CheckSquare, Calendar, BarChart2, Archive, Settings, Home, ListChecks } from 'lucide-react';
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { toast } from 'react-toastify'; // --- NEW ---
 
 const amenityCategories = {
     essentials: {
@@ -80,9 +81,9 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
     const [bathrooms, setBathrooms] = useState(1);
     const [guests, setGuests] = useState(2);
     const [amenities, setAmenities] = useState(initialAmenitiesState);
-    const [photo, setPhoto] = useState(null); // --- NEW ---
-    const [photoURL, setPhotoURL] = useState(''); // --- NEW ---
-    const [isUploading, setIsUploading] = useState(false); // --- NEW ---
+    const [photo, setPhoto] = useState(null);
+    const [photoURL, setPhotoURL] = useState('');
+    const [isLoading, setIsLoading] = useState(false); // Renamed from isUploading for clarity
 
     useEffect(() => {
         if (existingProperty) {
@@ -94,50 +95,69 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
             setBathrooms(existingProperty.bathrooms || 1);
             setGuests(existingProperty.guests || 2);
             setAmenities(existingProperty.amenities || initialAmenitiesState);
-            setPhotoURL(existingProperty.photoURL || ''); // --- NEW ---
+            setPhotoURL(existingProperty.photoURL || '');
         }
     }, [existingProperty]);
 
-    // --- NEW ---
     const handleFileChange = (e) => {
         if (e.target.files[0]) {
             setPhoto(e.target.files[0]);
-            // Create a preview URL
             setPhotoURL(URL.createObjectURL(e.target.files[0]));
         }
     };
     
-    // --- MODIFIED ---
+    // --- MODIFIED with Error Handling ---
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!propertyName || !address) {
-            alert("Please fill out at least the property name and address.");
+            toast.error("Please fill out at least the property name and address.");
             return;
         }
 
-        setIsUploading(true);
-        let uploadedPhotoURL = existingProperty?.photoURL || '';
+        setIsLoading(true);
+        const toastId = toast.loading(existingProperty ? "Updating property..." : "Adding property...");
 
-        // If a new photo was selected, upload it
-        if (photo) {
-            const photoRef = ref(storage, `property_photos/${Date.now()}_${photo.name}`);
-            await uploadBytes(photoRef, photo);
-            uploadedPhotoURL = await getDownloadURL(photoRef);
+        try {
+            let uploadedPhotoURL = existingProperty?.photoURL || '';
+
+            if (photo) {
+                const photoRef = ref(storage, `property_photos/${Date.now()}_${photo.name}`);
+                await uploadBytes(photoRef, photo);
+                uploadedPhotoURL = await getDownloadURL(photoRef);
+            }
+
+            const propertyData = {
+                propertyName,
+                propertyType,
+                address,
+                description,
+                bedrooms,
+                bathrooms,
+                guests,
+                amenities,
+                photoURL: uploadedPhotoURL,
+            };
+            
+            await onSave(propertyData);
+
+            toast.update(toastId, { 
+                render: `Property ${existingProperty ? 'updated' : 'added'} successfully!`, 
+                type: "success", 
+                isLoading: false, 
+                autoClose: 3000 
+            });
+
+        } catch (error) {
+            console.error("Error saving property:", error);
+            toast.update(toastId, { 
+                render: `Failed to save property. Please try again.`, 
+                type: "error", 
+                isLoading: false, 
+                autoClose: 5000 
+            });
+        } finally {
+            setIsLoading(false);
         }
-
-        const propertyData = {
-            propertyName,
-            propertyType,
-            address,
-            description,
-            bedrooms,
-            bathrooms,
-            guests,
-            amenities,
-            photoURL: uploadedPhotoURL, // Save the final URL
-        };
-        await onSave(propertyData);
-        setIsUploading(false);
     };
 
     return (
@@ -157,18 +177,16 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
                 </div>
                 <AmenitiesForm amenities={amenities} setAmenities={setAmenities} />
                 
-                {/* --- MODIFIED: Photo Upload Field --- */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="photo">Main Photo</label>
                     <input type="file" id="photo" onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/50 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900"/>
                     {photoURL && <img src={photoURL} alt="Property Preview" className="mt-4 w-40 h-40 object-cover rounded-lg shadow-md" />}
                 </div>
 
-                {/* --- MODIFIED: Buttons --- */}
                 <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
-                    <button type="submit" className="button-primary" disabled={isUploading}>
-                        {isUploading ? 'Saving...' : (existingProperty ? 'Update Property' : 'Save Property')}
+                    <button type="submit" className="button-primary" disabled={isLoading}>
+                        {isLoading ? 'Saving...' : (existingProperty ? 'Update Property' : 'Save Property')}
                     </button>
                 </div>
             </form>
@@ -211,17 +229,38 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         const unsubscribe = onSnapshot(propertyRef, (doc) => {
             if (doc.exists()) {
                 setLiveProperty({ id: doc.id, ...doc.data() });
+            } else {
+                toast.error("Property data could not be found.");
             }
+        }, (error) => {
+            console.error("Error fetching live property data:", error);
+            toast.error("Could not load live property data.");
         });
         return () => unsubscribe();
     }, [property.id]);
 
+    // --- MODIFIED with Error Handling ---
     const handleUpdateProperty = async (propertyData) => {
+        const toastId = toast.loading("Updating property...");
         try {
             const propertyRef = doc(db, "properties", property.id);
             await updateDoc(propertyRef, propertyData);
+            toast.update(toastId, { 
+                render: "Property updated successfully!", 
+                type: "success", 
+                isLoading: false, 
+                autoClose: 3000 
+            });
             setIsEditing(false);
-        } catch (error) { console.error("Error updating property:", error); alert("Failed to update property."); }
+        } catch (error) {
+            console.error("Error updating property:", error);
+            toast.update(toastId, { 
+                render: "Failed to update property.", 
+                type: "error", 
+                isLoading: false, 
+                autoClose: 5000 
+            });
+        }
     };
 
     const TabButton = ({ tabName, label, icon }) => (
@@ -300,12 +339,12 @@ const TemplateTaskModal = ({ templates, onClose, onAddTask }) => {
 
     const handleCreateTaskFromTemplate = () => {
         if (!selectedTemplateId) {
-            alert('Please select a template.');
+            toast.error('Please select a template.');
             return;
         }
         const template = templates.find(t => t.id === selectedTemplateId);
         if (!template) {
-            alert('Selected template not found.');
+            toast.error('Selected template not found.');
             return;
         }
 
@@ -371,6 +410,10 @@ const TasksView = ({ property, user }) => {
               .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
             setTasks(sortedTasks);
             setLoadingTasks(false);
+        }, (error) => {
+            console.error("Error fetching tasks:", error);
+            toast.error("Could not load tasks.");
+            setLoadingTasks(false);
         });
 
         const checklistsQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
@@ -383,11 +426,17 @@ const TasksView = ({ property, user }) => {
                 template.linkedProperties.includes(property.id)
               );
             setChecklistTemplates(relevantTemplates);
+        }, (error) => {
+            console.error("Error fetching checklist templates:", error);
+            toast.error("Could not load checklist templates.");
         });
 
         const teamQuery = query(collection(db, 'users'), where('ownerId', '==', user.uid));
         const teamUnsubscribe = onSnapshot(teamQuery, snapshot => {
             setTeam(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+        }, (error) => {
+            console.error("Error fetching team members:", error);
+            toast.error("Could not load team data.");
         });
         
         return () => {
@@ -397,7 +446,9 @@ const TasksView = ({ property, user }) => {
         };
     }, [property.id, user.uid]);
 
+    // --- MODIFIED with Error Handling ---
     const handleAddTask = async (taskData) => {
+        const toastId = toast.loading("Adding new task...");
         try {
             await addDoc(collection(db, "tasks"), { 
                 ...taskData, 
@@ -408,9 +459,23 @@ const TasksView = ({ property, user }) => {
                 status: 'Pending', 
                 createdAt: serverTimestamp() 
             });
+            toast.update(toastId, { 
+                render: "Task added successfully!", 
+                type: "success", 
+                isLoading: false, 
+                autoClose: 3000 
+            });
             setShowAddTaskForm(false);
             setShowTemplateModal(false);
-        } catch (error) { console.error("Error adding task: ", error); alert("Failed to add task."); }
+        } catch (error) {
+            console.error("Error adding task: ", error);
+            toast.update(toastId, { 
+                render: "Failed to add task.", 
+                type: "error", 
+                isLoading: false, 
+                autoClose: 5000 
+            });
+        }
     };
 
     return (
@@ -454,9 +519,6 @@ const TasksView = ({ property, user }) => {
 };
 
 const ChecklistsView = ({ user }) => {
-    // This component is now managed globally from the main sidebar, 
-    // so we can show a read-only view here or a link to the main manager.
-    // For now, we'll just show a message.
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
              <div className="flex justify-between items-center mb-4">
@@ -484,11 +546,17 @@ const CalendarView = ({ property, user }) => {
         const checklistsQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
         const checklistsUnsubscribe = onSnapshot(checklistsQuery, (snapshot) => {
             setChecklistTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }, (error) => {
+            console.error("Error fetching checklist templates for calendar:", error);
+            toast.error("Could not load checklist templates.");
         });
 
         const teamQuery = query(collection(db, 'users'), where('ownerId', '==', user.uid));
         const teamUnsubscribe = onSnapshot(teamQuery, snapshot => {
             setTeam(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+        }, (error) => {
+            console.error("Error fetching team for calendar:", error);
+            toast.error("Could not load team data.");
         });
 
         return () => {
@@ -518,6 +586,9 @@ const CalendarView = ({ property, user }) => {
             }).filter(event => event.start);
 
             setEvents([...bookingEvents, ...taskEvents]);
+        }, (error) => {
+            console.error("Error fetching tasks for calendar:", error);
+            toast.error("Could not load tasks on the calendar.");
         });
 
         return () => unsubscribe();
@@ -528,7 +599,9 @@ const CalendarView = ({ property, user }) => {
         setShowAddTaskForm(true);
     };
 
+    // --- MODIFIED with Error Handling ---
     const handleAddTask = async (taskData) => {
+        const toastId = toast.loading("Adding task...");
         try {
             await addDoc(collection(db, "tasks"), { 
                 ...taskData, 
@@ -539,26 +612,50 @@ const CalendarView = ({ property, user }) => {
                 status: 'Pending', 
                 createdAt: serverTimestamp() 
             });
+            toast.update(toastId, { 
+                render: "Task added successfully!", 
+                type: "success", 
+                isLoading: false, 
+                autoClose: 3000 
+            });
             setShowAddTaskForm(false);
         } catch (error) { 
             console.error("Error adding task: ", error); 
-            alert("Failed to add task."); 
+            toast.update(toastId, { 
+                render: "Failed to add task.", 
+                type: "error", 
+                isLoading: false, 
+                autoClose: 5000 
+            });
         }
     };
 
+    // --- MODIFIED with Error Handling ---
     const handleAddCalendarLink = async (e) => {
         e.preventDefault();
         if (!newCalLink.startsWith("https") || !newCalLink.endsWith(".ics")) {
-            alert("Please enter a valid iCal link (should start with https and end with .ics).");
+            toast.error("Please enter a valid iCal link (must start with https and end with .ics).");
             return;
         }
+        const toastId = toast.loading("Syncing calendar...");
         try {
             const propertyRef = doc(db, "properties", property.id);
             await updateDoc(propertyRef, { calendarLinks: arrayUnion(newCalLink) });
+            toast.update(toastId, { 
+                render: "Calendar synced successfully!", 
+                type: "success", 
+                isLoading: false, 
+                autoClose: 3000 
+            });
             setNewCalLink("");
         } catch (error) {
             console.error("Error adding calendar link:", error);
-            alert("Failed to add calendar link.");
+            toast.update(toastId, { 
+                render: "Failed to sync calendar.", 
+                type: "error", 
+                isLoading: false, 
+                autoClose: 5000 
+            });
         }
     };
 
