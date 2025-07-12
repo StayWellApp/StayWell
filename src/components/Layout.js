@@ -3,7 +3,7 @@ import { auth } from '../firebase-config';
 import { signOut } from 'firebase/auth';
 import { 
     LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings, 
-    LogOut, Sun, Moon, Bell, ChevronDown, Check
+    LogOut, Sun, Moon, Bell, ChevronDown, Check, MessageSquare // Import MessageSquare
 } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 
@@ -25,24 +25,20 @@ const useClickOutside = (ref, handler) => {
     }, [ref, handler]);
 };
 
-// --- Header Component ---
+// --- Header Component (No changes needed here) ---
 const Header = ({ user, toggleTheme, theme, handleLogout, setActiveView }) => {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
-
-    // Language mapping: Name -> {flag: country_code, name: language_name}
     const languages = {
         'gb': { flag: 'gb', name: 'English' },
         'es': { flag: 'es', name: 'Español' },
         'fr': { flag: 'fr', name: 'Français' },
     };
     const [currentLanguage, setCurrentLanguage] = useState(languages['gb']);
-
     const userMenuRef = useRef(null);
     const notificationsRef = useRef(null);
     const languageMenuRef = useRef(null);
-
     useClickOutside(userMenuRef, () => setUserMenuOpen(false));
     useClickOutside(notificationsRef, () => setNotificationsOpen(false));
     useClickOutside(languageMenuRef, () => setLanguageMenuOpen(false));
@@ -52,23 +48,14 @@ const Header = ({ user, toggleTheme, theme, handleLogout, setActiveView }) => {
             <div className="flex items-center justify-between p-4 h-20">
                 <div></div>
                 <div className="flex items-center space-x-4">
-                    {/* --- Language Selector --- */}
                     <div className="relative" ref={languageMenuRef}>
-                        <button
-                            onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
-                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            aria-label="Select language"
-                        >
+                        <button onClick={() => setLanguageMenuOpen(!languageMenuOpen)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" aria-label="Select language">
                             <span className={`fi fi-${currentLanguage.flag} rounded-full`}></span>
                         </button>
                         {languageMenuOpen && (
                             <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 py-1">
                                 {Object.values(languages).map((lang) => (
-                                    <button 
-                                        key={lang.flag} 
-                                        onClick={() => { setCurrentLanguage(lang); setLanguageMenuOpen(false); }}
-                                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                    >
+                                    <button key={lang.flag} onClick={() => { setCurrentLanguage(lang); setLanguageMenuOpen(false); }} className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                         <span className={`fi fi-${lang.flag} mr-3`}></span>
                                         <span>{lang.name}</span>
                                         {currentLanguage.flag === lang.flag && <Check size={16} className="ml-auto text-blue-500" />}
@@ -77,48 +64,26 @@ const Header = ({ user, toggleTheme, theme, handleLogout, setActiveView }) => {
                             </div>
                         )}
                     </div>
-                    
-                    {/* --- Theme Toggle --- */}
-                    <button 
-                        onClick={toggleTheme} 
-                        className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        aria-label="Toggle theme"
-                    >
+                    <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" aria-label="Toggle theme">
                         {theme === 'dark' ? <Sun size={20}/> : <Moon size={20}/>}
                     </button>
-                    
-                    {/* --- Notifications --- */}
                     <div className="relative" ref={notificationsRef}>
-                         <button 
-                            onClick={() => setNotificationsOpen(!notificationsOpen)}
-                            className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            aria-label="Notifications"
-                        >
+                         <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" aria-label="Notifications">
                             <Bell size={20} />
                         </button>
                         {notificationsOpen && (
                             <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
                                 <div className="p-4 font-semibold border-b dark:border-gray-700">Notifications</div>
-                                <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                                    No new notifications
-                                </div>
+                                <div className="p-4 text-center text-gray-500 dark:text-gray-400">No new notifications</div>
                             </div>
                         )}
                     </div>
-                    
-                    {/* --- User Menu --- */}
                     <div className="relative" ref={userMenuRef}>
-                        <button 
-                            onClick={() => setUserMenuOpen(!userMenuOpen)} 
-                            className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                                {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-                            </div>
+                        <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">{user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}</div>
                             <span className="hidden sm:inline text-sm font-semibold text-gray-700 dark:text-gray-300">{user.displayName || user.email}</span>
                             <ChevronDown size={16} className="text-gray-500 dark:text-gray-400" />
                         </button>
-                        
                         {userMenuOpen && (
                             <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 py-1">
                                 <div className="px-4 py-2 border-b dark:border-gray-700">
@@ -139,7 +104,6 @@ const Header = ({ user, toggleTheme, theme, handleLogout, setActiveView }) => {
         </header>
     );
 };
-
 
 // --- NavItem Component ---
 const NavItem = ({ id, label, icon: Icon, activeView, setActiveView }) => (
@@ -169,6 +133,7 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
     const navLinks = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'properties', label: 'Properties', icon: Building },
+        { id: 'chat', label: 'Chat', icon: MessageSquare }, // Added Chat link
         ...(hasPermission('templates_manage') ? [{ id: 'templates', label: 'Templates', icon: ListChecks }] : []),
         ...(hasPermission('tasks_view_all') ? [{ id: 'calendar', label: 'Master Calendar', icon: Calendar }] : []),
         ...(hasPermission('team_manage') ? [{ id: 'team', label: 'Team', icon: Users }] : []),
@@ -202,7 +167,8 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
                     handleLogout={handleLogout}
                     setActiveView={setActiveView} 
                 />
-                <main className="flex-grow overflow-y-auto p-8">
+                {/* Conditionally apply padding to the main content area */}
+                <main className={`flex-grow overflow-y-auto ${activeView === 'chat' ? 'p-0' : 'p-8'}`}>
                     {children}
                 </main>
             </div>
