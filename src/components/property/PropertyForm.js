@@ -1,13 +1,13 @@
 // src/components/property/PropertyForm.js
 // This component handles the form for adding or editing a property.
-// MODIFIED to include fields for House Rules and Access Information.
+// MODIFIED to remove House Rules and Access Info, which are now in a separate form.
 
 import React, { useState, useEffect } from 'react';
 import { storage } from '../../firebase-config';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from 'react-toastify';
 import { AmenitiesForm, initialAmenitiesState } from './AmenitiesForm';
-import { UploadCloud, X, Key, Wifi, ParkingSquare, Info, Home } from 'lucide-react';
+import { UploadCloud, X } from 'lucide-react';
 
 const propertyTypes = ["House", "Apartment", "Guesthouse", "Hotel", "Cabin", "Barn", "Bed & Breakfast", "Boat", "Camper/RV", "Castle", "Tiny Home", "Treehouse"];
 
@@ -21,15 +21,6 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
     const [guests, setGuests] = useState(2);
     const [amenities, setAmenities] = useState(initialAmenitiesState);
     
-    // --- NEW: State for House Rules and Access Info ---
-    const [houseRules, setHouseRules] = useState('');
-    const [accessInfo, setAccessInfo] = useState({
-        doorCode: '',
-        wifiPassword: '',
-        lockboxCode: '',
-        parkingInstructions: ''
-    });
-
     const [imageFiles, setImageFiles] = useState([]);
     const [existingImageUrls, setExistingImageUrls] = useState([]);
     const [imagePreviews, setImagePreviews] = useState([]);
@@ -46,10 +37,6 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
             setGuests(existingProperty.guests || 2);
             setAmenities(existingProperty.amenities || initialAmenitiesState);
             
-            // --- NEW: Populate new fields ---
-            setHouseRules(existingProperty.houseRules || '');
-            setAccessInfo(existingProperty.accessInfo || { doorCode: '', wifiPassword: '', lockboxCode: '', parkingInstructions: '' });
-
             const urls = existingProperty.photoURLs || [];
             setExistingImageUrls(urls);
             setImagePreviews(urls);
@@ -73,10 +60,6 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
         }
     };
 
-    const handleAccessInfoChange = (field, value) => {
-        setAccessInfo(prev => ({ ...prev, [field]: value }));
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!propertyName || !address) {
@@ -98,6 +81,7 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
 
             const allPhotoURLs = [...existingImageUrls, ...newImageUrls];
 
+            // We only save the fields relevant to this form
             const propertyData = {
                 propertyName,
                 propertyType,
@@ -109,9 +93,6 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
                 amenities,
                 photoURLs: allPhotoURLs,
                 mainPhotoURL: allPhotoURLs[0] || '',
-                // --- NEW: Save new fields to database ---
-                houseRules,
-                accessInfo,
             };
             
             await onSave(propertyData);
@@ -138,9 +119,9 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
 
     return (
         <div className="bg-white dark:bg-gray-800 p-8 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 animate-fade-in-down">
-            <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">{existingProperty ? 'Edit Property' : 'Add a New Property'}</h3>
+            <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">{existingProperty ? 'Edit Core Property Info' : 'Add a New Property'}</h3>
             <form onSubmit={handleSubmit} className="space-y-8">
-                {/* --- Property Details Section --- */}
+                {/* Property Details Section */}
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="propertyName">Property Name</label><input type="text" id="propertyName" value={propertyName} onChange={(e) => setPropertyName(e.target.value)} className="input-style" placeholder="e.g., Downtown Loft" /></div>
@@ -155,31 +136,12 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
                     </div>
                 </div>
 
-                {/* --- NEW: House Rules and Access Info --- */}
-                <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <div>
-                        <label className="block text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><Home size={20} className="mr-2"/> House Rules</label>
-                        <textarea value={houseRules} onChange={(e) => setHouseRules(e.target.value)} className="input-style" rows="4" placeholder="e.g., No smoking inside. Quiet hours are from 10 PM to 8 AM..."></textarea>
-                    </div>
-                     <div>
-                        <label className="block text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center"><Key size={20} className="mr-2"/> Access Information</label>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="doorCode">Door Code</label><input type="text" id="doorCode" value={accessInfo.doorCode} onChange={(e) => handleAccessInfoChange('doorCode', e.target.value)} className="input-style" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="wifiPassword">Wi-Fi Password</label><input type="text" id="wifiPassword" value={accessInfo.wifiPassword} onChange={(e) => handleAccessInfoChange('wifiPassword', e.target.value)} className="input-style" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="lockboxCode">Lockbox Code</label><input type="text" id="lockboxCode" value={accessInfo.lockboxCode} onChange={(e) => handleAccessInfoChange('lockboxCode', e.target.value)} className="input-style" /></div>
-                            </div>
-                            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" htmlFor="parkingInstructions">Parking Instructions</label><textarea id="parkingInstructions" value={accessInfo.parkingInstructions} onChange={(e) => handleAccessInfoChange('parkingInstructions', e.target.value)} className="input-style" rows="2"></textarea></div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* --- Amenities Section --- */}
+                {/* Amenities Section */}
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                     <AmenitiesForm amenities={amenities} setAmenities={setAmenities} />
                 </div>
                 
-                {/* --- Photo Upload Section --- */}
+                {/* Photo Upload Section */}
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                     <label className="block text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Property Photos</label>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
