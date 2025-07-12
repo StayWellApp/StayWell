@@ -1,9 +1,147 @@
-import React, { useContext } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import { auth } from '../firebase-config';
 import { signOut } from 'firebase/auth';
-import { LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings, LogOut, Sun, Moon, MessageSquare, Bell, ChevronDown } from 'lucide-react';
+import { 
+    LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings, 
+    LogOut, Sun, Moon, Bell, ChevronDown, Check
+} from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 
+// Helper hook to detect clicks outside a component
+const useClickOutside = (ref, handler) => {
+    useEffect(() => {
+        const listener = (event) => {
+            if (!ref.current || ref.current.contains(event.target)) {
+                return;
+            }
+            handler(event);
+        };
+        document.addEventListener('mousedown', listener);
+        document.addEventListener('touchstart', listener);
+        return () => {
+            document.removeEventListener('mousedown', listener);
+            document.removeEventListener('touchstart', listener);
+        };
+    }, [ref, handler]);
+};
+
+// --- Header Component ---
+const Header = ({ user, toggleTheme, theme, handleLogout, setActiveView }) => {
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
+
+    // Language mapping: Name -> {flag: country_code, name: language_name}
+    const languages = {
+        'gb': { flag: 'gb', name: 'English' },
+        'es': { flag: 'es', name: 'Español' },
+        'fr': { flag: 'fr', name: 'Français' },
+    };
+    const [currentLanguage, setCurrentLanguage] = useState(languages['gb']);
+
+    const userMenuRef = useRef(null);
+    const notificationsRef = useRef(null);
+    const languageMenuRef = useRef(null);
+
+    useClickOutside(userMenuRef, () => setUserMenuOpen(false));
+    useClickOutside(notificationsRef, () => setNotificationsOpen(false));
+    useClickOutside(languageMenuRef, () => setLanguageMenuOpen(false));
+
+    return (
+        <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between p-4 h-20">
+                <div></div>
+                <div className="flex items-center space-x-4">
+                    {/* --- Language Selector --- */}
+                    <div className="relative" ref={languageMenuRef}>
+                        <button
+                            onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
+                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            aria-label="Select language"
+                        >
+                            <span className={`fi fi-${currentLanguage.flag} rounded-full`}></span>
+                        </button>
+                        {languageMenuOpen && (
+                            <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 py-1">
+                                {Object.values(languages).map((lang) => (
+                                    <button 
+                                        key={lang.flag} 
+                                        onClick={() => { setCurrentLanguage(lang); setLanguageMenuOpen(false); }}
+                                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    >
+                                        <span className={`fi fi-${lang.flag} mr-3`}></span>
+                                        <span>{lang.name}</span>
+                                        {currentLanguage.flag === lang.flag && <Check size={16} className="ml-auto text-blue-500" />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* --- Theme Toggle --- */}
+                    <button 
+                        onClick={toggleTheme} 
+                        className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        aria-label="Toggle theme"
+                    >
+                        {theme === 'dark' ? <Sun size={20}/> : <Moon size={20}/>}
+                    </button>
+                    
+                    {/* --- Notifications --- */}
+                    <div className="relative" ref={notificationsRef}>
+                         <button 
+                            onClick={() => setNotificationsOpen(!notificationsOpen)}
+                            className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            aria-label="Notifications"
+                        >
+                            <Bell size={20} />
+                        </button>
+                        {notificationsOpen && (
+                            <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
+                                <div className="p-4 font-semibold border-b dark:border-gray-700">Notifications</div>
+                                <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                                    No new notifications
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* --- User Menu --- */}
+                    <div className="relative" ref={userMenuRef}>
+                        <button 
+                            onClick={() => setUserMenuOpen(!userMenuOpen)} 
+                            className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                                {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="hidden sm:inline text-sm font-semibold text-gray-700 dark:text-gray-300">{user.displayName || user.email}</span>
+                            <ChevronDown size={16} className="text-gray-500 dark:text-gray-400" />
+                        </button>
+                        
+                        {userMenuOpen && (
+                            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 py-1">
+                                <div className="px-4 py-2 border-b dark:border-gray-700">
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Signed in as</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{user.email}</p>
+                                </div>
+                                <button onClick={() => { setActiveView('settings'); setUserMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <Settings size={16} className="mr-2"/> Settings
+                                </button>
+                                <button onClick={handleLogout} className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <LogOut size={16} className="mr-2"/> Logout
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </header>
+    );
+};
+
+
+// --- NavItem Component ---
 const NavItem = ({ id, label, icon: Icon, activeView, setActiveView }) => (
     <li>
         <button
@@ -20,35 +158,7 @@ const NavItem = ({ id, label, icon: Icon, activeView, setActiveView }) => (
     </li>
 );
 
-const Header = ({ user, userData, toggleTheme, theme, handleLogout }) => (
-    <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between p-4">
-            <div>
-                {/* Future search bar can go here */}
-            </div>
-            <div className="flex items-center space-x-4">
-                <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    {theme === 'dark' ? <Sun size={20}/> : <Moon size={20}/>}
-                </button>
-                <button className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Bell size={20} />
-                </button>
-                <div className="relative">
-                    <button className="flex items-center space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                            {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-                        </div>
-                        <ChevronDown size={16} />
-                    </button>
-                    {/* Dropdown for user settings, language, etc. can be implemented here */}
-                </div>
-                <button onClick={handleLogout} className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:underline">Logout</button>
-            </div>
-        </div>
-    </header>
-);
-
-
+// --- Main Layout Component ---
 const Layout = ({ children, user, userData, activeView, setActiveView, hasPermission }) => {
     const { theme, toggleTheme } = useContext(ThemeContext);
 
@@ -56,29 +166,19 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
         await signOut(auth);
     };
     
-    // --- Build navigation links based on permissions ---
-    const navLinks = [];
-    navLinks.push({ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard });
-    navLinks.push({ id: 'properties', label: 'Properties', icon: Building });
-
-    if (hasPermission('templates_manage')) {
-        navLinks.push({ id: 'templates', label: 'Templates', icon: ListChecks });
-    }
-    if (hasPermission('tasks_view_all')) {
-        navLinks.push({ id: 'calendar', label: 'Master Calendar', icon: Calendar });
-    }
-    if (hasPermission('team_manage')) {
-        navLinks.push({ id: 'team', label: 'Team', icon: Users });
-    }
-    if (hasPermission('storage_view')) {
-         navLinks.push({ id: 'storage', label: 'Storage', icon: Archive });
-    }
+    const navLinks = [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'properties', label: 'Properties', icon: Building },
+        ...(hasPermission('templates_manage') ? [{ id: 'templates', label: 'Templates', icon: ListChecks }] : []),
+        ...(hasPermission('tasks_view_all') ? [{ id: 'calendar', label: 'Master Calendar', icon: Calendar }] : []),
+        ...(hasPermission('team_manage') ? [{ id: 'team', label: 'Team', icon: Users }] : []),
+        ...(hasPermission('storage_view') ? [{ id: 'storage', label: 'Storage', icon: Archive }] : []),
+    ];
 
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
             <aside className="w-64 flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
                 <div className="h-20 flex items-center justify-center border-b border-gray-200 dark:border-gray-700">
-                    {/* Better Logo */}
                     <div className="flex items-center">
                         <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -93,14 +193,15 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
                         ))}
                     </ul>
                 </nav>
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                    {hasPermission('team_manage') && (
-                        <NavItem id='settings' label='Settings' icon={Settings} activeView={activeView} setActiveView={setActiveView} />
-                    )}
-                </div>
             </aside>
             <div className="flex flex-col flex-grow">
-                <Header user={user} userData={userData} toggleTheme={toggleTheme} theme={theme} handleLogout={handleLogout} />
+                <Header 
+                    user={user} 
+                    theme={theme} 
+                    toggleTheme={toggleTheme} 
+                    handleLogout={handleLogout}
+                    setActiveView={setActiveView} 
+                />
                 <main className="flex-grow overflow-y-auto p-8">
                     {children}
                 </main>

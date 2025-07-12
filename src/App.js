@@ -14,6 +14,8 @@ import { ChecklistsView } from './components/ChecklistViews';
 import { StorageView } from './components/StorageViews';
 import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
+import ChatLayout from './components/ChatLayout'; // UPDATED: Import the new ChatLayout
+import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
@@ -26,6 +28,7 @@ function App() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
+    const [isChatOpen, setIsChatOpen] = useState(false); // This now controls the full-screen chat
 
     const { hasPermission, loadingPermissions } = usePermissions(userData);
 
@@ -52,12 +55,10 @@ function App() {
 
     const handleSelectProperty = (property) => {
         setSelectedProperty(property);
-        setActiveView('propertyDetail'); // Keep track that we are in a detail view
+        setActiveView('propertyDetail');
     };
     
-    // --- NEW: Wrapped setActiveView to handle navigation from property detail ---
     const handleSetActiveView = (view) => {
-        // When we use the main navigation, we should always exit the property detail view
         if (selectedProperty) {
             setSelectedProperty(null);
         }
@@ -65,11 +66,9 @@ function App() {
     };
     
     const renderActiveView = () => {
-        // --- MODIFIED: Prioritize showing the selected property ---
         if (selectedProperty) {
             return <PropertyDetailView 
                         property={selectedProperty} 
-                        // This onBack function now correctly returns to the properties list
                         onBack={() => {
                             setSelectedProperty(null);
                             setActiveView('properties');
@@ -125,10 +124,24 @@ function App() {
     return (
         <ThemeProvider>
             <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
-            {/* --- MODIFIED: Pass the new handler to Layout --- */}
+            
+            {/* The main application layout is always rendered */}
             <Layout user={user} userData={userData} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
                 {renderActiveView()}
             </Layout>
+            
+            {/* UPDATED: Chat Integration Logic */}
+            {/* The floating button is only shown when the chat is NOT open */}
+            {!isChatOpen && (
+                <div className="fixed bottom-4 right-4 z-50">
+                    <button onClick={() => setIsChatOpen(true)} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
+                        <MessageSquare size={24} />
+                    </button>
+                </div>
+            )}
+            
+            {/* The full-screen chat layout is rendered when isChatOpen is true */}
+            {isChatOpen && <ChatLayout onClose={() => setIsChatOpen(false)} />}
         </ThemeProvider>
     );
 }
