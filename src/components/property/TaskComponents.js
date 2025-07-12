@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { db, storage } from '../../firebase-config';
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks, Info, Image, ChevronDown, Upload, Repeat, Edit, X, ShieldCheck, Paperclip } from 'lucide-react';
+import {  Trash2, Plus, MessageSquare, ListChecks, Info, Image, ChevronDown, Repeat, Edit, X, ShieldCheck, Paperclip } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
 
