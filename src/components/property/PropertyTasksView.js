@@ -1,12 +1,12 @@
 // src/components/property/PropertyTasksView.js
 // This component displays the tasks for a specific property.
-// MODIFIED to make recurring tasks actionable.
+// MODIFIED to allow deleting recurring task prototypes.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../firebase-config';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { Plus, ListChecks, Search, Repeat, ChevronDown, Calendar } from 'lucide-react';
+import { Plus, ListChecks, Search, Repeat, ChevronDown, Calendar, Trash2 } from 'lucide-react';
 import { AddTaskForm, TaskDetailModal, TemplateTaskModal, ActivateRecurringTaskModal } from './TaskComponents';
 
 const TaskCard = ({ task, onClick }) => {
@@ -92,33 +92,35 @@ export const TasksView = ({ property, user }) => {
         try {
             const { recurring, ...originalTaskData } = prototypeTask;
             const assignedToEmail = team.find(member => member.uid === assignment.assignedTo)?.email || '';
-            const newTask = {
-                ...originalTaskData,
-                assignedTo: assignment.assignedTo,
-                assignedToEmail: assignedToEmail,
-                scheduledDate: assignment.scheduledDate,
-                status: 'Pending',
-                createdAt: serverTimestamp(),
-                recurring: { ...recurring, isPrototype: false }
-            };
+            const newTask = { ...originalTaskData, assignedTo: assignment.assignedTo, assignedToEmail: assignedToEmail, scheduledDate: assignment.scheduledDate, status: 'Pending', createdAt: serverTimestamp(), recurring: { ...recurring, isPrototype: false } };
             delete newTask.id;
             await addDoc(collection(db, "tasks"), newTask);
-
             let nextDueDate = new Date(assignment.scheduledDate + 'T00:00:00');
             const interval = recurring.interval || 1;
             if (recurring.frequency === 'daily') nextDueDate.setDate(nextDueDate.getDate() + interval);
             else if (recurring.frequency === 'weekly') nextDueDate.setDate(nextDueDate.getDate() + (interval * 7));
             else if (recurring.frequency === 'monthly') nextDueDate.setMonth(nextDueDate.getMonth() + interval);
-            
-            await updateDoc(doc(db, "tasks", prototypeTask.id), {
-                scheduledDate: nextDueDate.toISOString().split('T')[0]
-            });
-
+            await updateDoc(doc(db, "tasks", prototypeTask.id), { scheduledDate: nextDueDate.toISOString().split('T')[0] });
             toast.update(toastId, { render: "Task activated and moved to Pending!", type: "success", isLoading: false, autoClose: 3000 });
             setActivatingTask(null);
         } catch (error) {
             console.error("Error activating recurring task:", error);
             toast.update(toastId, { render: "Failed to activate task.", type: "error", isLoading: false, autoClose: 5000 });
+        }
+    };
+
+    // --- NEW: Handler to delete a recurring task prototype ---
+    const handleDeleteRecurringPrototype = async (e, taskId) => {
+        e.stopPropagation(); // Prevent the li's onClick from firing
+        if (window.confirm("Are you sure you want to delete this recurring task series? This cannot be undone.")) {
+            const toastId = toast.loading("Deleting recurring task...");
+            try {
+                await deleteDoc(doc(db, "tasks", taskId));
+                toast.update(toastId, { render: "Recurring task deleted.", type: "success", isLoading: false, autoClose: 3000 });
+            } catch (error) {
+                console.error("Error deleting recurring task:", error);
+                toast.update(toastId, { render: "Failed to delete.", type: "error", isLoading: false, autoClose: 5000 });
+            }
         }
     };
 
@@ -145,7 +147,23 @@ export const TasksView = ({ property, user }) => {
                     <button onClick={() => setShowRecurring(!showRecurring)} className="w-full flex justify-between items-center p-4"><h4 className="font-semibold text-lg text-gray-800 dark:text-gray-200 flex items-center"><Repeat size={18} className="mr-3" /> Scheduled Recurring Tasks</h4><ChevronDown size={20} className={`transition-transform ${showRecurring ? 'rotate-180' : ''}`} /></button>
                     {showRecurring && (
                         <div className="p-4 border-t dark:border-gray-700 animate-fade-in-down">
-                            {recurringPrototypes.length > 0 ? (<ul className="space-y-2">{recurringPrototypes.map(task => (<li key={task.id} onClick={() => setActivatingTask(task)} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"><div><p className="font-semibold">{task.taskName}</p><p className="text-sm text-gray-500">Repeats {task.recurring.frequency}</p></div><div className="text-sm text-gray-500 flex items-center"><Calendar size={14} className="mr-2" /><span>Next due: {task.scheduledDate ? new Date(task.scheduledDate + 'T00:00:00').toLocaleDateString() : 'Not set'}</span></div></li>))}</ul>) : (<p className="text-sm text-center text-gray-500 dark:text-gray-400 py-4">No recurring tasks have been set up.</p>)}
+                            {recurringPrototypes.length > 0 ? (<ul className="space-y-2">{recurringPrototypes.map(task => (
+                                <li key={task.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center">
+                                    <div onClick={() => setActivatingTask(task)} className="flex-grow cursor-pointer">
+                                        <p className="font-semibold">{task.taskName}</p>
+                                        <p className="text-sm text-gray-500">Repeats {task.recurring.frequency}</p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-sm text-gray-500 flex items-center">
+                                            <Calendar size={14} className="mr-2" />
+                                            <span>Next due: {task.scheduledDate ? new Date(task.scheduledDate + 'T00:00:00').toLocaleDateString() : 'Not set'}</span>
+                                        </div>
+                                        <button onClick={(e) => handleDeleteRecurringPrototype(e, task.id)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </li>
+                            ))}</ul>) : (<p className="text-sm text-center text-gray-500 dark:text-gray-400 py-4">No recurring tasks have been set up.</p>)}
                         </div>
                     )}
                 </div>
