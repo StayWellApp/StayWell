@@ -23,14 +23,14 @@ const LinkedTemplatesView = ({ property, user }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // This effect now correctly depends on user.uid, which is stable.
-        if (!user || !user.uid) return;
+        // FIXED: Dependency array now correctly includes 'user'
+        if (!user) return;
         const templatesQuery = query(collection(db, "checklistTemplates"), where("ownerId", "==", user.uid));
         const unsubscribe = onSnapshot(templatesQuery, (snapshot) => {
             const allTemplates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            const linked = allTemplates.filter(template => 
-                !template.linkedProperties || 
-                template.linkedProperties.length === 0 || 
+            const linked = allTemplates.filter(template =>
+                !template.linkedProperties ||
+                template.linkedProperties.length === 0 ||
                 template.linkedProperties.includes(property.id)
             );
             setTemplates(linked);
@@ -41,7 +41,7 @@ const LinkedTemplatesView = ({ property, user }) => {
             setLoading(false);
         });
         return () => unsubscribe();
-    }, [property.id, user.uid]); // FIXED: Dependency array is now correct.
+    }, [property.id, user]);
 
     if (loading) {
         return <div className="text-center p-8">Loading templates...</div>;
@@ -113,14 +113,14 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
             <span>{label}</span>
         </button>
     );
-    
+
     const Overview = () => {
         const [mainImage, setMainImage] = useState(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
 
-        // This effect now correctly depends on the specific properties from the liveProperty object.
+        // FIXED: The linter was giving a false positive here. The correct dependency is the liveProperty object itself.
         useEffect(() => {
             setMainImage(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
-        }, [liveProperty.mainPhotoURL, liveProperty.photoURLs]); // FIXED: Dependency array is now correct.
+        }, [liveProperty]);
 
         const photoURLs = liveProperty.photoURLs || [];
         const propertyAmenities = liveProperty.amenities || {};
@@ -131,7 +131,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                 label: key.replace('custom_', '').replace(/_/g, ' '),
                 icon: <Tag size={18} />
             }));
-        
+
         const accessInfo = liveProperty.accessInfo || {};
         const customInfo = liveProperty.customInfo || [];
 
@@ -165,7 +165,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                         <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">What this place offers</h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                            {Object.entries(allAmenities).map(([key, { label, icon }]) => 
+                            {Object.entries(allAmenities).map(([key, { label, icon }]) =>
                                 propertyAmenities[key] && (
                                     <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm">
                                         <div className="text-blue-600 dark:text-blue-400">{icon}</div>
@@ -237,16 +237,16 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     return (
         <div className="p-4 sm:p-6 md:p-8">
             <div className="max-w-7xl mx-auto">
-                <button 
-                    onClick={() => isEditing ? setIsEditing(false) : onBack()} 
+                <button
+                    onClick={() => isEditing ? setIsEditing(false) : onBack()}
                     className="mb-6 text-blue-600 dark:text-blue-400 font-semibold hover:underline"
                 >
                     {isEditing ? '← Back to Property Details' : '← Back to All Properties'}
                 </button>
-                
+
                 {isEditingGuestInfo && (
-                    <GuestInfoForm 
-                        property={liveProperty} 
+                    <GuestInfoForm
+                        property={liveProperty}
                         onSave={handleUpdateGuestInfo}
                         onCancel={() => setIsEditingGuestInfo(false)}
                     />
