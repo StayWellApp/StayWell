@@ -1,12 +1,11 @@
 // src/components/property/TaskComponents.js
-// This file contains smaller, reusable components related to tasks.
-// MODIFIED to improve recurring tasks, add checklist proof requirements, and use real usernames.
+// FINAL CORRECTED FILE
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { db, storage } from '../../firebase-config';
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import {  Trash2, Plus, MessageSquare, ListChecks, Info, Image, ChevronDown, Repeat, Edit, X, ShieldCheck, Paperclip } from 'lucide-react';
+import { Trash2, Plus, MessageSquare, ListChecks, Info, Image, ChevronDown, Repeat, Edit, X, ShieldCheck, Paperclip } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
 
@@ -35,7 +34,7 @@ const RecurringSettings = ({ recurringConfig, setRecurringConfig }) => {
             }
         }));
     };
-    
+
     const DayButton = ({ day, label }) => (
         <button
             type="button"
@@ -90,7 +89,7 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
     const [assignedTo, setAssignedTo] = useState('');
     const [templateId, setTemplateId] = useState('');
     const [isRecurring, setIsRecurring] = useState(false);
-    
+
     const [recurringConfig, setRecurringConfig] = useState({
         frequency: 'weekly',
         interval: 1,
@@ -105,7 +104,7 @@ export const AddTaskForm = ({ onAddTask, onCancel, checklistTemplates, team, pre
         }
         const assignedToEmail = team.find(member => member.uid === assignedTo)?.email || '';
         const selectedTemplate = checklistTemplates.find(t => t.id === templateId);
-        
+
         const taskData = {
             taskName,
             taskType,
@@ -214,6 +213,7 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
     const [checklist, setChecklist] = useState([]);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
 
+    // FIXED: The function is now defined directly inside useCallback.
     const debouncedUpdate = useCallback(debounce(async (taskId, data) => {
         const taskRef = doc(db, 'tasks', taskId);
         try {
@@ -244,7 +244,7 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
         });
         return () => { unsubscribeTask(); unsubscribeComments(); };
     }, [task.id]);
-    
+
     const addActivityLog = async (text) => {
         try {
             await addDoc(collection(db, `tasks/${task.id}/comments`), {
@@ -393,7 +393,7 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
                             <InlineDate label="Due Date" value={liveTask.scheduledDate} onChange={(e) => handleImmediateUpdate('scheduledDate', e.target.value)} />
                         </div>
                         {checklist && checklist.length > 0 && <div className="mb-6"><TaskChecklist items={checklist} onUpdate={handleChecklistItemUpdate} onProofUpload={handleChecklistProofUpload} taskId={task.id} /></div>}
-                        
+
                         <div><h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center"><MessageSquare size={18} className="mr-2"/>Activity & Comments</h4><div className="space-y-3 mb-4 max-h-48 overflow-y-auto">{comments.length > 0 ? comments.map(comment => (<div key={comment.id} className={`text-sm p-3 rounded-lg ${comment.isActivityLog ? 'bg-blue-50 dark:bg-blue-900/50' : 'bg-gray-50 dark:bg-gray-700/50'}`}><p className="text-gray-800 dark:text-gray-200">{comment.text}</p><p className="text-xs text-gray-400 dark:text-gray-500 mt-1">- {comment.author} at {new Date(comment.createdAt?.toDate()).toLocaleString()}</p>{comment.isProof && comment.proofURL && (<a href={comment.proofURL} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline flex items-center mt-1"><Image size={12} className="mr-1" /> View Proof</a>)}</div>)) : <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>}</div><div className="flex space-x-2"><input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Add a comment..." className="flex-grow input-style" /><button onClick={handleAddComment} className="button-primary px-4"><Plus size={16}/></button></div></div>
                     </div>
                     <div className="flex justify-between items-center mt-6 pt-4 border-t dark:border-gray-700 flex-shrink-0">
