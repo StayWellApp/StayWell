@@ -1,5 +1,5 @@
 // src/components/property/PropertyPerformanceView.js
-// This new component provides a comprehensive financial overview of the property.
+// MODIFIED to fix the chart resizing bug by adding a size-constrained wrapper.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
@@ -15,9 +15,8 @@ export const PerformanceView = ({ property }) => {
     const [tasks, setTasks] = useState([]);
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [timeframe, setTimeframe] = useState(30); // Default to last 30 days
+    const [timeframe, setTimeframe] = useState(30);
 
-    // Fetch tasks and events for this property
     useEffect(() => {
         setLoading(true);
         const tasksQuery = query(collection(db, "tasks"), where("propertyId", "==", property.id), where("status", "==", "Completed"));
@@ -38,7 +37,6 @@ export const PerformanceView = ({ property }) => {
         };
     }, [property.id]);
     
-    // --- Data Processing ---
     const getFilteredData = () => {
         const now = new Date();
         const filteredTasks = tasks.filter(task => {
@@ -60,7 +58,6 @@ export const PerformanceView = ({ property }) => {
 
     const { filteredTasks, filteredEvents } = getFilteredData();
 
-    // --- KPI Calculations ---
     const grossRevenue = filteredEvents.reduce((acc, event) => acc + (Number(event.payout) || 0), 0);
     const totalExpenses = filteredTasks.reduce((acc, task) => acc + (Number(task.cost) || 0), 0);
     const netProfit = grossRevenue - totalExpenses;
@@ -74,7 +71,6 @@ export const PerformanceView = ({ property }) => {
     }, 0);
     const occupancyRate = timeframe > 0 ? ((bookedNights / timeframe) * 100).toFixed(1) : 0;
     
-    // --- Chart Data ---
     const expenseByCategory = filteredTasks.reduce((acc, task) => {
         const category = task.category || 'Other';
         acc[category] = (acc[category] || 0) + (Number(task.cost) || 0);
@@ -86,7 +82,7 @@ export const PerformanceView = ({ property }) => {
         datasets: [{
             data: Object.values(expenseByCategory),
             backgroundColor: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'],
-            borderColor: '#1F2937', // dark:bg-gray-800
+            borderColor: '#1F2937',
             borderWidth: 2,
         }],
     };
@@ -94,21 +90,9 @@ export const PerformanceView = ({ property }) => {
     const profitLossData = {
         labels: [`Last ${timeframe} Days`],
         datasets: [
-            {
-                label: 'Gross Revenue',
-                data: [grossRevenue],
-                backgroundColor: '#10B981',
-            },
-            {
-                label: 'Total Expenses',
-                data: [totalExpenses],
-                backgroundColor: '#EF4444',
-            },
-            {
-                label: 'Net Profit',
-                data: [netProfit],
-                backgroundColor: '#3B82F6',
-            },
+            { label: 'Gross Revenue', data: [grossRevenue], backgroundColor: '#10B981' },
+            { label: 'Total Expenses', data: [totalExpenses], backgroundColor: '#EF4444' },
+            { label: 'Net Profit', data: [netProfit], backgroundColor: '#3B82F6' },
         ],
     };
 
@@ -116,9 +100,7 @@ export const PerformanceView = ({ property }) => {
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex justify-between items-center">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-                <div className={`w-8 h-8 flex items-center justify-center rounded-full ${colorClass}`}>
-                    {icon}
-                </div>
+                <div className={`w-8 h-8 flex items-center justify-center rounded-full ${colorClass}`}>{icon}</div>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">{value}</p>
         </div>
@@ -142,12 +124,18 @@ export const PerformanceView = ({ property }) => {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 <div className="xl:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Profit & Loss</h3>
-                    <Bar options={{ responsive: true, maintainAspectRatio: false }} data={profitLossData} height={300} />
+                    {/* --- BUG FIX: Added a relatively positioned container with a fixed height --- */}
+                    <div className="relative h-96">
+                        <Bar options={{ responsive: true, maintainAspectRatio: false }} data={profitLossData} />
+                    </div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><PieChart size={18} className="mr-2" />Expense Breakdown</h3>
                     {filteredTasks.length > 0 ? (
-                        <Pie options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} data={pieChartData} height={300} />
+                        /* --- BUG FIX: Added a relatively positioned container with a fixed height --- */
+                        <div className="relative h-96">
+                             <Pie options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} data={pieChartData} />
+                        </div>
                     ) : (
                         <div className="flex items-center justify-center h-full text-gray-500">No expense data</div>
                     )}
