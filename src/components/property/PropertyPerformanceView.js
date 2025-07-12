@@ -1,5 +1,5 @@
 // src/components/property/PropertyPerformanceView.js
-// MODIFIED to fix the chart resizing bug by adding a size-constrained wrapper.
+// FIXED: Added buttons to control the timeframe, using the setTimeframe state setter.
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
@@ -8,7 +8,6 @@ import { Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Percent } from 'lucide-react';
 
-// Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 export const PerformanceView = ({ property }) => {
@@ -18,6 +17,7 @@ export const PerformanceView = ({ property }) => {
     const [timeframe, setTimeframe] = useState(30);
 
     useEffect(() => {
+        // ... (data fetching logic remains the same)
         setLoading(true);
         const tasksQuery = query(collection(db, "tasks"), where("propertyId", "==", property.id), where("status", "==", "Completed"));
         const eventsQuery = query(collection(db, "events"), where("propertyId", "==", property.id));
@@ -37,6 +37,7 @@ export const PerformanceView = ({ property }) => {
         };
     }, [property.id]);
     
+    // ... (data processing and chart data logic remains the same)
     const getFilteredData = () => {
         const now = new Date();
         const filteredTasks = tasks.filter(task => {
@@ -96,6 +97,7 @@ export const PerformanceView = ({ property }) => {
         ],
     };
 
+
     const KPICard = ({ title, value, icon, colorClass }) => (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex justify-between items-center">
@@ -112,7 +114,20 @@ export const PerformanceView = ({ property }) => {
 
     return (
         <div className="space-y-8">
-            {/* KPIs */}
+            {/* --- NEW Timeframe Selector --- */}
+            <div className="flex justify-end items-center space-x-2">
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Show data for last:</span>
+                {[30, 60, 90].map(days => (
+                    <button 
+                        key={days} 
+                        onClick={() => setTimeframe(days)} 
+                        className={`px-3 py-1 text-sm rounded-md transition-colors ${timeframe === days ? 'bg-blue-600 text-white font-semibold' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                    >
+                        {days} days
+                    </button>
+                ))}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 <KPICard title="Gross Revenue" value={`$${grossRevenue.toFixed(2)}`} icon={<TrendingUp size={18} className="text-white"/>} colorClass="bg-green-500" />
                 <KPICard title="Total Expenses" value={`$${totalExpenses.toFixed(2)}`} icon={<TrendingDown size={18} className="text-white"/>} colorClass="bg-red-500" />
@@ -120,11 +135,9 @@ export const PerformanceView = ({ property }) => {
                 <KPICard title="Occupancy Rate" value={`${occupancyRate}%`} icon={<Percent size={18} className="text-white"/>} colorClass="bg-yellow-500" />
             </div>
 
-            {/* Charts */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 <div className="xl:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Profit & Loss</h3>
-                    {/* --- BUG FIX: Added a relatively positioned container with a fixed height --- */}
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Profit & Loss ({`Last ${timeframe} Days`})</h3>
                     <div className="relative h-96">
                         <Bar options={{ responsive: true, maintainAspectRatio: false }} data={profitLossData} />
                     </div>
@@ -132,7 +145,6 @@ export const PerformanceView = ({ property }) => {
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><PieChart size={18} className="mr-2" />Expense Breakdown</h3>
                     {filteredTasks.length > 0 ? (
-                        /* --- BUG FIX: Added a relatively positioned container with a fixed height --- */
                         <div className="relative h-96">
                              <Pie options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} data={pieChartData} />
                         </div>
