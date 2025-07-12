@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { auth } from '../firebase-config';
 import { signOut } from 'firebase/auth';
-import { LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings, LogOut, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings, LogOut, Sun, Moon, MessageSquare, Bell, ChevronDown } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 
 const NavItem = ({ id, label, icon: Icon, activeView, setActiveView }) => (
@@ -20,19 +20,34 @@ const NavItem = ({ id, label, icon: Icon, activeView, setActiveView }) => (
     </li>
 );
 
-const UserProfile = ({ user, userData }) => (
-    <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+const Header = ({ user, userData, toggleTheme, theme, handleLogout }) => (
+    <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-4">
+            <div>
+                {/* Future search bar can go here */}
             </div>
-            <div className="ml-3">
-                <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{user.displayName || user.email}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{userData?.role}</p>
+            <div className="flex items-center space-x-4">
+                <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    {theme === 'dark' ? <Sun size={20}/> : <Moon size={20}/>}
+                </button>
+                <button className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <Bell size={20} />
+                </button>
+                <div className="relative">
+                    <button className="flex items-center space-x-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                            {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                        </div>
+                        <ChevronDown size={16} />
+                    </button>
+                    {/* Dropdown for user settings, language, etc. can be implemented here */}
+                </div>
+                <button onClick={handleLogout} className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:underline">Logout</button>
             </div>
         </div>
-    </div>
+    </header>
 );
+
 
 const Layout = ({ children, user, userData, activeView, setActiveView, hasPermission }) => {
     const { theme, toggleTheme } = useContext(ThemeContext);
@@ -58,15 +73,18 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
     if (hasPermission('storage_view')) {
          navLinks.push({ id: 'storage', label: 'Storage', icon: Archive });
     }
-    if (hasPermission('team_manage')) { // Typically only admins can change settings
-        navLinks.push({ id: 'settings', label: 'Settings', icon: Settings });
-    }
 
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
             <aside className="w-64 flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
                 <div className="h-20 flex items-center justify-center border-b border-gray-200 dark:border-gray-700">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">StayWell</h1>
+                    {/* Better Logo */}
+                    <div className="flex items-center">
+                        <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 ml-2">StayWell</h1>
+                    </div>
                 </div>
                 <nav className="flex-grow p-4">
                     <ul>
@@ -75,21 +93,18 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
                         ))}
                     </ul>
                 </nav>
-                <div className="p-4">
-                    <button onClick={toggleTheme} className="w-full flex items-center p-3 my-1 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
-                        {theme === 'dark' ? <Sun size={20}/> : <Moon size={20}/>}
-                        <span className="ml-4 font-semibold">Toggle Theme</span>
-                    </button>
-                    <button onClick={handleLogout} className="w-full flex items-center p-3 my-1 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
-                        <LogOut size={20} />
-                        <span className="ml-4 font-semibold">Logout</span>
-                    </button>
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                    {hasPermission('team_manage') && (
+                        <NavItem id='settings' label='Settings' icon={Settings} activeView={activeView} setActiveView={setActiveView} />
+                    )}
                 </div>
-                <UserProfile user={user} userData={userData} />
             </aside>
-            <main className="flex-grow overflow-y-auto">
-                {children}
-            </main>
+            <div className="flex flex-col flex-grow">
+                <Header user={user} userData={userData} toggleTheme={toggleTheme} theme={theme} handleLogout={handleLogout} />
+                <main className="flex-grow overflow-y-auto p-8">
+                    {children}
+                </main>
+            </div>
         </div>
     );
 };
