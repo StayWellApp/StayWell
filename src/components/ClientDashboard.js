@@ -1,30 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { Building, AlertTriangle, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X, ClipboardCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TaskDetailModal } from './TaskViews';
+import { TaskCard, KanbanColumn } from './property/PropertyTasksView'; // Import Kanban components
 
 const ClientDashboard = ({ user, setActiveView }) => {
     const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
-    const [unassignedTasks, setUnassignedTasks] = useState([]);
-    const [todaysTasks, setTodaysTasks] = useState([]);
     const [allOpenTasks, setAllOpenTasks] = useState([]);
     const [lowStockItems, setLowStockItems] = useState([]);
     const [taskStatusData, setTaskStatusData] = useState([]);
     const [team, setTeam] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
 
-    // --- RESTORED: Hardcoded upcoming bookings data ---
     const upcomingBookings = [
-        { id: 'booking-1', propertyName: 'Seaside Villa', guestName: 'John Doe', checkIn: '2025-07-10' },
-        { id: 'booking-2', propertyName: 'Downtown Loft', guestName: 'Jane Smith', checkIn: '2025-07-12' },
-        { id: 'booking-3', propertyName: 'Mountain Cabin', guestName: 'Peter Jones', checkIn: '2025-07-14' },
+        { id: 'booking-1', propertyName: 'Seaside Villa', guestName: 'John Doe', checkIn: '2025-07-10', platform: 'Airbnb' },
+        { id: 'booking-2', propertyName: 'Downtown Loft', guestName: 'Jane Smith', checkIn: '2025-07-12', platform: 'Booking.com' },
+        { id: 'booking-3', propertyName: 'Mountain Cabin', guestName: 'Peter Jones', checkIn: '2025-07-14', platform: 'VRBO' },
     ];
+    
+    const [selectedBooking, setSelectedBooking] = useState(null);
 
     useEffect(() => {
         if (!user) return;
@@ -38,18 +37,13 @@ const ClientDashboard = ({ user, setActiveView }) => {
             const allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const openTasks = allTasks.filter(task => task.status !== 'Completed');
             
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const todayISO = today.toISOString().split('T')[0];
-
-            setTodaysTasks(allTasks.filter(task => task.scheduledDate === todayISO));
             setAllOpenTasks(openTasks);
-            setUnassignedTasks(openTasks.filter(task => !task.assignedTo));
             
             const statusCounts = allTasks.reduce((acc, task) => {
                 acc[task.status] = (acc[task.status] || 0) + 1;
                 return acc;
             }, {});
+
             setTaskStatusData([
                 { name: 'Pending', value: statusCounts['Pending'] || 0 },
                 { name: 'In Progress', value: statusCounts['In Progress'] || 0 },
@@ -59,7 +53,7 @@ const ClientDashboard = ({ user, setActiveView }) => {
         });
 
         const teamUnsubscribe = onSnapshot(query(collection(db, 'users'), where('ownerId', '==', user.uid)), (snapshot) => {
-            setTeam(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setTeam(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
         });
 
         const fetchLowStockItems = async () => {
@@ -88,10 +82,12 @@ const ClientDashboard = ({ user, setActiveView }) => {
         };
     }, [user]);
 
-    const handleOpenTask = (task) => {
-        setSelectedTask(task);
-        setIsTasksModalOpen(false);
-    };
+    const groupedTasks = useMemo(() => {
+        return {
+            'Pending': allOpenTasks.filter(t => t.status === 'Pending'),
+            'In Progress': allOpenTasks.filter(t => t.status === 'In Progress'),
+        };
+    }, [allOpenTasks]);
 
     return (
         <div className="p-4 sm:p-6 md:p-8">
@@ -102,58 +98,33 @@ const ClientDashboard = ({ user, setActiveView }) => {
 
             {loading ? <p className="text-center text-gray-500 dark:text-gray-400">Loading dashboard...</p> : (
                 <div className="space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <StatCard icon={<Building size={24} />} title="Total Properties" value={stats.properties} color="blue" onClick={() => setActiveView('properties')} />
-                        <StatCard icon={<ListTodo size={24} />} title="Open Tasks" value={stats.openTasks} color="green" onClick={() => setIsTasksModalOpen(true)} />
+                        <StatCard icon={<ListTodo size={24} />} title="Open Tasks" value={stats.openTasks} color="green" />
                         <StatCard icon={<AlertTriangle size={24} />} title="Low Stock Items" value={stats.lowStockItems} color="red" onClick={() => setIsStockModalOpen(true)} />
+                        <StatCard icon={<PieChartIcon size={24} />} title="Task Status" value="" color="yellow" chart={<TaskStatusChart data={taskStatusData} />} />
                     </div>
+
+                    <DashboardCard icon={<ClipboardCheck size={22} />} title="Open Tasks">
+                         <div className="flex flex-col md:flex-row gap-6 h-full">
+                            <KanbanColumn title="Pending" tasks={groupedTasks['Pending']} onTaskClick={setSelectedTask} />
+                            <KanbanColumn title="In Progress" tasks={groupedTasks['In Progress']} onTaskClick={setSelectedTask} />
+                        </div>
+                    </DashboardCard>
                     
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <DashboardCard icon={<ClipboardCheck size={22} />} title="Today's Tasks" className="lg:col-span-1">
-                            {todaysTasks.length > 0 ? (
-                                <ul className="divide-y divide-gray-200 dark:divide-gray-700 -mx-2">
-                                    {todaysTasks.map(task => (
-                                        <li key={task.id} className="py-3 px-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex justify-between items-center" onClick={() => handleOpenTask(task)}>
-                                            <div>
-                                                <p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p>
-                                            </div>
-                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${task.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{task.status}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No tasks scheduled for today.</p>}
-                        </DashboardCard>
-                        
-                        <DashboardCard icon={<Siren size={22} />} title="Unassigned Tasks" className="lg:col-span-1">
-                            {unassignedTasks.length > 0 ? (
-                                <ul className="divide-y divide-gray-200 dark:divide-gray-700 -mx-2">
-                                    {unassignedTasks.map(task => (
-                                        <li key={task.id} className="py-3 px-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex justify-between items-center" onClick={() => handleOpenTask(task)}>
-                                            <div>
-                                                <p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No unassigned tasks.</p>}
-                        </DashboardCard>
-
-                        <DashboardCard icon={<PieChartIcon size={22} />} title="Task Status" className="lg:col-span-1"><TaskStatusChart data={taskStatusData} /></DashboardCard>
-                    </div>
-
-                    {/* --- RESTORED: Upcoming Bookings Card --- */}
                     <DashboardCard icon={<Calendar size={22} />} title="Upcoming Bookings">
                         {upcomingBookings.length > 0 ? (
                             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                                 {upcomingBookings.map(booking => (
-                                    <li key={booking.id} className="py-3 flex justify-between items-center">
+                                    <li key={booking.id} className="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50" onClick={() => setSelectedBooking(booking)}>
                                         <div>
                                             <p className="font-medium text-gray-800 dark:text-gray-100">{booking.guestName}</p>
                                             <p className="text-sm text-gray-500 dark:text-gray-400">{booking.propertyName}</p>
                                         </div>
-                                        <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{new Date(booking.checkIn).toLocaleDateString()}</span>
+                                        <div className="text-right">
+                                            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{new Date(booking.checkIn).toLocaleDateString()}</span>
+                                            <p className="text-xs text-gray-400">{booking.platform}</p>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>
@@ -162,23 +133,28 @@ const ClientDashboard = ({ user, setActiveView }) => {
                 </div>
             )}
 
-            {isTasksModalOpen && <TasksModal tasks={allOpenTasks} onOpenTask={handleOpenTask} onClose={() => setIsTasksModalOpen(false)} />}
             {isStockModalOpen && <StockModal items={lowStockItems} onClose={() => setIsStockModalOpen(false)} />}
-            {selectedTask && <TaskDetailModal task={selectedTask} team={team} onClose={() => setSelectedTask(null)} />}
+            {selectedTask && <TaskDetailModal task={selectedTask} team={team} user={user} onClose={() => setSelectedTask(null)} />}
+            {selectedBooking && <BookingModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} />}
         </div>
     );
 };
 
-const StatCard = ({ icon, title, value, color, onClick }) => {
+const StatCard = ({ icon, title, value, color, onClick, chart }) => {
     const colors = {
         blue: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300',
         green: 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-300',
         red: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-300',
+        yellow: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-300'
     };
     return (
-        <div onClick={onClick} className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center space-x-4 transition-all hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer">
+        <div onClick={onClick} className={`bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center space-x-4 transition-all ${onClick ? 'hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer' : ''}`}>
             <div className={`p-3 rounded-full ${colors[color]}`}>{icon}</div>
-            <div><p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p><p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p></div>
+            <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
+                {value && <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>}
+                {chart && <div className="mt-2 w-24 h-16">{chart}</div>}
+            </div>
         </div>
     );
 };
@@ -195,27 +171,11 @@ const TaskStatusChart = ({ data }) => {
     const chartData = data.filter(d => d.value > 0);
     if (chartData.length === 0) return <p className="text-center py-4 text-gray-500 dark:text-gray-400">No task data.</p>;
     return (
-        <ResponsiveContainer width="100%" height={150}>
-            <PieChart><Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5}>{chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[entry.name]} />)}</Pie><Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', backdropFilter: 'blur(4px)', border: '1px solid #4b5563', borderRadius: '0.75rem' }} /><Legend iconSize={10} /></PieChart>
+        <ResponsiveContainer width="100%" height="100%">
+            <PieChart><Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={20} outerRadius={40}>{chartData.map((entry) => <Cell key={entry.name} fill={COLORS[entry.name]} />)}</Pie><Tooltip /></PieChart>
         </ResponsiveContainer>
     );
 };
-
-const TasksModal = ({ tasks, onOpenTask, onClose }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-2xl border dark:border-gray-700 max-h-[80vh] flex flex-col">
-            <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">All Open Tasks</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"><X size={24} /></button></div>
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto">
-                {tasks.map(task => (
-                    <li key={task.id} onClick={() => onOpenTask(task)} className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex justify-between items-center">
-                        <div><p className="font-medium text-gray-800 dark:text-gray-100">{task.taskName}</p><p className="text-sm text-gray-500 dark:text-gray-400">{task.propertyName}</p></div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${task.priority === 'High' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300'}`}>{task.priority}</span>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    </div>
-);
 
 const StockModal = ({ items, onClose }) => (
      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
@@ -229,6 +189,21 @@ const StockModal = ({ items, onClose }) => (
                     </li>
                 ))}
             </ul>
+        </div>
+    </div>
+);
+
+const BookingModal = ({ booking, onClose }) => (
+     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700">
+            <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Booking Details</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"><X size={24} /></button></div>
+            <div className="space-y-4">
+                <p><strong>Property:</strong> {booking.propertyName}</p>
+                <p><strong>Guest:</strong> {booking.guestName}</p>
+                <p><strong>Check-in:</strong> {new Date(booking.checkIn).toLocaleDateString()}</p>
+                <p><strong>Platform:</strong> {booking.platform}</p>
+                <p className="text-sm text-gray-500 pt-4">Further details from booking platforms like Airbnb can be integrated here.</p>
+            </div>
         </div>
     </div>
 );
