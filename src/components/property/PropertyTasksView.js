@@ -1,6 +1,6 @@
 // src/components/property/PropertyTasksView.js
 // This component displays the tasks for a specific property.
-// MODIFIED to allow deleting recurring task prototypes.
+// MODIFIED to allow deleting recurring task prototypes and to export components for the dashboard.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../firebase-config';
@@ -9,7 +9,8 @@ import { toast } from 'react-toastify';
 import { Plus, ListChecks, Search, Repeat, ChevronDown, Calendar, Trash2 } from 'lucide-react';
 import { AddTaskForm, TaskDetailModal, TemplateTaskModal, ActivateRecurringTaskModal } from './TaskComponents';
 
-const TaskCard = ({ task, onClick }) => {
+// --- MODIFIED: Added 'export' ---
+export const TaskCard = ({ task, onClick }) => {
     const priorityColors = {
         High: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
         Medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
@@ -32,7 +33,8 @@ const TaskCard = ({ task, onClick }) => {
     );
 };
 
-const KanbanColumn = ({ title, tasks, onTaskClick }) => {
+// --- MODIFIED: Added 'export' ---
+export const KanbanColumn = ({ title, tasks, onTaskClick }) => {
     const statusStyles = { Pending: "border-yellow-500", "In Progress": "border-blue-500", Completed: "border-green-500" };
     return (
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 flex-1 flex flex-col"><h4 className={`font-semibold text-lg text-gray-800 dark:text-gray-200 mb-4 pb-2 border-b-2 ${statusStyles[title]}`}>{title}</h4><div className="space-y-3 flex-grow overflow-y-auto pr-2">{tasks.length > 0 ? (tasks.map(task => <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task)} />)) : (<p className="text-sm text-center text-gray-500 dark:text-gray-400 pt-4">No tasks in this status.</p>)}</div></div>
@@ -109,7 +111,6 @@ export const TasksView = ({ property, user }) => {
         }
     };
 
-    // --- NEW: Handler to delete a recurring task prototype ---
     const handleDeleteRecurringPrototype = async (e, taskId) => {
         e.stopPropagation(); // Prevent the li's onClick from firing
         if (window.confirm("Are you sure you want to delete this recurring task series? This cannot be undone.")) {
