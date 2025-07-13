@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestor
 import { Building, AlertTriangle, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X, ClipboardCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TaskDetailModal } from './TaskViews';
-import { TaskCard, KanbanColumn } from './property/PropertyTasksView'; // Import Kanban components
+import { TaskCard, KanbanColumn } from './property/PropertyTasksView'; // Import the newly exported components
 
 const ClientDashboard = ({ user, setActiveView }) => {
     const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
@@ -16,14 +16,13 @@ const ClientDashboard = ({ user, setActiveView }) => {
     
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
+    const [selectedBooking, setSelectedBooking] = useState(null);
 
     const upcomingBookings = [
         { id: 'booking-1', propertyName: 'Seaside Villa', guestName: 'John Doe', checkIn: '2025-07-10', platform: 'Airbnb' },
         { id: 'booking-2', propertyName: 'Downtown Loft', guestName: 'Jane Smith', checkIn: '2025-07-12', platform: 'Booking.com' },
         { id: 'booking-3', propertyName: 'Mountain Cabin', guestName: 'Peter Jones', checkIn: '2025-07-14', platform: 'VRBO' },
     ];
-    
-    const [selectedBooking, setSelectedBooking] = useState(null);
 
     useEffect(() => {
         if (!user) return;
