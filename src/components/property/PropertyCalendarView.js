@@ -1,5 +1,5 @@
 // src/components/property/PropertyCalendarView.js
-// MODIFIED to allow adding a "Booking Payout" to any calendar event.
+// MERGED FILE: Displays manual events, synced iCal bookings, and automated tasks.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../../firebase-config';
@@ -12,21 +12,11 @@ import { Trash, X } from 'lucide-react';
 
 const localizer = momentLocalizer(moment);
 
-// Custom Toolbar for the Calendar
+// Custom Toolbar for the Calendar (no changes needed)
 const CustomToolbar = (toolbar) => {
-    // ... (This component remains the same, no changes needed)
-    const goToBack = () => {
-        toolbar.onNavigate('PREV');
-    };
-
-    const goToNext = () => {
-        toolbar.onNavigate('NEXT');
-    };
-
-    const goToCurrent = () => {
-        toolbar.onNavigate('TODAY');
-    };
-
+    const goToBack = () => toolbar.onNavigate('PREV');
+    const goToNext = () => toolbar.onNavigate('NEXT');
+    const goToCurrent = () => toolbar.onNavigate('TODAY');
     const label = () => {
         const date = moment(toolbar.date);
         return (
@@ -57,16 +47,22 @@ const CustomToolbar = (toolbar) => {
 
 // Main Calendar View Component
 export const CalendarView = ({ property, user }) => {
-    const [events, setEvents] = useState([]);
+    const [manualEvents, setManualEvents] = useState([]);
+    const [syncedBookings, setSyncedBookings] = useState([]);
+    const [automatedTasks, setAutomatedTasks] = useState([]);
+    
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [eventTitle, setEventTitle] = useState('');
-    const [payout, setPayout] = useState(''); // NEW state for booking payout
+    const [payout, setPayout] = useState('');
 
-    // Fetch events from Firestore
-    const fetchEvents = useCallback(() => {
-        const eventsQuery = query(collection(db, "events"), where("propertyId", "==", property.id));
-        const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
+    // --- MODIFIED: Fetch all three types of events ---
+    useEffect(() => {
+        if (!property.id) return;
+
+        // 1. Fetch Manual Events
+        const manualEventsQuery = query(collection(db, "events"), where("propertyId", "==", property.id));
+        const unsubscribeManual = onSnapshot(manualEventsQuery, (snapshot) => {
             const fetchedEvents = snapshot.docs.map(doc => {
                 const data = doc.data();
                 return {
@@ -74,25 +70,63 @@ export const CalendarView = ({ property, user }) => {
                     title: data.title,
                     start: data.start.toDate(),
                     end: data.end.toDate(),
-                    payout: data.payout || 0, // NEW: get payout
+                    payout: data.payout || 0,
                     allDay: data.allDay,
+                    type: 'manual' // Identify event type
                 };
             });
-            setEvents(fetchedEvents);
+            setManualEvents(fetchedEvents);
         });
-        return unsubscribe;
+
+        // 2. Fetch Synced Bookings from iCal
+        const bookingsQuery = query(collection(db, "bookings"), where("propertyId", "==", property.id));
+        const unsubscribeBookings = onSnapshot(bookingsQuery, (snapshot) => {
+            const fetchedBookings = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    title: `Booking: ${data.guestName}`,
+                    start: new Date(data.startDate),
+                    end: new Date(data.endDate),
+                    allDay: true,
+                    type: 'booking' // Identify event type
+                };
+            });
+            setSyncedBookings(fetchedBookings);
+        });
+
+        // 3. Fetch Automated Tasks
+        const tasksQuery = query(collection(db, "tasks"), where("propertyId", "==", property.id));
+        const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
+            const fetchedTasks = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    title: `Task: ${data.taskName}`,
+                    start: new Date(data.scheduledDate),
+                    end: new Date(data.scheduledDate),
+                    allDay: true,
+                    type: 'task' // Identify event type
+                };
+            });
+            setAutomatedTasks(fetchedTasks);
+        });
+
+        return () => {
+            unsubscribeManual();
+            unsubscribeBookings();
+            unsubscribeTasks();
+        };
     }, [property.id]);
 
-    useEffect(() => {
-        const unsubscribe = fetchEvents();
-        return () => unsubscribe();
-    }, [fetchEvents]);
+    // Combine all events into one array for the calendar
+    const allEvents = [...manualEvents, ...syncedBookings, ...automatedTasks];
 
-    // Handle selecting a calendar slot to create a new event
+    // Handle selecting a calendar slot to create a new MANUAL event
     const handleSelectSlot = (slotInfo) => {
         setSelectedEvent(null);
         setEventTitle('');
-        setPayout(''); // NEW: reset payout
+        setPayout('');
         setIsModalOpen(true);
         setSelectedEvent({
             start: slotInfo.start,
@@ -101,21 +135,27 @@ export const CalendarView = ({ property, user }) => {
         });
     };
 
-    // Handle selecting an existing event to edit
+    // --- MODIFIED: Handle selecting an existing event ---
     const handleSelectEvent = (event) => {
-        setSelectedEvent(event);
-        setEventTitle(event.title);
-        setPayout(event.payout || ''); // NEW: set payout for editing
-        setIsModalOpen(true);
+        if (event.type === 'manual') {
+            // If it's a manual event, open the edit modal
+            setSelectedEvent(event);
+            setEventTitle(event.title);
+            setPayout(event.payout || '');
+            setIsModalOpen(true);
+        } else {
+            // For synced bookings and tasks, just show an alert with info
+            const typeLabel = event.type.charAt(0).toUpperCase() + event.type.slice(1);
+            toast.info(`${typeLabel}: ${event.title.split(': ')[1]}`, { autoClose: 5000 });
+        }
     };
 
-    // Save or Update event
+    // Save or Update a MANUAL event
     const handleSaveEvent = async () => {
         if (!eventTitle) {
             toast.error("Event title is required.");
             return;
         }
-
         const eventData = {
             title: eventTitle,
             start: selectedEvent.start,
@@ -123,18 +163,17 @@ export const CalendarView = ({ property, user }) => {
             allDay: selectedEvent.allDay,
             propertyId: property.id,
             ownerId: user.uid,
-            payout: Number(payout) || 0, // NEW: save payout
+            payout: Number(payout) || 0,
         };
-
         const toastId = toast.loading(selectedEvent.id ? "Updating event..." : "Creating event...");
         try {
             if (selectedEvent.id) {
                 const eventRef = doc(db, 'events', selectedEvent.id);
                 await updateDoc(eventRef, eventData);
-                toast.update(toastId, { render: "Event updated successfully!", type: "success", isLoading: false, autoClose: 2000 });
+                toast.update(toastId, { render: "Event updated!", type: "success", isLoading: false, autoClose: 2000 });
             } else {
                 await addDoc(collection(db, 'events'), eventData);
-                toast.update(toastId, { render: "Event created successfully!", type: "success", isLoading: false, autoClose: 2000 });
+                toast.update(toastId, { render: "Event created!", type: "success", isLoading: false, autoClose: 2000 });
             }
             closeModal();
         } catch (error) {
@@ -143,7 +182,7 @@ export const CalendarView = ({ property, user }) => {
         }
     };
     
-    // Delete Event
+    // Delete a MANUAL event
     const handleDeleteEvent = async () => {
         if (!selectedEvent?.id) return;
         if (window.confirm("Are you sure you want to delete this event?")) {
@@ -163,25 +202,48 @@ export const CalendarView = ({ property, user }) => {
         setIsModalOpen(false);
         setSelectedEvent(null);
         setEventTitle('');
-        setPayout(''); // NEW: reset payout
+        setPayout('');
     };
+
+    // --- NEW: Function to style events based on their type ---
+    const eventPropGetter = useCallback((event) => {
+        const style = {
+            borderRadius: '5px',
+            border: 'none',
+            color: 'white',
+            display: 'block',
+        };
+        switch (event.type) {
+            case 'booking':
+                style.backgroundColor = '#6b21a8'; // Purple
+                break;
+            case 'task':
+                style.backgroundColor = '#16a34a'; // Green
+                break;
+            default: // manual
+                style.backgroundColor = '#2563eb'; // Blue
+                break;
+        }
+        return { style };
+    }, []);
     
     return (
         <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative" style={{ height: '80vh' }}>
             <BigCalendar
                 localizer={localizer}
-                events={events}
+                events={allEvents} // Use the combined array
                 startAccessor="start"
                 endAccessor="end"
                 selectable
                 onSelectSlot={handleSelectSlot}
                 onSelectEvent={handleSelectEvent}
+                eventPropGetter={eventPropGetter} // Apply custom styles
                 components={{
                     toolbar: CustomToolbar
                 }}
             />
 
-            {/* Event Modal */}
+            {/* Event Modal (only for manual events) */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-lg border dark:border-gray-700">
@@ -194,7 +256,6 @@ export const CalendarView = ({ property, user }) => {
                                 <label htmlFor="eventTitle" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title / Guest Name</label>
                                 <input id="eventTitle" type="text" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="mt-1 input-style" placeholder="e.g., John Doe" />
                             </div>
-                             {/* --- NEW Payout Field --- */}
                             <div>
                                 <label htmlFor="payout" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Booking Payout ($)</label>
                                 <input id="payout" type="number" value={payout} onChange={(e) => setPayout(e.target.value)} className="mt-1 input-style" placeholder="e.g., 450.50" />
@@ -202,14 +263,14 @@ export const CalendarView = ({ property, user }) => {
                             </div>
                         </div>
                         <div className="flex justify-between items-center pt-6 mt-4 border-t dark:border-gray-700">
-                           <div>
-                            {selectedEvent?.id && (
-                                <button onClick={handleDeleteEvent} className="button-secondary-danger text-sm"><Trash size={14} className="mr-2"/>Delete</button>
-                            )}
-                           </div>
+                            <div>
+                                {selectedEvent?.id && (
+                                    <button onClick={handleDeleteEvent} className="button-secondary-danger text-sm"><Trash size={14} className="mr-2"/>Delete</button>
+                                )}
+                            </div>
                            <div className="flex space-x-2">
-                            <button onClick={closeModal} className="button-secondary">Cancel</button>
-                            <button onClick={handleSaveEvent} className="button-primary">{selectedEvent?.id ? 'Update' : 'Create'}</button>
+                                <button onClick={closeModal} className="button-secondary">Cancel</button>
+                                <button onClick={handleSaveEvent} className="button-primary">{selectedEvent?.id ? 'Update' : 'Create'}</button>
                            </div>
                         </div>
                     </div>
