@@ -1,11 +1,10 @@
 // src/components/property/PropertyDetailView.js
 // FINAL CORRECTED FILE
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // --- CORRECTED LINE ---
 import { db } from '../../firebase-config';
 import { doc, onSnapshot, updateDoc, collection, query, where } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-// --- MODIFIED ---
 import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building, Tag, Key, Info, ListChecks, FileText, Bot } from 'lucide-react';
 
 // Import the refactored and NEW components
@@ -15,7 +14,7 @@ import { TasksView } from './PropertyTasksView';
 import { CalendarView } from './PropertyCalendarView';
 import { PerformanceView } from './PropertyPerformanceView';
 import { SettingsView } from './PropertySettingsView';
-import { AutomationView } from './PropertyAutomationView'; // --- NEW ---
+import { AutomationView } from './PropertyAutomationView';
 import { InventoryView } from '../InventoryViews';
 import { allAmenities } from './AmenitiesForm';
 
@@ -120,7 +119,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
 
         useEffect(() => {
             setMainImage(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
-        }, [liveProperty.mainPhotoURL, liveProperty.photoURLs]);
+        }, [liveProperty]);
 
         const photoURLs = liveProperty.photoURLs || [];
         const propertyAmenities = liveProperty.amenities || {};
@@ -263,7 +262,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                                 <TabButton tabName="templates" label="Templates" icon={<ListChecks size={18}/>} />
                                 <TabButton tabName="inventory" label="Inventory" icon={<Archive size={18}/>} />
                                 <TabButton tabName="calendar" label="Calendar" icon={<Calendar size={18}/>} />
-                                {/* --- NEW --- */}
                                 <TabButton tabName="automation" label="Automation" icon={<Bot size={18}/>} />
                                 <TabButton tabName="performance" label="Performance" icon={<BarChart2 size={18}/>} />
                                 <TabButton tabName="settings" label="Settings" icon={<Settings size={18}/>} />
@@ -275,8 +273,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                             {activeTab === 'templates' && <LinkedTemplatesView property={liveProperty} user={user} />}
                             {activeTab === 'inventory' && <InventoryView property={liveProperty} user={user} />}
                             {activeTab === 'calendar' && <CalendarView property={liveProperty} user={user} />}
-                            {/* --- NEW --- */}
-                            {activeTab === 'automation' && <AutomationView property={liveProperty} />}
+                            {activeTab === 'automation' && <AutomationView property={property} />}
                             {activeTab === 'performance' && <PerformanceView property={liveProperty} />}
                             {activeTab === 'settings' && <SettingsView property={liveProperty} user={user} onBack={onBack} />}
                         </div>
