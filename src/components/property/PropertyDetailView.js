@@ -1,7 +1,7 @@
 // src/components/property/PropertyDetailView.js
 // FINAL CORRECTED FILE
 
-import React, { useState, useEffect } from 'react'; // --- CORRECTED LINE ---
+import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { doc, onSnapshot, updateDoc, collection, query, where } from 'firebase/firestore';
 import { toast } from 'react-toastify';
@@ -70,6 +70,127 @@ const LinkedTemplatesView = ({ property, user }) => {
     );
 };
 
+// --- REFACTORED COMPONENT ---
+// Overview is now a standalone component to resolve the ESLint warning.
+const Overview = ({ liveProperty, onEdit, onEditGuestInfo }) => {
+    const [mainImage, setMainImage] = useState(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
+
+    useEffect(() => {
+        setMainImage(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
+    }, [liveProperty]);
+
+    const photoURLs = liveProperty.photoURLs || [];
+    const propertyAmenities = liveProperty.amenities || {};
+    const customAmenitiesToDisplay = Object.entries(propertyAmenities)
+        .filter(([key, value]) => key.startsWith('custom_') && value)
+        .map(([key]) => ({
+            key,
+            label: key.replace('custom_', '').replace(/_/g, ' '),
+            icon: <Tag size={18} />
+        }));
+
+    const accessInfo = liveProperty.accessInfo || {};
+    const customInfo = liveProperty.customInfo || [];
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column */}
+            <div className="lg:col-span-2 space-y-8">
+                {/* Gallery */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><ImageIcon size={20} className="mr-2"/> Gallery</h3>
+                    <div className="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden mb-4">
+                        {mainImage ? (
+                            <img src={mainImage} alt="Main property view" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                                <Building className="w-24 h-24 text-gray-300 dark:text-gray-500" />
+                            </div>
+                        )}
+                    </div>
+                    {photoURLs.length > 1 && (
+                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                            {photoURLs.map((url, index) => (
+                                <div key={index} className="aspect-square cursor-pointer rounded-md overflow-hidden" onClick={() => setMainImage(url)}>
+                                    <img src={url} alt={`Thumbnail ${index + 1}`} className={`w-full h-full object-cover transition-all duration-200 ${mainImage === url ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-800' : 'opacity-70 hover:opacity-100'}`} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                {/* Amenities */}
+                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">What this place offers</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                        {Object.entries(allAmenities).map(([key, { label, icon }]) =>
+                            propertyAmenities[key] && (
+                                <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm">
+                                    <div className="text-blue-600 dark:text-blue-400">{icon}</div>
+                                    <span>{label}</span>
+                                </div>
+                            )
+                        )}
+                        {customAmenitiesToDisplay.map(({ key, label, icon }) => (
+                            <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm capitalize">
+                                <div className="text-green-500">{icon}</div>
+                                <span>{label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="lg:col-span-1 space-y-8">
+                {/* Details Card */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{liveProperty.propertyType}</p>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{liveProperty.propertyName}</h2>
+                            <p className="text-gray-500 dark:text-gray-400 mt-2">{liveProperty.address}</p>
+                        </div>
+                        <button onClick={onEdit} className="button-secondary flex-shrink-0">Edit</button>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300">{liveProperty.description}</p>
+                </div>
+                {/* Access Info & House Rules Card */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Guest Information</h3>
+                        <button onClick={onEditGuestInfo} className="button-secondary text-xs">Edit</button>
+                    </div>
+                    <div className="space-y-4">
+                       <div>
+                            <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Key size={16} className="mr-2"/> Access Details</h4>
+                            <div className="text-sm space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">
+                                <p><strong>Door Code:</strong> {accessInfo.doorCode || 'N/A'}</p>
+                                <p><strong>Wi-Fi Password:</strong> {accessInfo.wifiPassword || 'N/A'}</p>
+                                <p><strong>Lockbox:</strong> {accessInfo.lockboxCode || 'N/A'}</p>
+                                <p><strong>Parking:</strong> {accessInfo.parkingInstructions || 'N/A'}</p>
+                             </div>
+                       </div>
+                       <div>
+                            <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Home size={16} className="mr-2"/> House Rules</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">{liveProperty.houseRules || 'No rules specified.'}</p>
+                       </div>
+                       {customInfo.length > 0 && (
+                           <div>
+                               <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Info size={16} className="mr-2"/> Additional Info</h4>
+                               <div className="text-sm space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">
+                                    {customInfo.map((item, index) => (
+                                        <p key={index}><strong>{item.label}:</strong> {item.value}</p>
+                                    ))}
+                               </div>
+                           </div>
+                       )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 export const PropertyDetailView = ({ property, onBack, user }) => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -114,125 +235,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
         </button>
     );
 
-    const Overview = () => {
-        const [mainImage, setMainImage] = useState(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
-
-        useEffect(() => {
-            setMainImage(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
-        }, [liveProperty]);
-
-        const photoURLs = liveProperty.photoURLs || [];
-        const propertyAmenities = liveProperty.amenities || {};
-        const customAmenitiesToDisplay = Object.entries(propertyAmenities)
-            .filter(([key, value]) => key.startsWith('custom_') && value)
-            .map(([key]) => ({
-                key,
-                label: key.replace('custom_', '').replace(/_/g, ' '),
-                icon: <Tag size={18} />
-            }));
-
-        const accessInfo = liveProperty.accessInfo || {};
-        const customInfo = liveProperty.customInfo || [];
-
-        return (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column */}
-                <div className="lg:col-span-2 space-y-8">
-                    {/* Gallery */}
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><ImageIcon size={20} className="mr-2"/> Gallery</h3>
-                        <div className="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden mb-4">
-                            {mainImage ? (
-                                <img src={mainImage} alt="Main property view" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <Building className="w-24 h-24 text-gray-300 dark:text-gray-500" />
-                                </div>
-                            )}
-                        </div>
-                        {photoURLs.length > 1 && (
-                            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                                {photoURLs.map((url, index) => (
-                                    <div key={index} className="aspect-square cursor-pointer rounded-md overflow-hidden" onClick={() => setMainImage(url)}>
-                                        <img src={url} alt={`Thumbnail ${index + 1}`} className={`w-full h-full object-cover transition-all duration-200 ${mainImage === url ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-800' : 'opacity-70 hover:opacity-100'}`} />
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    {/* Amenities */}
-                     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">What this place offers</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                            {Object.entries(allAmenities).map(([key, { label, icon }]) =>
-                                propertyAmenities[key] && (
-                                    <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm">
-                                        <div className="text-blue-600 dark:text-blue-400">{icon}</div>
-                                        <span>{label}</span>
-                                    </div>
-                                )
-                            )}
-                            {customAmenitiesToDisplay.map(({ key, label, icon }) => (
-                                <div key={key} className="flex items-center text-gray-700 dark:text-gray-300 space-x-3 text-sm capitalize">
-                                    <div className="text-green-500">{icon}</div>
-                                    <span>{label}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column */}
-                <div className="lg:col-span-1 space-y-8">
-                    {/* Details Card */}
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{liveProperty.propertyType}</p>
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{liveProperty.propertyName}</h2>
-                                <p className="text-gray-500 dark:text-gray-400 mt-2">{liveProperty.address}</p>
-                            </div>
-                            <button onClick={() => setIsEditing(true)} className="button-secondary flex-shrink-0">Edit</button>
-                        </div>
-                        <p className="text-gray-600 dark:text-gray-300">{liveProperty.description}</p>
-                    </div>
-                    {/* Access Info & House Rules Card */}
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Guest Information</h3>
-                            <button onClick={() => setIsEditingGuestInfo(true)} className="button-secondary text-xs">Edit</button>
-                        </div>
-                        <div className="space-y-4">
-                           <div>
-                                <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Key size={16} className="mr-2"/> Access Details</h4>
-                                <div className="text-sm space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">
-                                    <p><strong>Door Code:</strong> {accessInfo.doorCode || 'N/A'}</p>
-                                    <p><strong>Wi-Fi Password:</strong> {accessInfo.wifiPassword || 'N/A'}</p>
-                                    <p><strong>Lockbox:</strong> {accessInfo.lockboxCode || 'N/A'}</p>
-                                    <p><strong>Parking:</strong> {accessInfo.parkingInstructions || 'N/A'}</p>
-                                 </div>
-                           </div>
-                           <div>
-                                <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Home size={16} className="mr-2"/> House Rules</h4>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">{liveProperty.houseRules || 'No rules specified.'}</p>
-                           </div>
-                           {customInfo.length > 0 && (
-                               <div>
-                                   <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Info size={16} className="mr-2"/> Additional Info</h4>
-                                   <div className="text-sm space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">
-                                        {customInfo.map((item, index) => (
-                                            <p key={index}><strong>{item.label}:</strong> {item.value}</p>
-                                        ))}
-                                   </div>
-                               </div>
-                           )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     return (
         <div className="p-4 sm:p-6 md:p-8">
             <div className="max-w-7xl mx-auto">
@@ -268,7 +270,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                             </div>
                         </div>
                         <div>
-                            {activeTab === 'overview' && <Overview />}
+                            {activeTab === 'overview' && <Overview liveProperty={liveProperty} onEdit={() => setIsEditing(true)} onEditGuestInfo={() => setIsEditingGuestInfo(true)} />}
                             {activeTab === 'tasks' && <TasksView property={liveProperty} user={user} />}
                             {activeTab === 'templates' && <LinkedTemplatesView property={liveProperty} user={user} />}
                             {activeTab === 'inventory' && <InventoryView property={liveProperty} user={user} />}
