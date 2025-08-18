@@ -8,6 +8,7 @@ const os = require("os");
 const fs = require("fs");
 const cors = require("cors")({ origin: true });
 const Busboy = require("busboy");
+const ical = require("node-ical"); // --- NEW ---
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -190,4 +191,62 @@ exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
       return res.status(500).send({ status: "error", message: "Internal server error." });
     }
   });
+});
+
+// --- NEW SCHEDULED FUNCTION FOR ICAL SYNC ---
+// This function will run automatically.
+exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
+    functions.logger.log("Starting iCal sync for all properties.");
+    
+    const propertiesSnapshot = await db.collection('properties').get();
+    
+    if (propertiesSnapshot.empty) {
+        functions.logger.log("No properties found to sync.");
+        return null;
+    }
+
+    const syncPromises = [];
+
+    for (const doc of propertiesSnapshot.docs) {
+        const property = doc.data();
+        const propertyId = doc.id;
+
+        if (property.iCalUrl) {
+            functions.logger.log(`Found iCal URL for property: ${property.propertyName} (${propertyId})`);
+            
+            const promise = ical.fromURL(property.iCalUrl).then(data => {
+                const bookingPromises = [];
+                for (const k in data) {
+                    if (data[k].type === 'VEVENT') {
+                        const event = data[k];
+                        // Use the event's UID as a unique ID to prevent duplicate bookings.
+                        const bookingId = event.uid.split('@')[0]; // Clean up UID for Firestore doc ID
+                        
+                        const bookingData = {
+                            propertyId: propertyId,
+                            propertyName: property.propertyName,
+                            ownerId: property.ownerId,
+                            guestName: event.summary || 'Booked',
+                            startDate: event.start.toISOString().split('T')[0],
+                            endDate: event.end.toISOString().split('T')[0],
+                            syncedAt: admin.firestore.FieldValue.serverTimestamp()
+                        };
+                        
+                        // Add or update the booking in the 'bookings' collection
+                        const bookingRef = db.collection('bookings').doc(bookingId);
+                        bookingPromises.push(bookingRef.set(bookingData, { merge: true }));
+                    }
+                }
+                return Promise.all(bookingPromises);
+            }).catch(err => {
+                functions.logger.error(`Error fetching or parsing iCal for property ${propertyId}:`, err);
+            });
+            
+            syncPromises.push(promise);
+        }
+    }
+
+    await Promise.all(syncPromises);
+    functions.logger.log("Finished iCal sync process.");
+    return null;
 });
