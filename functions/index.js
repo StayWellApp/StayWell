@@ -13,6 +13,56 @@ const ical = require("node-ical");
 admin.initializeApp();
 const db = admin.firestore();
 
+// --- NEW HELPER FUNCTION FOR DOUBLE BOOKING DETECTION ---
+const checkForDoubleBooking = async (newBooking, existingBookingId = null) => {
+    functions.logger.log(`Checking for double bookings for property: ${newBooking.propertyId}`);
+    
+    // Query for any bookings on the same property that end after the new booking starts.
+    const bookingsRef = db.collection('bookings');
+    const q = bookingsRef
+        .where('propertyId', '==', newBooking.propertyId)
+        .where('endDate', '>', newBooking.startDate);
+
+    const snapshot = await q.get();
+
+    if (snapshot.empty) {
+        functions.logger.log("No potential conflicts found.");
+        return; // No potential conflicts
+    }
+
+    // Now, filter in memory for bookings that start before the new booking ends.
+    const conflictingBookings = [];
+    snapshot.forEach(doc => {
+        // Exclude the booking if it's the one we're currently updating/creating
+        if (doc.id === existingBookingId) {
+            return;
+        }
+        const booking = doc.data();
+        if (booking.startDate < newBooking.endDate) {
+            conflictingBookings.push({ id: doc.id, ...booking });
+        }
+    });
+
+    if (conflictingBookings.length > 0) {
+        functions.logger.warn(`Conflict detected! New booking overlaps with ${conflictingBookings.length} other booking(s).`);
+        const conflictingGuest = conflictingBookings[0].guestName;
+
+        const notification = {
+            ownerId: newBooking.ownerId,
+            propertyId: newBooking.propertyId,
+            type: "DOUBLE_BOOKING",
+            message: `Double booking detected at ${newBooking.propertyName} for guest "${newBooking.guestName}". It conflicts with the booking for "${conflictingGuest}".`,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            isRead: false,
+            conflictingBookingIds: [existingBookingId, ...conflictingBookings.map(b => b.id)].filter(Boolean)
+        };
+        
+        // Create a notification in the 'notifications' collection
+        await db.collection('notifications').add(notification);
+    }
+};
+
+
 // --- EXISTING FUNCTION ---
 exports.uploadProof = functions.https.onRequest((req, res) => {
   cors(req, res, () => {
@@ -185,28 +235,22 @@ exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
   });
 });
 
-// --- SCHEDULED FUNCTION FOR ICAL SYNC ---
+// --- SCHEDULED FUNCTION FOR ICAL SYNC (MODIFIED) ---
 exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
     functions.logger.log("Starting iCal sync for all properties.");
-    
     const propertiesSnapshot = await db.collection('properties').get();
-    
     if (propertiesSnapshot.empty) {
         functions.logger.log("No properties found to sync.");
         return null;
     }
-
-    const syncPromises = [];
 
     for (const doc of propertiesSnapshot.docs) {
         const property = doc.data();
         const propertyId = doc.id;
 
         if (property.iCalUrl) {
-            functions.logger.log(`Found iCal URL for property: ${property.propertyName} (${propertyId})`);
-            
-            const promise = ical.fromURL(property.iCalUrl).then(data => {
-                const bookingPromises = [];
+            try {
+                const data = await ical.fromURL(property.iCalUrl);
                 for (const k in data) {
                     if (data[k].type === 'VEVENT') {
                         const event = data[k];
@@ -222,60 +266,41 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
                             syncedAt: admin.firestore.FieldValue.serverTimestamp()
                         };
                         
+                        // Check for conflicts before saving
+                        await checkForDoubleBooking(bookingData, bookingId);
+
                         const bookingRef = db.collection('bookings').doc(bookingId);
-                        bookingPromises.push(bookingRef.set(bookingData, { merge: true }));
+                        await bookingRef.set(bookingData, { merge: true });
                     }
                 }
-                return Promise.all(bookingPromises);
-            }).catch(err => {
-                functions.logger.error(`Error fetching or parsing iCal for property ${propertyId}:`, err);
-            });
-            
-            syncPromises.push(promise);
+            } catch (err) {
+                functions.logger.error(`Error processing iCal for property ${propertyId}:`, err);
+            }
         }
     }
 
-    await Promise.all(syncPromises);
     functions.logger.log("Finished iCal sync process.");
     return null;
 });
 
-// --- NEW ENDPOINT FOR MANUAL BOOKINGS VIA POSTMAN ---
+// --- ENDPOINT FOR MANUAL BOOKINGS (MODIFIED) ---
 exports.addManualBooking = functions.https.onRequest(async (req, res) => {
     cors(req, res, async () => {
         if (req.method !== "POST") {
-            functions.logger.warn("Received non-POST request to addManualBooking.");
             return res.status(405).send({ error: "Method Not Allowed" });
         }
 
         try {
-            const bookingData = req.body;
-            functions.logger.log("Received manual booking data:", JSON.stringify(bookingData));
-
-            // --- VALIDATION ---
-            const { propertyId, startDate, endDate, guestName } = bookingData;
+            const { propertyId, startDate, endDate, guestName } = req.body;
             if (!propertyId || !startDate || !endDate || !guestName) {
-                const missing = [
-                    !propertyId && "propertyId",
-                    !startDate && "startDate",
-                    !endDate && "endDate",
-                    !guestName && "guestName"
-                ].filter(Boolean).join(', ');
-                functions.logger.error(`Validation failed: Missing fields - ${missing}`);
-                return res.status(400).send({ error: `Missing required fields: ${missing}` });
+                return res.status(400).send({ error: `Missing required fields.` });
             }
 
-            // --- FETCH PROPERTY ---
-            const propertyRef = db.collection('properties').doc(propertyId);
-            const propertyDoc = await propertyRef.get();
-
+            const propertyDoc = await db.collection('properties').doc(propertyId).get();
             if (!propertyDoc.exists) {
-                functions.logger.error(`Property with ID ${propertyId} not found.`);
                 return res.status(404).send({ error: "Property not found." });
             }
             const propertyData = propertyDoc.data();
-
-            // --- PREPARE BOOKING DATA ---
             const bookingId = `manual_${Date.now()}`;
             
             const newBooking = {
@@ -288,11 +313,11 @@ exports.addManualBooking = functions.https.onRequest(async (req, res) => {
                 syncedAt: admin.firestore.FieldValue.serverTimestamp()
             };
 
-            // --- SAVE TO DATABASE ---
+            // Check for conflicts before saving
+            await checkForDoubleBooking(newBooking, bookingId);
+
             const bookingRef = db.collection('bookings').doc(bookingId);
             await bookingRef.set(newBooking);
-
-            functions.logger.log(`Successfully created manual booking ${bookingId} for property ${propertyId}.`);
 
             return res.status(200).send({
                 status: "success",
