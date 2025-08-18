@@ -11,6 +11,7 @@ const Busboy = require("busboy");
 
 admin.initializeApp();
 
+// --- EXISTING FUNCTION ---
 exports.uploadProof = functions.https.onRequest((req, res) => {
   cors(req, res, () => {
     functions.logger.log("Function triggered. Method:", req.method);
@@ -101,6 +102,44 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
     } catch (error) {
       functions.logger.error("Critical error in function execution:", error);
       return res.status(500).send({ error: "Function execution failed." });
+    }
+  });
+});
+
+
+// --- NEW FUNCTION ---
+// This function will be triggered by a webhook from your calendar syncing service.
+exports.onBookingReceived = functions.https.onRequest((req, res) => {
+  // We use cors to allow requests from the third-party service.
+  cors(req, res, () => {
+    if (req.method !== "POST") {
+      functions.logger.warn("Received non-POST request.");
+      return res.status(405).send({ error: "Method Not Allowed" });
+    }
+
+    try {
+      const bookingData = req.body;
+      
+      // Log the incoming data for debugging purposes.
+      // In Firebase console, you can check Logs Explorer for "onBookingReceived".
+      functions.logger.log("Received new booking data:", JSON.stringify(bookingData));
+      
+      // Here is where you would trigger the full rules engine.
+      // For now, we just acknowledge receipt of the data.
+      // TODO: Implement `createTasksForBooking(bookingData)` logic.
+
+      // Send a success response back to the webhook sender.
+      return res.status(200).send({ 
+          status: "success", 
+          message: "Booking data received and logged." 
+      });
+
+    } catch (error) {
+      functions.logger.error("Error processing booking data:", error);
+      return res.status(500).send({ 
+          status: "error", 
+          message: "Internal server error." 
+      });
     }
   });
 });
