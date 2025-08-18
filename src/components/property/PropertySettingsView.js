@@ -5,13 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { doc, updateDoc, deleteDoc, collection, query, where, onSnapshot, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { UserPlus, ShieldAlert, Trash2, Archive } from 'lucide-react';
+import { UserPlus, ShieldAlert, Trash2, Archive, Calendar } from 'lucide-react';
 
 export const SettingsView = ({ property, user, onBack }) => {
     const [team, setTeam] = useState([]);
     const [loadingTeam, setLoadingTeam] = useState(true);
     const [confirmDeleteText, setConfirmDeleteText] = useState('');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [iCalUrl, setICalUrl] = useState(property.iCalUrl || '');
 
     // Fetch all team members associated with the account owner
     useEffect(() => {
@@ -75,10 +76,39 @@ export const SettingsView = ({ property, user, onBack }) => {
             toast.update(toastId, { render: "Failed to delete property.", type: "error", isLoading: false, autoClose: 5000 });
         }
     };
+    
+    // Function to save the iCal URL
+    const handleSaveICalUrl = async () => {
+        const propertyRef = doc(db, "properties", property.id);
+        const toastId = toast.loading("Saving iCal link...");
+        try {
+            await updateDoc(propertyRef, { iCalUrl: iCalUrl });
+            toast.update(toastId, { render: "iCal link saved!", type: "success", isLoading: false, autoClose: 2000 });
+        } catch (error) {
+            console.error("Error saving iCal link:", error);
+            toast.update(toastId, { render: "Failed to save iCal link.", type: "error", isLoading: false, autoClose: 4000 });
+        }
+    };
 
     return (
         <>
             <div className="space-y-8">
+                 {/* Calendar Sync */}
+                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Calendar size={20} className="mr-3 text-green-500" /> Calendar Sync</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Paste the iCal link from your booking platform (e.g., Airbnb, VRBO) to sync your reservations.</p>
+                    <div className="flex space-x-2">
+                        <input
+                            type="url"
+                            value={iCalUrl}
+                            onChange={(e) => setICalUrl(e.target.value)}
+                            className="w-full input-style"
+                            placeholder="https://www.airbnb.com/calendar/ical/..."
+                        />
+                        <button onClick={handleSaveICalUrl} className="button-primary">Save</button>
+                    </div>
+                </div>
+
                 {/* Team Access Management */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><UserPlus size={20} className="mr-3 text-blue-500" /> Team Access</h3>
