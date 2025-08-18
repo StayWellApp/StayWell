@@ -1,5 +1,5 @@
 // This is the full content of your functions/index.js file.
-// It is set up to handle file uploads via a HTTPS request.
+// It is set up to handle file uploads, booking webhooks, and iCal sync.
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
@@ -13,11 +13,66 @@ const ical = require("node-ical");
 admin.initializeApp();
 const db = admin.firestore();
 
-// --- NEW HELPER FUNCTION FOR DOUBLE BOOKING DETECTION ---
+// --- REUSABLE AUTOMATION FUNCTION ---
+const triggerAutomationForBooking = async (bookingDetails) => {
+    const { propertyId, checkoutDate, guestName } = bookingDetails;
+    functions.logger.log(`Triggering automation for propertyId: ${propertyId}`);
+
+    if (!propertyId || !checkoutDate) {
+        functions.logger.error("Automation trigger failed: Missing propertyId or checkoutDate.");
+        return; // Exit if essential data is missing
+    }
+
+    const propertyRef = db.collection('properties').doc(propertyId);
+    const rulesRef = db.collection('automationRules').doc(propertyId);
+    
+    const [propertyDoc, rulesDoc] = await Promise.all([propertyRef.get(), rulesRef.get()]);
+
+    if (!propertyDoc.exists()) {
+        functions.logger.error(`Automation trigger failed: Property with ID ${propertyId} not found.`);
+        return;
+    }
+    if (!rulesDoc.exists() || !rulesDoc.data().rules) {
+        functions.logger.info(`No automation rules found for property ${propertyId}. No tasks created.`);
+        return;
+    }
+
+    const propertyData = propertyDoc.data();
+    const rules = rulesDoc.data().rules;
+    const tasksToCreate = [];
+
+    for (const rule of rules) {
+        const coDate = new Date(checkoutDate);
+        const dueDate = new Date(coDate.setDate(coDate.getDate() + (rule.timeline?.daysAfterCheckout || 0)));
+        const formattedDueDate = dueDate.toISOString().split('T')[0];
+
+        const taskData = {
+            taskName: `${rule.ruleName} for ${guestName || propertyData.propertyName}`,
+            taskType: rule.taskType || 'Cleaning',
+            description: `Automated task generated for checkout on ${checkoutDate}.`,
+            priority: 'Medium',
+            status: 'Pending',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            propertyId: propertyId,
+            propertyName: propertyData.propertyName,
+            ownerId: propertyData.ownerId,
+            scheduledDate: formattedDueDate,
+            assignedTo: rule.defaultAssignee || '',
+            assignedToEmail: '',
+            checklistTemplateId: rule.checklistTemplateId || '',
+            checklistItems: [],
+        };
+        tasksToCreate.push(db.collection('tasks').add(taskData));
+    }
+
+    await Promise.all(tasksToCreate);
+    functions.logger.log(`Automation successful: Created ${tasksToCreate.length} tasks for property ${propertyId}.`);
+};
+
+// --- HELPER FUNCTION FOR DOUBLE BOOKING DETECTION ---
 const checkForDoubleBooking = async (newBooking, existingBookingId = null) => {
     functions.logger.log(`Checking for double bookings for property: ${newBooking.propertyId}`);
     
-    // Query for any bookings on the same property that end after the new booking starts.
     const bookingsRef = db.collection('bookings');
     const q = bookingsRef
         .where('propertyId', '==', newBooking.propertyId)
@@ -27,13 +82,11 @@ const checkForDoubleBooking = async (newBooking, existingBookingId = null) => {
 
     if (snapshot.empty) {
         functions.logger.log("No potential conflicts found.");
-        return; // No potential conflicts
+        return;
     }
 
-    // Now, filter in memory for bookings that start before the new booking ends.
     const conflictingBookings = [];
     snapshot.forEach(doc => {
-        // Exclude the booking if it's the one we're currently updating/creating
         if (doc.id === existingBookingId) {
             return;
         }
@@ -57,13 +110,12 @@ const checkForDoubleBooking = async (newBooking, existingBookingId = null) => {
             conflictingBookingIds: [existingBookingId, ...conflictingBookings.map(b => b.id)].filter(Boolean)
         };
         
-        // Create a notification in the 'notifications' collection
         await db.collection('notifications').add(notification);
     }
 };
 
 
-// --- EXISTING FUNCTION ---
+// --- EXISTING UPLOAD FUNCTION ---
 exports.uploadProof = functions.https.onRequest((req, res) => {
   cors(req, res, () => {
     functions.logger.log("Function triggered. Method:", req.method);
@@ -155,87 +207,31 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
 });
 
 
-// --- UPDATED FUNCTION WITH RULES ENGINE ---
+// --- AUTOMATION WEBHOOK (NOW USES THE REUSABLE FUNCTION) ---
 exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
   cors(req, res, async () => {
     if (req.method !== "POST") {
-      functions.logger.warn("Received non-POST request.");
       return res.status(405).send({ error: "Method Not Allowed" });
     }
-
     try {
       const bookingData = req.body;
-      functions.logger.log("Received booking data:", JSON.stringify(bookingData));
-
-      // --- VALIDATION ---
-      const { propertyId, checkoutDate, guestName } = bookingData;
-      if (!propertyId || !checkoutDate) {
-        functions.logger.error("Validation failed: propertyId or checkoutDate missing.");
-        return res.status(400).send({ error: "Missing required fields: propertyId, checkoutDate." });
-      }
-
-      // --- FETCH PROPERTY AND RULES ---
-      const propertyRef = db.collection('properties').doc(propertyId);
-      const rulesRef = db.collection('automationRules').doc(propertyId);
+      functions.logger.log("Received booking data via webhook:", JSON.stringify(bookingData));
       
-      const [propertyDoc, rulesDoc] = await Promise.all([propertyRef.get(), rulesRef.get()]);
-
-      if (!propertyDoc.exists) {
-        functions.logger.error(`Property with ID ${propertyId} not found.`);
-        return res.status(404).send({ error: "Property not found." });
-      }
-      if (!rulesDoc.exists || !rulesDoc.data().rules) {
-        functions.logger.info(`No automation rules found for property ${propertyId}. Exiting.`);
-        return res.status(200).send({ status: "success", message: "No rules to process." });
-      }
-
-      const propertyData = propertyDoc.data();
-      const rules = rulesDoc.data().rules;
-      const tasksToCreate = [];
-
-      // --- PROCESS RULES ---
-      for (const rule of rules) {
-        const coDate = new Date(checkoutDate);
-        const dueDate = new Date(coDate.setDate(coDate.getDate() + (rule.timeline?.daysAfterCheckout || 0)));
-        const formattedDueDate = dueDate.toISOString().split('T')[0];
-
-        const taskData = {
-          taskName: `${rule.ruleName} for ${guestName || propertyData.propertyName}`,
-          taskType: rule.taskType || 'Cleaning',
-          description: `Automated task generated for checkout on ${checkoutDate}.`,
-          priority: 'Medium',
-          status: 'Pending',
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          propertyId: propertyId,
-          propertyName: propertyData.propertyName,
-          ownerId: propertyData.ownerId,
-          scheduledDate: formattedDueDate,
-          assignedTo: rule.defaultAssignee || '',
-          assignedToEmail: '', 
-          checklistTemplateId: rule.checklistTemplateId || '',
-          checklistItems: [],
-        };
-        
-        functions.logger.log(`Prepared task from rule '${rule.ruleName}':`, taskData);
-        tasksToCreate.push(db.collection('tasks').add(taskData));
-      }
-
-      await Promise.all(tasksToCreate);
-      functions.logger.log(`Successfully created ${tasksToCreate.length} tasks for property ${propertyId}.`);
+      // Call the reusable automation function
+      await triggerAutomationForBooking(bookingData);
 
       return res.status(200).send({
         status: "success",
-        message: `Processed ${rules.length} rules and created ${tasksToCreate.length} tasks.`,
+        message: "Booking data received and automation triggered.",
       });
-
     } catch (error) {
-      functions.logger.error("Error processing booking data:", error);
+      functions.logger.error("Error in onBookingReceived:", error);
       return res.status(500).send({ status: "error", message: "Internal server error." });
     }
   });
 });
 
-// --- SCHEDULED FUNCTION FOR ICAL SYNC (MODIFIED) ---
+// --- ICAL SYNC FUNCTION ---
 exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
     functions.logger.log("Starting iCal sync for all properties.");
     const propertiesSnapshot = await db.collection('properties').get();
@@ -266,7 +262,6 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
                             syncedAt: admin.firestore.FieldValue.serverTimestamp()
                         };
                         
-                        // Check for conflicts before saving
                         await checkForDoubleBooking(bookingData, bookingId);
 
                         const bookingRef = db.collection('bookings').doc(bookingId);
@@ -283,7 +278,8 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
     return null;
 });
 
-// --- ENDPOINT FOR MANUAL BOOKINGS (MODIFIED) ---
+
+// --- MANUAL BOOKING ENDPOINT (MODIFIED TO TRIGGER AUTOMATION) ---
 exports.addManualBooking = functions.https.onRequest(async (req, res) => {
     cors(req, res, async () => {
         if (req.method !== "POST") {
@@ -313,15 +309,21 @@ exports.addManualBooking = functions.https.onRequest(async (req, res) => {
                 syncedAt: admin.firestore.FieldValue.serverTimestamp()
             };
 
-            // Check for conflicts before saving
             await checkForDoubleBooking(newBooking, bookingId);
 
             const bookingRef = db.collection('bookings').doc(bookingId);
             await bookingRef.set(newBooking);
 
+            // --- NEW: Trigger the automation workflow ---
+            await triggerAutomationForBooking({
+                propertyId: propertyId,
+                checkoutDate: endDate, // Use the booking's end date as the checkout date
+                guestName: guestName,
+            });
+
             return res.status(200).send({
                 status: "success",
-                message: "Manual booking created successfully.",
+                message: "Manual booking created and automation triggered.",
                 bookingId: bookingId,
             });
 
