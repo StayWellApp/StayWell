@@ -28,11 +28,12 @@ const triggerAutomationForBooking = async (bookingDetails) => {
     
     const [propertyDoc, rulesDoc] = await Promise.all([propertyRef.get(), rulesRef.get()]);
 
-    if (!propertyDoc.exists()) {
+    // --- CORRECTED LINE ---
+    if (!propertyDoc.exists) { // Changed propertyDoc.exists() to propertyDoc.exists
         functions.logger.error(`Automation trigger failed: Property with ID ${propertyId} not found.`);
         return;
     }
-    if (!rulesDoc.exists() || !rulesDoc.data().rules) {
+    if (!rulesDoc.exists || !rulesDoc.data().rules) { // This one was already correct
         functions.logger.info(`No automation rules found for property ${propertyId}. No tasks created.`);
         return;
     }
@@ -217,7 +218,6 @@ exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
       const bookingData = req.body;
       functions.logger.log("Received booking data via webhook:", JSON.stringify(bookingData));
       
-      // Call the reusable automation function
       await triggerAutomationForBooking(bookingData);
 
       return res.status(200).send({
@@ -314,10 +314,9 @@ exports.addManualBooking = functions.https.onRequest(async (req, res) => {
             const bookingRef = db.collection('bookings').doc(bookingId);
             await bookingRef.set(newBooking);
 
-            // --- NEW: Trigger the automation workflow ---
             await triggerAutomationForBooking({
                 propertyId: propertyId,
-                checkoutDate: endDate, // Use the booking's end date as the checkout date
+                checkoutDate: endDate,
                 guestName: guestName,
             });
 
