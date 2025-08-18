@@ -5,11 +5,12 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const path = require("path");
 const os = require("os");
-const fs =require("fs");
+const fs = require("fs");
 const cors = require("cors")({ origin: true });
 const Busboy = require("busboy");
 
 admin.initializeApp();
+const db = admin.firestore();
 
 // --- EXISTING FUNCTION ---
 exports.uploadProof = functions.https.onRequest((req, res) => {
@@ -79,13 +80,12 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
           });
           functions.logger.log("Upload to GCS successful.");
 
-          // Clean up the temporary file
           fs.unlinkSync(fileData.filepath);
 
           const file = bucket.file(destination);
           const [url] = await file.getSignedUrl({
             action: "read",
-            expires: "03-09-2491", // A far-future expiration date
+            expires: "03-09-2491",
           });
           functions.logger.log("Signed URL generated successfully.");
 
@@ -95,9 +95,6 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
           return res.status(500).send({ error: "Processing failed on server." });
         }
       });
-
-      // The rawBody is automatically parsed by Cloud Functions.
-      // We pass it to busboy.end().
       busboy.end(req.rawBody);
     } catch (error) {
       functions.logger.error("Critical error in function execution:", error);
@@ -107,11 +104,9 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
 });
 
 
-// --- NEW FUNCTION ---
-// This function will be triggered by a webhook from your calendar syncing service.
-exports.onBookingReceived = functions.https.onRequest((req, res) => {
-  // We use cors to allow requests from the third-party service.
-  cors(req, res, () => {
+// --- UPDATED FUNCTION WITH RULES ENGINE ---
+exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
+  cors(req, res, async () => {
     if (req.method !== "POST") {
       functions.logger.warn("Received non-POST request.");
       return res.status(405).send({ error: "Method Not Allowed" });
@@ -119,27 +114,80 @@ exports.onBookingReceived = functions.https.onRequest((req, res) => {
 
     try {
       const bookingData = req.body;
-      
-      // Log the incoming data for debugging purposes.
-      // In Firebase console, you can check Logs Explorer for "onBookingReceived".
-      functions.logger.log("Received new booking data:", JSON.stringify(bookingData));
-      
-      // Here is where you would trigger the full rules engine.
-      // For now, we just acknowledge receipt of the data.
-      // TODO: Implement `createTasksForBooking(bookingData)` logic.
+      functions.logger.log("Received booking data:", JSON.stringify(bookingData));
 
-      // Send a success response back to the webhook sender.
-      return res.status(200).send({ 
-          status: "success", 
-          message: "Booking data received and logged." 
+      // --- VALIDATION ---
+      // The third-party service must send at least these fields.
+      const { propertyId, checkoutDate, guestName } = bookingData;
+      if (!propertyId || !checkoutDate) {
+        functions.logger.error("Validation failed: propertyId or checkoutDate missing.");
+        return res.status(400).send({ error: "Missing required fields: propertyId, checkoutDate." });
+      }
+
+      // --- FETCH PROPERTY AND RULES ---
+      const propertyRef = db.collection('properties').doc(propertyId);
+      const rulesRef = db.collection('automationRules').doc(propertyId);
+      
+      const [propertyDoc, rulesDoc] = await Promise.all([propertyRef.get(), rulesRef.get()]);
+
+      if (!propertyDoc.exists) {
+        functions.logger.error(`Property with ID ${propertyId} not found.`);
+        return res.status(404).send({ error: "Property not found." });
+      }
+      if (!rulesDoc.exists || !rulesDoc.data().rules) {
+        functions.logger.info(`No automation rules found for property ${propertyId}. Exiting.`);
+        return res.status(200).send({ status: "success", message: "No rules to process." });
+      }
+
+      const propertyData = propertyDoc.data();
+      const rules = rulesDoc.data().rules;
+      const tasksToCreate = [];
+
+      // --- PROCESS RULES ---
+      for (const rule of rules) {
+        // Calculate due date
+        const coDate = new Date(checkoutDate);
+        const dueDate = new Date(coDate.setDate(coDate.getDate() + (rule.timeline?.daysAfterCheckout || 0)));
+        const formattedDueDate = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        const taskData = {
+          taskName: `${rule.ruleName} for ${guestName || propertyData.propertyName}`,
+          taskType: rule.taskType || 'Cleaning',
+          description: `Automated task generated for checkout on ${checkoutDate}.`,
+          priority: 'Medium',
+          status: 'Pending',
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          
+          propertyId: propertyId,
+          propertyName: propertyData.propertyName,
+          ownerId: propertyData.ownerId,
+
+          scheduledDate: formattedDueDate,
+          assignedTo: rule.defaultAssignee || '', // Add fallback logic if needed
+          
+          // You might need to fetch assignee email separately or store it in the rule
+          assignedToEmail: '', 
+          
+          // If a checklist is linked, prepare it for the new task
+          checklistTemplateId: rule.checklistTemplateId || '',
+          checklistItems: [], // This would be populated by fetching the template
+        };
+        
+        functions.logger.log(`Prepared task from rule '${rule.ruleName}':`, taskData);
+        tasksToCreate.push(db.collection('tasks').add(taskData));
+      }
+
+      await Promise.all(tasksToCreate);
+      functions.logger.log(`Successfully created ${tasksToCreate.length} tasks for property ${propertyId}.`);
+
+      return res.status(200).send({
+        status: "success",
+        message: `Processed ${rules.length} rules and created ${tasksToCreate.length} tasks.`,
       });
 
     } catch (error) {
       functions.logger.error("Error processing booking data:", error);
-      return res.status(500).send({ 
-          status: "error", 
-          message: "Internal server error." 
-      });
+      return res.status(500).send({ status: "error", message: "Internal server error." });
     }
   });
 });
