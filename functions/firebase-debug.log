@@ -1,0 +1,22 @@
+[debug] [2025-08-18T15:50:48.538Z] ----------------------------------------------------------------------
+[debug] [2025-08-18T15:50:48.540Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\neilc\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2025-08-18T15:50:48.541Z] CLI Version:   14.12.1
+[debug] [2025-08-18T15:50:48.541Z] Platform:      win32
+[debug] [2025-08-18T15:50:48.541Z] Node Version:  v20.18.0
+[debug] [2025-08-18T15:50:48.541Z] Time:          Mon Aug 18 2025 17:50:48 GMT+0200 (Central European Summer Time)
+[debug] [2025-08-18T15:50:48.541Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-08-18T15:50:48.708Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-08-18T15:50:48.709Z] > authorizing via signed-in user (appstaywell@gmail.com)
+[debug] [2025-08-18T15:50:48.709Z] [iam] checking project staywellapp-49b62 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2025-08-18T15:50:48.710Z] Checked if tokens are valid: true, expires at: 1755533890800
+[debug] [2025-08-18T15:50:48.710Z] Checked if tokens are valid: true, expires at: 1755533890800
+[debug] [2025-08-18T15:50:48.711Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/staywellapp-49b62:testIamPermissions [none]
+[debug] [2025-08-18T15:50:48.711Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/staywellapp-49b62:testIamPermissions x-goog-quota-user=projects/staywellapp-49b62
+[debug] [2025-08-18T15:50:48.711Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/staywellapp-49b62:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-08-18T15:50:49.520Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/staywellapp-49b62:testIamPermissions 200
+[debug] [2025-08-18T15:50:49.520Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/staywellapp-49b62:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-08-18T15:50:49.521Z] Checked if tokens are valid: true, expires at: 1755533890800
+[debug] [2025-08-18T15:50:49.521Z] Checked if tokens are valid: true, expires at: 1755533890800
+[debug] [2025-08-18T15:50:49.521Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/staywellapp-49b62/serviceAccounts/staywellapp-49b62@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2025-08-18T15:50:49.521Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/staywellapp-49b62/serviceAccounts/staywellapp-49b62@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
