@@ -5,7 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { doc, onSnapshot, updateDoc, collection, query, where } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building, Tag, Key, Info, ListChecks, FileText } from 'lucide-react';
+// --- MODIFIED ---
+import { Home, CheckSquare, Archive, Calendar, BarChart2, Settings, Image as ImageIcon, Building, Tag, Key, Info, ListChecks, FileText, Bot } from 'lucide-react';
 
 // Import the refactored and NEW components
 import { PropertyForm } from './PropertyForm';
@@ -14,6 +15,7 @@ import { TasksView } from './PropertyTasksView';
 import { CalendarView } from './PropertyCalendarView';
 import { PerformanceView } from './PropertyPerformanceView';
 import { SettingsView } from './PropertySettingsView';
+import { AutomationView } from './PropertyAutomationView'; // --- NEW ---
 import { InventoryView } from '../InventoryViews';
 import { allAmenities } from './AmenitiesForm';
 
@@ -116,7 +118,6 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
     const Overview = () => {
         const [mainImage, setMainImage] = useState(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
 
-        // FIXED: The linter warning is addressed by making the dependencies more specific.
         useEffect(() => {
             setMainImage(liveProperty.mainPhotoURL || (liveProperty.photoURLs && liveProperty.photoURLs[0]) || '');
         }, [liveProperty.mainPhotoURL, liveProperty.photoURLs]);
@@ -220,9 +221,9 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                                <div>
                                    <h4 className="font-semibold text-gray-700 dark:text-gray-300 flex items-center mb-2"><Info size={16} className="mr-2"/> Additional Info</h4>
                                    <div className="text-sm space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-600 ml-2">
-                                       {customInfo.map((item, index) => (
-                                           <p key={index}><strong>{item.label}:</strong> {item.value}</p>
-                                       ))}
+                                        {customInfo.map((item, index) => (
+                                            <p key={index}><strong>{item.label}:</strong> {item.value}</p>
+                                        ))}
                                    </div>
                                </div>
                            )}
@@ -262,6 +263,8 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                                 <TabButton tabName="templates" label="Templates" icon={<ListChecks size={18}/>} />
                                 <TabButton tabName="inventory" label="Inventory" icon={<Archive size={18}/>} />
                                 <TabButton tabName="calendar" label="Calendar" icon={<Calendar size={18}/>} />
+                                {/* --- NEW --- */}
+                                <TabButton tabName="automation" label="Automation" icon={<Bot size={18}/>} />
                                 <TabButton tabName="performance" label="Performance" icon={<BarChart2 size={18}/>} />
                                 <TabButton tabName="settings" label="Settings" icon={<Settings size={18}/>} />
                             </div>
@@ -272,6 +275,8 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                             {activeTab === 'templates' && <LinkedTemplatesView property={liveProperty} user={user} />}
                             {activeTab === 'inventory' && <InventoryView property={liveProperty} user={user} />}
                             {activeTab === 'calendar' && <CalendarView property={liveProperty} user={user} />}
+                            {/* --- NEW --- */}
+                            {activeTab === 'automation' && <AutomationView property={liveProperty} />}
                             {activeTab === 'performance' && <PerformanceView property={liveProperty} />}
                             {activeTab === 'settings' && <SettingsView property={liveProperty} user={user} onBack={onBack} />}
                         </div>
