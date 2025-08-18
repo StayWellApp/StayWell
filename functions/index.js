@@ -8,7 +8,7 @@ const os = require("os");
 const fs = require("fs");
 const cors = require("cors")({ origin: true });
 const Busboy = require("busboy");
-const ical = require("node-ical"); // --- NEW ---
+const ical = require("node-ical");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -118,7 +118,6 @@ exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
       functions.logger.log("Received booking data:", JSON.stringify(bookingData));
 
       // --- VALIDATION ---
-      // The third-party service must send at least these fields.
       const { propertyId, checkoutDate, guestName } = bookingData;
       if (!propertyId || !checkoutDate) {
         functions.logger.error("Validation failed: propertyId or checkoutDate missing.");
@@ -146,10 +145,9 @@ exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
 
       // --- PROCESS RULES ---
       for (const rule of rules) {
-        // Calculate due date
         const coDate = new Date(checkoutDate);
         const dueDate = new Date(coDate.setDate(coDate.getDate() + (rule.timeline?.daysAfterCheckout || 0)));
-        const formattedDueDate = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        const formattedDueDate = dueDate.toISOString().split('T')[0];
 
         const taskData = {
           taskName: `${rule.ruleName} for ${guestName || propertyData.propertyName}`,
@@ -158,20 +156,14 @@ exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
           priority: 'Medium',
           status: 'Pending',
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          
           propertyId: propertyId,
           propertyName: propertyData.propertyName,
           ownerId: propertyData.ownerId,
-
           scheduledDate: formattedDueDate,
-          assignedTo: rule.defaultAssignee || '', // Add fallback logic if needed
-          
-          // You might need to fetch assignee email separately or store it in the rule
+          assignedTo: rule.defaultAssignee || '',
           assignedToEmail: '', 
-          
-          // If a checklist is linked, prepare it for the new task
           checklistTemplateId: rule.checklistTemplateId || '',
-          checklistItems: [], // This would be populated by fetching the template
+          checklistItems: [],
         };
         
         functions.logger.log(`Prepared task from rule '${rule.ruleName}':`, taskData);
@@ -193,8 +185,7 @@ exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
   });
 });
 
-// --- NEW SCHEDULED FUNCTION FOR ICAL SYNC ---
-// This function will run automatically.
+// --- SCHEDULED FUNCTION FOR ICAL SYNC ---
 exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
     functions.logger.log("Starting iCal sync for all properties.");
     
@@ -219,8 +210,7 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
                 for (const k in data) {
                     if (data[k].type === 'VEVENT') {
                         const event = data[k];
-                        // Use the event's UID as a unique ID to prevent duplicate bookings.
-                        const bookingId = event.uid.split('@')[0]; // Clean up UID for Firestore doc ID
+                        const bookingId = event.uid.split('@')[0];
                         
                         const bookingData = {
                             propertyId: propertyId,
@@ -232,7 +222,6 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
                             syncedAt: admin.firestore.FieldValue.serverTimestamp()
                         };
                         
-                        // Add or update the booking in the 'bookings' collection
                         const bookingRef = db.collection('bookings').doc(bookingId);
                         bookingPromises.push(bookingRef.set(bookingData, { merge: true }));
                     }
@@ -249,4 +238,71 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
     await Promise.all(syncPromises);
     functions.logger.log("Finished iCal sync process.");
     return null;
+});
+
+// --- NEW ENDPOINT FOR MANUAL BOOKINGS VIA POSTMAN ---
+exports.addManualBooking = functions.https.onRequest(async (req, res) => {
+    cors(req, res, async () => {
+        if (req.method !== "POST") {
+            functions.logger.warn("Received non-POST request to addManualBooking.");
+            return res.status(405).send({ error: "Method Not Allowed" });
+        }
+
+        try {
+            const bookingData = req.body;
+            functions.logger.log("Received manual booking data:", JSON.stringify(bookingData));
+
+            // --- VALIDATION ---
+            const { propertyId, startDate, endDate, guestName } = bookingData;
+            if (!propertyId || !startDate || !endDate || !guestName) {
+                const missing = [
+                    !propertyId && "propertyId",
+                    !startDate && "startDate",
+                    !endDate && "endDate",
+                    !guestName && "guestName"
+                ].filter(Boolean).join(', ');
+                functions.logger.error(`Validation failed: Missing fields - ${missing}`);
+                return res.status(400).send({ error: `Missing required fields: ${missing}` });
+            }
+
+            // --- FETCH PROPERTY ---
+            const propertyRef = db.collection('properties').doc(propertyId);
+            const propertyDoc = await propertyRef.get();
+
+            if (!propertyDoc.exists) {
+                functions.logger.error(`Property with ID ${propertyId} not found.`);
+                return res.status(404).send({ error: "Property not found." });
+            }
+            const propertyData = propertyDoc.data();
+
+            // --- PREPARE BOOKING DATA ---
+            const bookingId = `manual_${Date.now()}`;
+            
+            const newBooking = {
+                propertyId: propertyId,
+                propertyName: propertyData.propertyName,
+                ownerId: propertyData.ownerId,
+                guestName: guestName,
+                startDate: startDate,
+                endDate: endDate,
+                syncedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+
+            // --- SAVE TO DATABASE ---
+            const bookingRef = db.collection('bookings').doc(bookingId);
+            await bookingRef.set(newBooking);
+
+            functions.logger.log(`Successfully created manual booking ${bookingId} for property ${propertyId}.`);
+
+            return res.status(200).send({
+                status: "success",
+                message: "Manual booking created successfully.",
+                bookingId: bookingId,
+            });
+
+        } catch (error) {
+            functions.logger.error("Error creating manual booking:", error);
+            return res.status(500).send({ status: "error", message: "Internal server error." });
+        }
+    });
 });
