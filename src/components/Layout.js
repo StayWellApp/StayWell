@@ -80,7 +80,7 @@ const Header = ({ user, toggleTheme, theme, handleLogout, setActiveView }) => {
                     </div>
                     <div className="relative" ref={userMenuRef}>
                         <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            <img className="w-8 h-8 rounded-full" src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || user.email}&background=random`} alt="User avatar" />
+                             <img className="w-8 h-8 rounded-full" src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || user.email}&background=random`} alt="User avatar" />
                             <span className="hidden sm:inline text-sm font-semibold text-gray-700 dark:text-gray-300">{user.displayName || user.email}</span>
                             <ChevronDown size={16} className="text-gray-500 dark:text-gray-400" />
                         </button>
@@ -155,7 +155,7 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
             <aside className="w-64 flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
                 <div className="h-20 flex items-center justify-center border-b border-gray-200 dark:border-gray-700 px-4">
                     {isSuperAdmin ? (
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Panel</h1>
+                         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Panel</h1>
                     ) : (
                         <div className="flex items-center">
                             <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
