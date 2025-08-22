@@ -15,6 +15,7 @@ import { StorageView } from './components/StorageViews';
 import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
 import ChatLayout from './components/ChatLayout';
+import SuperAdminDashboard from './components/admin/SuperAdminDashboard'; // Import the new dashboard
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
@@ -24,11 +25,11 @@ import 'react-toastify/dist/ReactToastify.css';
 function App() {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false); // State to track admin status
     const [isLoading, setIsLoading] = useState(true);
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
-    // isChatOpen state is no longer needed
 
     const { hasPermission, loadingPermissions } = usePermissions(userData);
 
@@ -36,9 +37,20 @@ function App() {
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
+                // Check for super admin custom claim
+                currentUser.getIdTokenResult().then(idTokenResult => {
+                    const claims = idTokenResult.claims;
+                    if (claims.superAdmin) {
+                        setIsSuperAdmin(true);
+                        setActiveView('adminDashboard'); // Default view for admins
+                    } else {
+                        setIsSuperAdmin(false);
+                    }
+                });
             } else {
                 setUser(null);
                 setUserData(null);
+                setIsSuperAdmin(false);
                 setIsLoading(false);
             }
         });
@@ -48,7 +60,7 @@ function App() {
     useEffect(() => {
         if (user) {
             const userDocRef = doc(db, "users", user.uid);
-            const unsubscribeSnapshot = onSnapshot(userDocRef, 
+            const unsubscribeSnapshot = onSnapshot(userDocRef,
                 (doc) => {
                     if (doc.exists()) {
                         setUserData(doc.data());
@@ -70,38 +82,40 @@ function App() {
         setSelectedProperty(property);
         setActiveView('propertyDetail');
     };
-    
+
     const handleSetActiveView = (view) => {
         if (selectedProperty) {
             setSelectedProperty(null);
         }
         setActiveView(view);
     };
-    
+
     const renderActiveView = () => {
         if (loadingPermissions) {
             return <div className="flex items-center justify-center h-full"><p className="text-gray-500">Checking permissions...</p></div>;
         }
 
         if (selectedProperty) {
-            return <PropertyDetailView 
-                        property={selectedProperty} 
+            return <PropertyDetailView
+                        property={selectedProperty}
                         onBack={() => {
                             setSelectedProperty(null);
                             setActiveView('properties');
-                        }} 
-                        user={user} 
+                        }}
+                        user={user}
                     />;
         }
-        
+
         switch (activeView) {
+            case 'adminDashboard': // New case for the admin view
+                return isSuperAdmin ? <SuperAdminDashboard user={user} /> : null;
             case 'dashboard':
                 return hasPermission('properties_view_all') || hasPermission('team_manage')
-                    ? <ClientDashboard user={user} setActiveView={handleSetActiveView} /> 
+                    ? <ClientDashboard user={user} setActiveView={handleSetActiveView} />
                     : <StaffDashboard user={user} userData={userData} />;
             case 'properties':
                 return <PropertiesView onSelectProperty={handleSelectProperty} user={user} userData={userData} hasPermission={hasPermission} />;
-            case 'chat': // Add case for chat view
+            case 'chat':
                 return <ChatLayout userData={userData} />;
             case 'team':
                 return hasPermission('team_manage') ? <TeamView user={user} /> : null;
@@ -115,7 +129,7 @@ function App() {
                  return hasPermission('team_manage') ? <SettingsView user={user} /> : null;
             default:
                 return hasPermission('properties_view_all')
-                    ? <ClientDashboard user={user} setActiveView={handleSetActiveView} /> 
+                    ? <ClientDashboard user={user} setActiveView={handleSetActiveView} />
                     : <StaffDashboard user={user} userData={userData} />;
         }
     };
@@ -137,7 +151,7 @@ function App() {
             </div>
         );
     }
-    
+
     if (loadingPermissions || !userData) {
         return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading User Profile...</p></div>;
     }
@@ -145,18 +159,18 @@ function App() {
     return (
         <ThemeProvider>
             <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
-            
-            <Layout user={user} userData={userData} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
+
+            <Layout user={user} userData={{ ...userData, isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
                 {renderActiveView()}
             </Layout>
-            
+
             {/* Floating button now sets the active view to 'chat' */}
             <div className="fixed bottom-4 right-4 z-50">
                 <button onClick={() => setActiveView('chat')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
                     <MessageSquare size={24} />
                 </button>
             </div>
-            
+
         </ThemeProvider>
     );
 }
