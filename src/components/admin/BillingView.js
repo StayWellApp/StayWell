@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { DollarSign, TrendingUp, Users } from 'lucide-react';
+import RevenueByPlanChart from './RevenueByPlanChart'; // Import the new chart
 
 const StatCard = ({ icon, title, value, color, description }) => {
     const colors = {
@@ -80,6 +81,9 @@ const BillingView = () => {
                     description="Your MRR projected over a full year."
                 />
             </div>
+            
+            <RevenueByPlanChart />
+
         </div>
     );
 };
