@@ -65,7 +65,7 @@ const triggerAutomationForBooking = async (bookingDetails) => {
             assignedToEmail: '',
             rejectionCount: 0,
             checklistTemplateId: rule.checklistTemplateId || '',
-            checklistItems: [],
+            checklistItems: [], // Checklist items will be populated from the template
         };
         
         const taskCreationPromise = db.collection('tasks').add(taskData).then(docRef => {
@@ -188,6 +188,106 @@ exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
     return { success: true };
 });
 
+exports.submitForInspection = functions.https.onCall(async (data, context) => {
+    const { taskId } = data;
+    const userId = context.auth.uid;
+
+    if (!userId) {
+        throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
+    }
+
+    const taskRef = db.collection('tasks').doc(taskId);
+    const taskDoc = await taskRef.get();
+
+    if (!taskDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Task not found.');
+    }
+
+    const taskData = taskDoc.data();
+    if (taskData.assignedTo !== userId) {
+        throw new functions.https.HttpsError('permission-denied', 'You are not assigned to this task.');
+    }
+
+    await taskRef.update({
+        status: 'Pending Inspection',
+        submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Notify inspector/manager
+    const inspectorId = taskData.propertyManagerId; // Or a dedicated inspector field
+    if (inspectorId) {
+        const notification = {
+            userId: inspectorId,
+            taskId: taskId,
+            type: "TASK_PENDING_INSPECTION",
+            message: `Task "${taskData.taskName}" is ready for inspection.`,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            isRead: false,
+        };
+        await db.collection('notifications').add(notification);
+    }
+
+    return { success: true };
+});
+
+exports.reviewTask = functions.https.onCall(async (data, context) => {
+    const { taskId, approved, comments } = data;
+    const userId = context.auth.uid;
+
+    if (!userId) {
+        throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
+    }
+
+    const taskRef = db.collection('tasks').doc(taskId);
+    const taskDoc = await taskRef.get();
+    if (!taskDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Task not found.');
+    }
+
+    const taskData = taskDoc.data();
+    // Logic to check if the user is an authorized inspector
+    // For now, let's assume the property manager is the inspector
+    if (userId !== taskData.propertyManagerId) {
+        throw new functions.https.HttpsError('permission-denied', 'You are not authorized to review this task.');
+    }
+
+    if (approved) {
+        await taskRef.update({
+            status: 'Completed',
+            inspection: {
+                approved: true,
+                reviewedBy: userId,
+                reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+                comments: comments || '',
+            },
+        });
+    } else {
+        await taskRef.update({
+            status: 'Requires Revisions',
+            inspection: {
+                approved: false,
+                reviewedBy: userId,
+                reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+                comments: comments || 'No comments provided.',
+            },
+        });
+
+        // Notify the original assignee that revisions are needed
+        if (taskData.assignedTo) {
+            const notification = {
+                userId: taskData.assignedTo,
+                taskId: taskId,
+                type: "TASK_REVISIONS_REQUIRED",
+                message: `Revisions are required for task: "${taskData.taskName}".`,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                isRead: false,
+            };
+            await db.collection('notifications').add(notification);
+        }
+    }
+
+    return { success: true, newStatus: approved ? 'Completed' : 'Requires Revisions' };
+});
 
 // --- HELPER FUNCTION FOR DOUBLE BOOKING DETECTION ---
 const checkForDoubleBooking = async (newBooking, existingBookingId = null) => {
@@ -311,6 +411,21 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
             expires: "03-09-2491",
           });
           functions.logger.log("Signed URL generated successfully.");
+          
+          // Now, update the checklist item with the photo URL
+          const taskRef = db.collection('tasks').doc(taskId);
+          const taskDoc = await taskRef.get();
+          if (taskDoc.exists) {
+              const taskData = taskDoc.data();
+              const checklistItems = taskData.checklistItems || [];
+              const itemToUpdate = checklistItems[itemIndex];
+
+              if (itemToUpdate) {
+                  itemToUpdate.photoURL = url;
+                  await taskRef.update({ checklistItems: checklistItems });
+                  functions.logger.log(`Task ${taskId}, item ${itemIndex} updated with photo URL.`);
+              }
+          }
 
           return res.status(200).send({ proofURL: url });
         } catch (error) {
