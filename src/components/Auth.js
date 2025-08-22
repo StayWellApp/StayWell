@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { auth, db } from '../firebase-config';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"; 
+import { doc, setDoc, serverTimestamp, Timestamp } from "firebase/firestore"; // Import Timestamp
 import { toast } from 'react-toastify';
 import { User, Lock, LogIn, UserPlus, Mail, Building, Briefcase } from 'lucide-react';
 
@@ -53,17 +53,36 @@ export const SignUp = () => {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const newUser = userCredential.user;
+            
             await updateProfile(newUser, {
-                displayName: newUser.email // Default display name
+                displayName: companyName || newUser.email
             });
-            await setDoc(doc(db, "users", newUser.uid), {
+
+            // --- TRIAL LOGIC ---
+            const userData = {
                 uid: newUser.uid,
                 email: newUser.email,
                 role: accountType,
                 companyName: companyName,
                 createdAt: serverTimestamp(),
-                displayName: newUser.email
-            });
+                displayName: companyName || newUser.email
+            };
+
+            // If the new user is a property owner, start a 14-day trial.
+            if (accountType === 'owner') {
+                const trialEndDate = new Date();
+                trialEndDate.setDate(trialEndDate.getDate() + 14);
+                userData.subscription = {
+                    planName: 'Trial',
+                    status: 'trialing',
+                    propertyLimit: 3, // Example limit for trials
+                    renewalDate: Timestamp.fromDate(trialEndDate)
+                };
+            }
+            // --- END TRIAL LOGIC ---
+
+            await setDoc(doc(db, "users", newUser.uid), userData);
+
             toast.update(toastId, { render: "Account created successfully!", type: "success", isLoading: false, autoClose: 3000 });
         } catch (error) {
             console.error("Authentication error:", error);

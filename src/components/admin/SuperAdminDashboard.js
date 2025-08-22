@@ -4,26 +4,26 @@ import ClientDetailView from './ClientDetailView';
 import DashboardMetrics from './DashboardMetrics';
 import SubscriptionsEndingSoon from './SubscriptionsEndingSoon';
 import RecentActivity from './RecentActivity';
-import CustomerGrowthChart from './CustomerGrowthChart'; // Import the new chart
+import CustomerGrowthChart from './CustomerGrowthChart';
+import NewSignupsPanel from './NewSignupsPanel'; // Import the new panel
 
 const SuperAdminDashboard = ({ user, initialView }) => {
     const [selectedClient, setSelectedClient] = useState(null);
 
-    // Simplified view logic for client list and detail
-    if (initialView === 'clients' && !selectedClient) {
-        return (
-            <div className="p-4 sm:p-6 md:p-8">
-                <ClientListView onSelectClient={setSelectedClient} />
-            </div>
-        );
+    const handleSelectClient = (client) => {
+        setSelectedClient(client);
+    };
+
+    const handleBack = () => {
+        setSelectedClient(null);
     }
     
+    // Logic to show client list or detail directly
+    if (initialView === 'clients' && !selectedClient) {
+        return <div className="p-4 sm:p-6 md:p-8"><ClientListView onSelectClient={handleSelectClient} /></div>;
+    }
     if (selectedClient) {
-        return (
-            <div className="p-4 sm:p-6 md:p-8">
-                <ClientDetailView client={selectedClient} onBack={() => setSelectedClient(null)} />
-            </div>
-        );
+        return <div className="p-4 sm:p-6 md:p-8"><ClientDetailView client={selectedClient} onBack={handleBack} /></div>;
     }
 
     // Default Dashboard View
@@ -36,11 +36,13 @@ const SuperAdminDashboard = ({ user, initialView }) => {
 
             <main className="space-y-8">
                 <DashboardMetrics />
-                <CustomerGrowthChart /> 
+                <CustomerGrowthChart />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Add the new panel to the dashboard */}
+                    <NewSignupsPanel onSelectClient={handleSelectClient} />
                     <SubscriptionsEndingSoon />
-                    <RecentActivity />
                 </div>
+                 <RecentActivity />
             </main>
         </div>
     );
