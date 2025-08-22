@@ -15,7 +15,6 @@ const StaffDashboard = () => {
     if (currentUser) {
       setUserName(currentUser.displayName || 'Staff Member');
       
-      // Corrected query to fetch properties assigned to the current staff member
       const propertiesQuery = query(
         collection(db, 'properties'),
         where('assignedStaff', 'array-contains', currentUser.uid)
@@ -30,7 +29,6 @@ const StaffDashboard = () => {
         setLoading(false);
       });
 
-      // Fetch tasks assigned to the current staff member
       const tasksQuery = query(
         collection(db, 'tasks'),
         where('assignedTo', '==', currentUser.uid)

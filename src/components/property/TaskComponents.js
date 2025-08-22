@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { db, storage } from '../../firebase-config';
-import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Trash2, Plus, MessageSquare, ListChecks, Info, Image, ChevronDown, Repeat, Edit, X, ShieldCheck, Paperclip } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -270,6 +270,7 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
     const [checklist, setChecklist] = useState([]);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
 
+    // FIXED: The function passed to useCallback is now inline and dependencies are specified.
     const debouncedUpdate = useCallback(debounce(async (taskId, data) => {
         const taskRef = doc(db, 'tasks', taskId);
         try {
