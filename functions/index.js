@@ -28,12 +28,11 @@ const triggerAutomationForBooking = async (bookingDetails) => {
     
     const [propertyDoc, rulesDoc] = await Promise.all([propertyRef.get(), rulesRef.get()]);
 
-    // --- CORRECTED LINE ---
-    if (!propertyDoc.exists) { // Changed propertyDoc.exists() to propertyDoc.exists
+    if (!propertyDoc.exists) {
         functions.logger.error(`Automation trigger failed: Property with ID ${propertyId} not found.`);
         return;
     }
-    if (!rulesDoc.exists || !rulesDoc.data().rules) { // This one was already correct
+    if (!rulesDoc.exists || !rulesDoc.data().rules) {
         functions.logger.info(`No automation rules found for property ${propertyId}. No tasks created.`);
         return;
     }
@@ -41,6 +40,7 @@ const triggerAutomationForBooking = async (bookingDetails) => {
     const propertyData = propertyDoc.data();
     const rules = rulesDoc.data().rules;
     const tasksToCreate = [];
+    const notificationsToSend = [];
 
     for (const rule of rules) {
         const coDate = new Date(checkoutDate);
@@ -52,23 +52,142 @@ const triggerAutomationForBooking = async (bookingDetails) => {
             taskType: rule.taskType || 'Cleaning',
             description: `Automated task generated for checkout on ${checkoutDate}.`,
             priority: 'Medium',
-            status: 'Pending',
+            status: 'Pending Assignment', // New status
+            assignmentStatus: 'PendingPrimary', // To track who the offer is for
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             propertyId: propertyId,
             propertyName: propertyData.propertyName,
             ownerId: propertyData.ownerId,
             scheduledDate: formattedDueDate,
-            assignedTo: rule.defaultAssignee || '',
+            primaryAssignee: rule.defaultAssignee || '',
+            fallbackAssignee: rule.fallbackAssignee || '', // Assuming you add this to your rules
+            assignedTo: '', // Initially unassigned
             assignedToEmail: '',
+            rejectionCount: 0,
             checklistTemplateId: rule.checklistTemplateId || '',
             checklistItems: [],
         };
-        tasksToCreate.push(db.collection('tasks').add(taskData));
+        
+        const taskCreationPromise = db.collection('tasks').add(taskData).then(docRef => {
+            // Create notification for the primary assignee
+            if (taskData.primaryAssignee) {
+                const notification = {
+                    userId: taskData.primaryAssignee,
+                    taskId: docRef.id,
+                    type: "NEW_TASK_OFFER",
+                    message: `You have a new task offer: "${taskData.taskName}" for property "${taskData.propertyName}".`,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    isRead: false,
+                };
+                notificationsToSend.push(db.collection('notifications').add(notification));
+            }
+        });
+
+        tasksToCreate.push(taskCreationPromise);
     }
 
     await Promise.all(tasksToCreate);
-    functions.logger.log(`Automation successful: Created ${tasksToCreate.length} tasks for property ${propertyId}.`);
+    await Promise.all(notificationsToSend);
+    functions.logger.log(`Automation successful: Created ${tasksToCreate.length} tasks and sent notifications for property ${propertyId}.`);
 };
+
+exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
+    const { taskId, response } = data; // response can be 'accepted' or 'rejected'
+    const userId = context.auth.uid;
+
+    if (!userId) {
+        throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to respond to a task offer.');
+    }
+
+    const taskRef = db.collection('tasks').doc(taskId);
+    const taskDoc = await taskRef.get();
+
+    if (!taskDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Task not found.');
+    }
+
+    const taskData = taskDoc.data();
+    const notificationsToSend = [];
+
+    // Check if the user is the current assignee
+    const isPrimary = taskData.assignmentStatus === 'PendingPrimary' && taskData.primaryAssignee === userId;
+    const isFallback = taskData.assignmentStatus === 'PendingFallback' && taskData.fallbackAssignee === userId;
+
+    if (!isPrimary && !isFallback) {
+        throw new functions.https.HttpsError('permission-denied', 'You are not authorized to respond to this task offer.');
+    }
+
+    if (response === 'accepted') {
+        await taskRef.update({
+            status: 'Pending',
+            assignmentStatus: 'Accepted',
+            assignedTo: userId,
+        });
+
+        // Notify property manager of acceptance
+        const managerNotification = {
+            // You need a way to get property manager's ID. Assuming it's stored on the property.
+            userId: taskData.propertyManagerId, // This field needs to be added to your property data
+            type: "TASK_ACCEPTED",
+            message: `Task "${taskData.taskName}" has been accepted by ${context.auth.token.name || 'a user'}.`,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            isRead: false,
+        };
+        notificationsToSend.push(db.collection('notifications').add(managerNotification));
+
+    } else if (response === 'rejected') {
+        const newRejectionCount = (taskData.rejectionCount || 0) + 1;
+        await taskRef.update({ rejectionCount: newRejectionCount });
+
+        // Notify property manager of rejection
+        const managerRejectionNotification = {
+            userId: taskData.propertyManagerId,
+            type: "TASK_REJECTED",
+            message: `Task "${taskData.taskName}" has been rejected by ${context.auth.token.name || 'a user'}.`,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            isRead: false,
+        };
+        notificationsToSend.push(db.collection('notifications').add(managerRejectionNotification));
+
+
+        if (isPrimary && taskData.fallbackAssignee) {
+            // Offer to fallback assignee
+            await taskRef.update({ assignmentStatus: 'PendingFallback' });
+            const fallbackNotification = {
+                userId: taskData.fallbackAssignee,
+                taskId: taskId,
+                type: "NEW_TASK_OFFER",
+                message: `A task has become available: "${taskData.taskName}" for property "${taskData.propertyName}".`,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                isRead: false,
+            };
+            notificationsToSend.push(db.collection('notifications').add(fallbackNotification));
+        } else {
+            // No fallback or fallback also rejected, notify admins
+            await taskRef.update({ status: 'Unassigned', assignmentStatus: 'Rejected' });
+            const adminUsers = [taskData.ownerId, taskData.propertyManagerId, /* another admin role */]; 
+            for (const adminId of adminUsers) {
+                if(adminId) {
+                    const escalationNotification = {
+                        userId: adminId,
+                        taskId: taskId,
+                        type: "TASK_UNASSIGNED",
+                        message: `Task "${taskData.taskName}" is unassigned after being rejected.`,
+                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                        isRead: false,
+                    };
+                    notificationsToSend.push(db.collection('notifications').add(escalationNotification));
+                }
+            }
+        }
+    } else {
+        throw new functions.https.HttpsError('invalid-argument', 'Response must be "accepted" or "rejected".');
+    }
+    
+    await Promise.all(notificationsToSend);
+    return { success: true };
+});
+
 
 // --- HELPER FUNCTION FOR DOUBLE BOOKING DETECTION ---
 const checkForDoubleBooking = async (newBooking, existingBookingId = null) => {
