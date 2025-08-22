@@ -271,16 +271,19 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
     const [checklist, setChecklist] = useState([]);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
 
-    const debouncedUpdate = useCallback(debounce(async (taskId, data) => {
-        const taskRef = doc(db, 'tasks', taskId);
-        try {
-            await updateDoc(taskRef, data);
-            toast.success("Task auto-saved!", { autoClose: 1500, position: "bottom-right" });
-        } catch (error) {
-            console.error("Auto-save failed:", error);
-            toast.error("Failed to save changes.");
-        }
-    }, 1000), []);
+    const debouncedUpdate = useCallback(
+        debounce(async (taskId, data) => {
+            const taskRef = doc(db, 'tasks', taskId);
+            try {
+                await updateDoc(taskRef, data);
+                toast.success("Task auto-saved!", { autoClose: 1500, position: "bottom-right" });
+            } catch (error) {
+                console.error("Auto-save failed:", error);
+                toast.error("Failed to save changes.");
+            }
+        }, 1000),
+        []
+    );
 
     useEffect(() => {
         const taskRef = doc(db, 'tasks', task.id);
