@@ -3,7 +3,6 @@ import { db } from '../../firebase-config';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { SlidersHorizontal } from 'lucide-react';
-import SubscriptionManager from './SubscriptionManager'; // Import the new component
 
 const ALL_FEATURES = [
     { id: 'advancedAnalytics', label: 'Enable Advanced Analytics' },
@@ -50,14 +49,11 @@ const AdminSettingsView = () => {
         <div className="p-4 sm:p-6 md:p-8 space-y-8">
              <header>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Admin Settings</h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">Manage global application settings, feature flags, and subscription plans.</p>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">Manage global application settings and feature flags.</p>
             </header>
 
-            {/* Subscription Manager */}
-            <SubscriptionManager />
-
             {/* Global Feature Flags */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm max-w-2xl">
                 <div className="flex items-center mb-4">
                     <SlidersHorizontal size={20} className="mr-3 text-blue-500" />
                     <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Global Feature Flags</h3>

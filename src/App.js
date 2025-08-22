@@ -21,6 +21,7 @@ import AuditLogView from './components/admin/AuditLogView';
 import BillingView from './components/admin/BillingView';
 import ClientListView from './components/admin/ClientListView';
 import ClientDetailView from './components/admin/ClientDetailView';
+import AdminSubscriptionsView from './components/admin/AdminSubscriptionsView'; // Import the new view
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
@@ -35,7 +36,7 @@ function App() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
-    const [selectedAdminClient, setSelectedAdminClient] = useState(null); // State for admin view
+    const [selectedAdminClient, setSelectedAdminClient] = useState(null);
 
     const { hasPermission, loadingPermissions } = usePermissions(userData);
 
@@ -88,17 +89,15 @@ function App() {
 
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
-        setSelectedAdminClient(null); // Reset selected client when changing main views
+        setSelectedAdminClient(null);
         setActiveView(view);
     };
     
-    // Admin-specific handler to view a client
     const handleSelectAdminClient = (client) => {
         setSelectedAdminClient(client);
     };
     
     const renderActiveView = () => {
-        // --- ADMIN VIEW ROUTING ---
         if (isSuperAdmin) {
             if (selectedAdminClient) {
                 return <ClientDetailView client={selectedAdminClient} onBack={() => setSelectedAdminClient(null)} />;
@@ -110,6 +109,8 @@ function App() {
                     return <ClientListView onSelectClient={handleSelectAdminClient} />;
                 case 'adminBilling':
                     return <BillingView />;
+                case 'adminSubscriptions': // Add this case
+                    return <AdminSubscriptionsView />;
                 case 'adminSettings':
                     return <AdminSettingsView />;
                 case 'adminAuditLog':
@@ -119,7 +120,6 @@ function App() {
             }
         }
 
-        // --- REGULAR USER VIEW ROUTING ---
         if (loadingPermissions) {
             return <div className="flex items-center justify-center h-full"><p className="text-gray-500">Checking permissions...</p></div>;
         }
