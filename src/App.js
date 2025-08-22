@@ -16,7 +16,8 @@ import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
 import ChatLayout from './components/ChatLayout';
 import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
-import AdminSettingsView from './components/admin/AdminSettingsView'; // Import the new settings view
+import AdminSettingsView from './components/admin/AdminSettingsView';
+import AuditLogView from './components/admin/AuditLogView'; // Import the new audit log view
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
@@ -26,7 +27,7 @@ import 'react-toastify/dist/ReactToastify.css';
 function App() {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
-    const [isSuperAdmin, setIsSuperAdmin] = useState(false); // State to track admin status
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
@@ -38,13 +39,12 @@ function App() {
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                // Check for super admin custom claim
                 currentUser.getIdTokenResult().then(idTokenResult => {
                     const claims = idTokenResult.claims;
                     if (claims.superAdmin) {
                         setIsSuperAdmin(true);
-                        setActiveView('adminDashboard'); // Default view for admins
-                        setIsLoading(false); // Super admin can proceed without a user doc
+                        setActiveView('adminDashboard');
+                        setIsLoading(false);
                     } else {
                         setIsSuperAdmin(false);
                     }
@@ -60,7 +60,6 @@ function App() {
     }, []);
 
     useEffect(() => {
-        // This effect should not run for super admins without a user doc
         if (user && !isSuperAdmin) {
             const userDocRef = doc(db, "users", user.uid);
             const unsubscribeSnapshot = onSnapshot(userDocRef,
@@ -94,7 +93,6 @@ function App() {
     };
 
     const renderActiveView = () => {
-        // For super admin, we bypass permission checks for their dashboard
         if (isSuperAdmin) {
              switch (activeView) {
                 case 'adminDashboard':
@@ -103,6 +101,8 @@ function App() {
                     return <SuperAdminDashboard user={user} initialView="clients" />;
                 case 'adminSettings':
                     return <AdminSettingsView />;
+                case 'adminAuditLog':
+                    return <AuditLogView />;
                 default:
                     return <SuperAdminDashboard user={user} />;
             }

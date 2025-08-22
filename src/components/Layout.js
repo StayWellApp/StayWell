@@ -3,7 +3,7 @@ import { auth } from '../firebase-config';
 import { signOut } from 'firebase/auth';
 import {
     LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings,
-    LogOut, Sun, Moon, Bell, ChevronDown, Check, MessageSquare, SlidersHorizontal
+    LogOut, Sun, Moon, Bell, ChevronDown, Check, MessageSquare, SlidersHorizontal, FileClock
 } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 
@@ -147,6 +147,7 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
         { id: 'adminDashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'adminClients', label: 'Clients', icon: Users },
         { id: 'adminSettings', label: 'Settings', icon: SlidersHorizontal },
+        { id: 'adminAuditLog', label: 'Audit Log', icon: FileClock },
     ];
 
     const navLinks = isSuperAdmin ? adminNavLinks : userNavLinks;
