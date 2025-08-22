@@ -25,7 +25,7 @@ const triggerAutomationForBooking = async (bookingDetails) => {
 
     const propertyRef = db.collection('properties').doc(propertyId);
     const rulesRef = db.collection('automationRules').doc(propertyId);
-    
+
     const [propertyDoc, rulesDoc] = await Promise.all([propertyRef.get(), rulesRef.get()]);
 
     if (!propertyDoc.exists) {
@@ -67,7 +67,7 @@ const triggerAutomationForBooking = async (bookingDetails) => {
             checklistTemplateId: rule.checklistTemplateId || '',
             checklistItems: [], // Checklist items will be populated from the template
         };
-        
+
         const taskCreationPromise = db.collection('tasks').add(taskData).then(docRef => {
             // Create notification for the primary assignee
             if (taskData.primaryAssignee) {
@@ -165,7 +165,7 @@ exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
         } else {
             // No fallback or fallback also rejected, notify admins
             await taskRef.update({ status: 'Unassigned', assignmentStatus: 'Rejected' });
-            const adminUsers = [taskData.ownerId, taskData.propertyManagerId, /* another admin role */]; 
+            const adminUsers = [taskData.ownerId, taskData.propertyManagerId, /* another admin role */];
             for (const adminId of adminUsers) {
                 if(adminId) {
                     const escalationNotification = {
@@ -183,7 +183,7 @@ exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
     } else {
         throw new functions.https.HttpsError('invalid-argument', 'Response must be "accepted" or "rejected".');
     }
-    
+
     await Promise.all(notificationsToSend);
     return { success: true };
 });
@@ -292,7 +292,7 @@ exports.reviewTask = functions.https.onCall(async (data, context) => {
 // --- HELPER FUNCTION FOR DOUBLE BOOKING DETECTION ---
 const checkForDoubleBooking = async (newBooking, existingBookingId = null) => {
     functions.logger.log(`Checking for double bookings for property: ${newBooking.propertyId}`);
-    
+
     const bookingsRef = db.collection('bookings');
     const q = bookingsRef
         .where('propertyId', '==', newBooking.propertyId)
@@ -329,7 +329,7 @@ const checkForDoubleBooking = async (newBooking, existingBookingId = null) => {
             isRead: false,
             conflictingBookingIds: [existingBookingId, ...conflictingBookings.map(b => b.id)].filter(Boolean)
         };
-        
+
         await db.collection('notifications').add(notification);
     }
 };
@@ -392,7 +392,7 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
           if (!taskId || !itemIndex || !originalFilename) {
             throw new Error(`Required fields missing. taskId: ${taskId}, itemIndex: ${itemIndex}, originalFilename: ${originalFilename}`);
           }
-          
+
           const bucket = admin.storage().bucket();
           const destination = `proofs/${taskId}/${itemIndex}-${originalFilename}`;
           functions.logger.log(`Attempting to upload to: ${destination}`);
@@ -411,7 +411,7 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
             expires: "03-09-2491",
           });
           functions.logger.log("Signed URL generated successfully.");
-          
+
           // Now, update the checklist item with the photo URL
           const taskRef = db.collection('tasks').doc(taskId);
           const taskDoc = await taskRef.get();
@@ -451,7 +451,7 @@ exports.onBookingReceived = functions.https.onRequest(async (req, res) => {
     try {
       const bookingData = req.body;
       functions.logger.log("Received booking data via webhook:", JSON.stringify(bookingData));
-      
+
       await triggerAutomationForBooking(bookingData);
 
       return res.status(200).send({
@@ -485,7 +485,7 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
                     if (data[k].type === 'VEVENT') {
                         const event = data[k];
                         const bookingId = event.uid.split('@')[0];
-                        
+
                         const bookingData = {
                             propertyId: propertyId,
                             propertyName: property.propertyName,
@@ -495,7 +495,7 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
                             endDate: event.end.toISOString().split('T')[0],
                             syncedAt: admin.firestore.FieldValue.serverTimestamp()
                         };
-                        
+
                         await checkForDoubleBooking(bookingData, bookingId);
 
                         const bookingRef = db.collection('bookings').doc(bookingId);
@@ -532,7 +532,7 @@ exports.addManualBooking = functions.https.onRequest(async (req, res) => {
             }
             const propertyData = propertyDoc.data();
             const bookingId = `manual_${Date.now()}`;
-            
+
             const newBooking = {
                 propertyId: propertyId,
                 propertyName: propertyData.propertyName,
@@ -565,4 +565,39 @@ exports.addManualBooking = functions.https.onRequest(async (req, res) => {
             return res.status(500).send({ status: "error", message: "Internal server error." });
         }
     });
+});
+
+// --- NEW SUPER ADMIN FUNCTION ---
+/**
+ * Creates a custom sign-in token for a given user ID.
+ * This function can only be called by an authenticated user with a `superAdmin` custom claim.
+ */
+exports.createImpersonationToken = functions.https.onCall(async (data, context) => {
+  // 1. Check for authentication and superAdmin claim
+  if (!context.auth || !context.auth.token.superAdmin) {
+    throw new functions.https.HttpsError(
+        "permission-denied",
+        "This function can only be called by a super admin.",
+    );
+  }
+
+  const impersonatedUid = data.uid;
+  if (!impersonatedUid) {
+    throw new functions.https.HttpsError(
+        "invalid-argument",
+        "The function must be called with a 'uid' argument.",
+    );
+  }
+
+  // 2. Generate the custom token for the target user
+  try {
+    const customToken = await admin.auth().createCustomToken(impersonatedUid);
+    return { token: customToken };
+  } catch (error) {
+    console.error("Error creating custom token:", error);
+    throw new functions.https.HttpsError(
+        "internal",
+        "An internal error occurred while creating the impersonation token.",
+    );
+  }
 });
