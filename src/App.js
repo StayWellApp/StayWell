@@ -18,7 +18,7 @@ import ChatLayout from './components/ChatLayout';
 import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
 import AdminSettingsView from './components/admin/AdminSettingsView';
 import AuditLogView from './components/admin/AuditLogView';
-import BillingView from './components/admin/BillingView'; // Import the new billing view
+import BillingView from './components/admin/BillingView';
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
@@ -61,16 +61,18 @@ function App() {
     }, []);
 
     useEffect(() => {
-        if (user && !isSuperAdmin) {
+        if (user) { // This now runs for all users to get their data
             const userDocRef = doc(db, "users", user.uid);
             const unsubscribeSnapshot = onSnapshot(userDocRef,
                 (doc) => {
                     if (doc.exists()) {
                         setUserData(doc.data());
                     } else {
-                        setUserData(null);
+                        setUserData(null); // This is expected for admins without a user doc
                     }
-                    setIsLoading(false);
+                    if (!isSuperAdmin) { // Only set loading false for regular users here
+                        setIsLoading(false);
+                    }
                 },
                 (error) => {
                     console.error("Firestore snapshot error:", error);
@@ -144,7 +146,7 @@ function App() {
             case 'calendar':
                 return hasPermission('tasks_view_all') ? <MasterCalendarView user={user} userData={userData} /> : <StaffDashboard user={user} userData={userData} />;
             case 'settings':
-                 return hasPermission('team_manage') ? <SettingsView user={user} /> : null;
+                 return hasPermission('team_manage') ? <SettingsView user={user} userData={userData} /> : null; // <-- THE FIX IS HERE
             default:
                 if (isSuperAdmin) return <SuperAdminDashboard user={user} />;
                 return hasPermission('properties_view_all')
