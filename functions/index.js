@@ -567,11 +567,7 @@ exports.addManualBooking = functions.https.onRequest(async (req, res) => {
     });
 });
 
-// --- NEW SUPER ADMIN FUNCTION ---
-/**
- * Creates a custom sign-in token for a given user ID.
- * This function can only be called by an authenticated user with a `superAdmin` custom claim.
- */
+// --- SUPER ADMIN FUNCTION ---
 exports.createImpersonationToken = functions.https.onCall(async (data, context) => {
   // 1. Check for authentication and superAdmin claim
   if (!context.auth || !context.auth.token.superAdmin) {
@@ -600,4 +596,35 @@ exports.createImpersonationToken = functions.https.onCall(async (data, context) 
         "An internal error occurred while creating the impersonation token.",
     );
   }
+});
+
+// --- NEW AUDIT LOG FUNCTION ---
+/**
+ * Logs an action taken by a super admin to a dedicated audit collection.
+ */
+exports.logAdminAction = functions.https.onCall(async (data, context) => {
+  if (!context.auth || !context.auth.token.superAdmin) {
+    throw new functions.https.HttpsError(
+        "permission-denied",
+        "This function can only be called by a super admin.",
+    );
+  }
+
+  const adminEmail = context.auth.token.email;
+  const message = data.message;
+
+  if (!message) {
+     throw new functions.https.HttpsError(
+        "invalid-argument",
+        "The function must be called with a 'message' argument.",
+    );
+  }
+
+  await admin.firestore().collection('auditLog').add({
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      adminEmail: adminEmail,
+      action: message,
+  });
+
+  return { success: true };
 });
