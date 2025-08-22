@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
-// CORRECTED: Import Timestamp
 import { collection, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { logAdminAction } from './auditLogUtils';
@@ -39,7 +38,9 @@ const ClientSubscriptionManager = ({ client }) => {
             const newSubscriptionData = newPlanId ? {
                 planId: selectedPlan.id,
                 planName: selectedPlan.name,
-                price: selectedPlan.price,
+                pricePerProperty: selectedPlan.pricePerProperty,
+                teamMemberLimit: selectedPlan.teamMemberLimit,
+                features: selectedPlan.features,
                 status: 'active',
                 assignedAt: Timestamp.now(),
                 renewalDate: Timestamp.fromDate(renewalDate),
@@ -74,16 +75,16 @@ const ClientSubscriptionManager = ({ client }) => {
                         onChange={handleSubscriptionChange}
                         className="mt-1 input-style w-full"
                     >
-                        <option value="">None</option>
+                        <option value="">None (Trial/Suspended)</option>
                         {plans.map(plan => (
                             <option key={plan.id} value={plan.id}>
-                                {plan.name} (${plan.price}/mo)
+                                {plan.name} (€{plan.pricePerProperty}/property)
                             </option>
                         ))}
                     </select>
                 </div>
             )}
-             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Assigning a plan will grant the client access based on its limits.</p>
+             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Assigning a plan will grant the client access based on its features and limits.</p>
         </div>
     );
 };
