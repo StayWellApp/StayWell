@@ -17,7 +17,8 @@ import SettingsView from './components/SettingsView';
 import ChatLayout from './components/ChatLayout';
 import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
 import AdminSettingsView from './components/admin/AdminSettingsView';
-import AuditLogView from './components/admin/AuditLogView'; // Import the new audit log view
+import AuditLogView from './components/admin/AuditLogView';
+import BillingView from './components/admin/BillingView'; // Import the new billing view
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
@@ -99,6 +100,8 @@ function App() {
                     return <SuperAdminDashboard user={user} />;
                 case 'adminClients':
                     return <SuperAdminDashboard user={user} initialView="clients" />;
+                case 'adminBilling':
+                    return <BillingView />;
                 case 'adminSettings':
                     return <AdminSettingsView />;
                 case 'adminAuditLog':
