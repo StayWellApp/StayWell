@@ -15,7 +15,8 @@ import { StorageView } from './components/StorageViews';
 import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
 import ChatLayout from './components/ChatLayout';
-import SuperAdminDashboard from './components/admin/SuperAdminDashboard'; // Import the new dashboard
+import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
+import AdminSettingsView from './components/admin/AdminSettingsView'; // Import the new settings view
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
@@ -99,7 +100,9 @@ function App() {
                 case 'adminDashboard':
                     return <SuperAdminDashboard user={user} />;
                 case 'adminClients':
-                    return <SuperAdminDashboard user={user} initialView="clients" />; // We'll use a prop to show the client list
+                    return <SuperAdminDashboard user={user} initialView="clients" />;
+                case 'adminSettings':
+                    return <AdminSettingsView />;
                 default:
                     return <SuperAdminDashboard user={user} />;
             }
