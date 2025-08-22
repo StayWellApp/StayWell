@@ -1,32 +1,13 @@
-import React, { useState } from 'react';
-import ClientListView from './ClientListView';
-import ClientDetailView from './ClientDetailView';
+import React from 'react';
 import DashboardMetrics from './DashboardMetrics';
 import SubscriptionsEndingSoon from './SubscriptionsEndingSoon';
 import RecentActivity from './RecentActivity';
 import CustomerGrowthChart from './CustomerGrowthChart';
-import NewSignupsPanel from './NewSignupsPanel'; // Import the new panel
+import NewSignupsPanel from './NewSignupsPanel';
 
-const SuperAdminDashboard = ({ user, initialView }) => {
-    const [selectedClient, setSelectedClient] = useState(null);
-
-    const handleSelectClient = (client) => {
-        setSelectedClient(client);
-    };
-
-    const handleBack = () => {
-        setSelectedClient(null);
-    }
-    
-    // Logic to show client list or detail directly
-    if (initialView === 'clients' && !selectedClient) {
-        return <div className="p-4 sm:p-6 md:p-8"><ClientListView onSelectClient={handleSelectClient} /></div>;
-    }
-    if (selectedClient) {
-        return <div className="p-4 sm:p-6 md:p-8"><ClientDetailView client={selectedClient} onBack={handleBack} /></div>;
-    }
-
-    // Default Dashboard View
+// Note: This component is now only the main dashboard view.
+// ClientList and ClientDetail are rendered directly by App.js
+const SuperAdminDashboard = ({ user }) => {
     return (
         <div className="p-4 sm:p-6 md:p-8">
             <header className="mb-8">
@@ -38,8 +19,7 @@ const SuperAdminDashboard = ({ user, initialView }) => {
                 <DashboardMetrics />
                 <CustomerGrowthChart />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Add the new panel to the dashboard */}
-                    <NewSignupsPanel onSelectClient={handleSelectClient} />
+                    <NewSignupsPanel />
                     <SubscriptionsEndingSoon />
                 </div>
                  <RecentActivity />

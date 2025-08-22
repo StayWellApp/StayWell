@@ -19,6 +19,8 @@ import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
 import AdminSettingsView from './components/admin/AdminSettingsView';
 import AuditLogView from './components/admin/AuditLogView';
 import BillingView from './components/admin/BillingView';
+import ClientListView from './components/admin/ClientListView';
+import ClientDetailView from './components/admin/ClientDetailView';
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
@@ -33,6 +35,7 @@ function App() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
+    const [selectedAdminClient, setSelectedAdminClient] = useState(null); // State for admin view
 
     const { hasPermission, loadingPermissions } = usePermissions(userData);
 
@@ -61,16 +64,16 @@ function App() {
     }, []);
 
     useEffect(() => {
-        if (user) { // This now runs for all users to get their data
+        if (user) {
             const userDocRef = doc(db, "users", user.uid);
             const unsubscribeSnapshot = onSnapshot(userDocRef,
                 (doc) => {
                     if (doc.exists()) {
                         setUserData(doc.data());
                     } else {
-                        setUserData(null); // This is expected for admins without a user doc
+                        setUserData(null);
                     }
-                    if (!isSuperAdmin) { // Only set loading false for regular users here
+                    if (!isSuperAdmin) {
                         setIsLoading(false);
                     }
                 },
@@ -83,25 +86,28 @@ function App() {
         }
     }, [user, isSuperAdmin]);
 
-    const handleSelectProperty = (property) => {
-        setSelectedProperty(property);
-        setActiveView('propertyDetail');
-    };
-
     const handleSetActiveView = (view) => {
-        if (selectedProperty) {
-            setSelectedProperty(null);
-        }
+        setSelectedProperty(null);
+        setSelectedAdminClient(null); // Reset selected client when changing main views
         setActiveView(view);
     };
-
+    
+    // Admin-specific handler to view a client
+    const handleSelectAdminClient = (client) => {
+        setSelectedAdminClient(client);
+    };
+    
     const renderActiveView = () => {
+        // --- ADMIN VIEW ROUTING ---
         if (isSuperAdmin) {
-             switch (activeView) {
+            if (selectedAdminClient) {
+                return <ClientDetailView client={selectedAdminClient} onBack={() => setSelectedAdminClient(null)} />;
+            }
+            switch (activeView) {
                 case 'adminDashboard':
                     return <SuperAdminDashboard user={user} />;
                 case 'adminClients':
-                    return <SuperAdminDashboard user={user} initialView="clients" />;
+                    return <ClientListView onSelectClient={handleSelectAdminClient} />;
                 case 'adminBilling':
                     return <BillingView />;
                 case 'adminSettings':
@@ -113,6 +119,7 @@ function App() {
             }
         }
 
+        // --- REGULAR USER VIEW ROUTING ---
         if (loadingPermissions) {
             return <div className="flex items-center justify-center h-full"><p className="text-gray-500">Checking permissions...</p></div>;
         }
@@ -120,10 +127,7 @@ function App() {
         if (selectedProperty) {
             return <PropertyDetailView
                         property={selectedProperty}
-                        onBack={() => {
-                            setSelectedProperty(null);
-                            setActiveView('properties');
-                        }}
+                        onBack={() => { setSelectedProperty(null); setActiveView('properties'); }}
                         user={user}
                     />;
         }
@@ -134,7 +138,7 @@ function App() {
                     ? <ClientDashboard user={user} setActiveView={handleSetActiveView} />
                     : <StaffDashboard user={user} userData={userData} />;
             case 'properties':
-                return <PropertiesView onSelectProperty={handleSelectProperty} user={user} userData={userData} hasPermission={hasPermission} />;
+                return <PropertiesView onSelectProperty={setSelectedProperty} user={user} userData={userData} hasPermission={hasPermission} />;
             case 'chat':
                 return <ChatLayout userData={userData} />;
             case 'team':
@@ -146,9 +150,8 @@ function App() {
             case 'calendar':
                 return hasPermission('tasks_view_all') ? <MasterCalendarView user={user} userData={userData} /> : <StaffDashboard user={user} userData={userData} />;
             case 'settings':
-                 return hasPermission('team_manage') ? <SettingsView user={user} userData={userData} /> : null; // <-- THE FIX IS HERE
+                 return hasPermission('team_manage') ? <SettingsView user={user} userData={userData} /> : null;
             default:
-                if (isSuperAdmin) return <SuperAdminDashboard user={user} />;
                 return hasPermission('properties_view_all')
                     ? <ClientDashboard user={user} setActiveView={handleSetActiveView} />
                     : <StaffDashboard user={user} userData={userData} />;
@@ -191,7 +194,6 @@ function App() {
                     </button>
                 </div>
             )}
-
         </ThemeProvider>
     );
 }
