@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ClientListView from './ClientListView';
 import ClientDetailView from './ClientDetailView';
+import DashboardMetrics from './DashboardMetrics'; // Import the new component
 
 const SuperAdminDashboard = ({ user }) => {
     const [selectedClient, setSelectedClient] = useState(null);
@@ -20,11 +21,15 @@ const SuperAdminDashboard = ({ user }) => {
                 <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome, {user.email}.</p>
             </header>
 
-            <main>
+            <main className="space-y-8">
                 {selectedClient ? (
                     <ClientDetailView client={selectedClient} onBack={handleBackToList} />
                 ) : (
-                    <ClientListView onSelectClient={handleSelectClient} />
+                    <>
+                        {/* Add the metrics component here */}
+                        <DashboardMetrics />
+                        <ClientListView onSelectClient={handleSelectClient} />
+                    </>
                 )}
             </main>
         </div>
