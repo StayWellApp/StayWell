@@ -13,17 +13,17 @@ service cloud.firestore {
       allow read: if request.auth.token.superAdmin == true;
       allow write, create: if request.auth.uid == userId;
     }
-
-    // Super Admins can manage global app settings and subscription plans
     match /appSettings/{docId} {
       allow read, write: if request.auth.token.superAdmin == true;
     }
     match /subscriptionPlans/{planId} {
       allow read, write: if request.auth.token.superAdmin == true;
     }
+    match /auditLog/{logId} {
+      allow read: if request.auth.token.superAdmin == true;
+    }
 
     // == USER DATA RULES ==
-    // ... (rest of the user rules are unchanged)
     function isOwner(resource) {
       return request.auth.uid == resource.data.ownerId;
     }
@@ -35,7 +35,6 @@ service cloud.firestore {
     }
 
     // == PROPERTY & TASK RULES ==
-    // ... (rest of the property and task rules are unchanged)
     match /properties/{propertyId} {
       allow read, write: if isOwner(resource);
     }
