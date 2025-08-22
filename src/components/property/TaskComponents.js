@@ -1,6 +1,3 @@
-// src/components/property/TaskComponents.js
-// FINAL CORRECTED FILE
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { db, storage } from '../../firebase-config';
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
@@ -9,7 +6,67 @@ import { Trash2, Plus, MessageSquare, ListChecks, Info, Image, ChevronDown, Repe
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
 
-// --- NEW: Advanced Recurring Settings Component ---
+// --- NEW (MERGED): Task Summary Card for Lists ---
+// Use this component in PropertyTasksView.js to list all tasks.
+// The `onTaskClick` prop should open the TaskDetailModal for the clicked task.
+export const TaskCard = ({ task, onTaskClick }) => {
+    const getPriorityPill = (priority) => {
+        switch (priority) {
+            case 'High': return 'bg-red-100 text-red-800 border-red-200';
+            case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'Low': return 'bg-green-100 text-green-800 border-green-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
+
+    const getStatusPill = (status) => {
+        switch (status) {
+          case 'Pending': return 'bg-yellow-200 text-yellow-800';
+          case 'In Progress': return 'bg-indigo-200 text-indigo-800';
+          case 'Completed':
+          case 'Approved': return 'bg-green-200 text-green-800';
+          case 'Pending Inspection': return 'bg-blue-200 text-blue-800';
+          case 'Requires Revisions': return 'bg-red-200 text-red-800';
+          default: return 'bg-gray-200 text-gray-800';
+        }
+    };
+    
+    return (
+        <div 
+            onClick={() => onTaskClick(task)} 
+            className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4 mb-4 border dark:border-gray-700 hover:shadow-md hover:border-blue-500 dark:hover:border-blue-500 transition-all cursor-pointer"
+        >
+            <div className="flex justify-between items-start">
+                <div className="flex-grow">
+                    <div className="flex items-center gap-2">
+                        {task.recurring?.enabled && <Repeat size={14} className="text-gray-400" title="Recurring Task" />}
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">{task.taskName}</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate w-full max-w-md">{task.description}</p>
+                </div>
+                <div className="flex flex-col items-end flex-shrink-0 ml-4">
+                     <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusPill(task.status)}`}>
+                        {task.status}
+                    </span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        Due: {task.scheduledDate || 'Not set'}
+                    </p>
+                </div>
+            </div>
+            <div className="flex items-center justify-between mt-4 pt-3 border-t dark:border-gray-700">
+                <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${getPriorityPill(task.priority)}`}>{task.priority} Priority</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">|</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Assignee: {task.assignedToEmail || 'Unassigned'}</span>
+                </div>
+                 <div className="text-xs text-gray-500 dark:text-gray-400">Click to view details</div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Advanced Recurring Settings Component ---
 const RecurringSettings = ({ recurringConfig, setRecurringConfig }) => {
     const handleFrequencyChange = (e) => {
         const newFrequency = e.target.value;
@@ -213,7 +270,6 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
     const [checklist, setChecklist] = useState([]);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
 
-    // FIXED: Function is now defined inline within useCallback
     const debouncedUpdate = useCallback(debounce(async (taskId, data) => {
         const taskRef = doc(db, 'tasks', taskId);
         try {
