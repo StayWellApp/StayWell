@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
+// CORRECTED: Import Timestamp
 import { collection, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { logAdminAction } from './auditLogUtils';
@@ -32,7 +33,6 @@ const ClientSubscriptionManager = ({ client }) => {
         try {
             const clientDocRef = doc(db, 'users', client.id);
             
-            // Calculate next renewal date (30 days from now)
             const renewalDate = new Date();
             renewalDate.setDate(renewalDate.getDate() + 30);
 
@@ -42,7 +42,7 @@ const ClientSubscriptionManager = ({ client }) => {
                 price: selectedPlan.price,
                 status: 'active',
                 assignedAt: Timestamp.now(),
-                renewalDate: Timestamp.fromDate(renewalDate), // Add renewal date
+                renewalDate: Timestamp.fromDate(renewalDate),
             } : null;
 
             await updateDoc(clientDocRef, {

@@ -5,7 +5,8 @@ const logAdminActionCallable = httpsCallable(functions, 'logAdminAction');
 
 export const logAdminAction = async (message) => {
     try {
-        await logAdminActionCallable({ message });
+        // CORRECTED: Pass the message inside an object with the key 'message'
+        await logAdminActionCallable({ message: message });
     } catch (error) {
         console.error("Failed to log admin action:", error);
         // We typically don't show an error toast for this,
