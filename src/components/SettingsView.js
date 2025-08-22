@@ -5,9 +5,10 @@ import { doc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, s
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { toast } from 'react-toastify';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, Upload } from 'lucide-react';
+import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, Upload, CreditCard } from 'lucide-react';
 import { PERMISSION_CATEGORIES, INITIAL_PERMISSIONS_STATE, STANDARD_ROLES } from '../config/permissions';
 import CustomSelect from './CustomSelect';
+import SubscriptionPanel from './SubscriptionPanel'; // Import the new panel
 
 // --- Reusable Components for the Tabbed Layout ---
 const SettingsTab = ({ id, label, icon: Icon, activeTab, setActiveTab }) => (
@@ -321,7 +322,7 @@ const NotificationToggle = ({ id, label, checked, onChange }) => (
 );
 
 // --- Main Settings View Component ---
-const SettingsView = ({ user }) => {
+const SettingsView = ({ user, userData }) => {
     const [activeTab, setActiveTab] = useState('profile');
     const [profileName, setProfileName] = useState(user.displayName || '');
     const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -457,6 +458,7 @@ const SettingsView = ({ user }) => {
                 <aside className="md:w-1/4 lg:w-1/5">
                     <nav className="space-y-1">
                         <SettingsTab id="profile" label="Profile" icon={User} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <SettingsTab id="subscription" label="Subscription" icon={CreditCard} activeTab={activeTab} setActiveTab={setActiveTab} />
                         <SettingsTab id="roles" label="Roles & Permissions" icon={Shield} activeTab={activeTab} setActiveTab={setActiveTab} />
                         <SettingsTab id="appearance" label="Appearance" icon={Palette} activeTab={activeTab} setActiveTab={setActiveTab} />
                         <SettingsTab id="notifications" label="Notifications" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -507,6 +509,11 @@ const SettingsView = ({ user }) => {
                                     </div>
                                 </form>
                             </div>
+                        </SettingsPanel>
+                    )}
+                    {activeTab === 'subscription' && (
+                        <SettingsPanel title="Subscription & Billing">
+                           <SubscriptionPanel user={user} userData={userData} />
                         </SettingsPanel>
                     )}
                     {activeTab === 'roles' && <RolesPanel user={user} />}

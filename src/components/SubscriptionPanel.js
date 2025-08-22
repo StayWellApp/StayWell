@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { CreditCard, CheckCircle } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 
 const SubscriptionPanel = ({ user, userData }) => {
     const [propertyCount, setPropertyCount] = useState(0);
@@ -33,7 +33,7 @@ const SubscriptionPanel = ({ user, userData }) => {
         );
     };
 
-    if (!subscription) {
+    if (!subscription || subscription.status !== 'active') {
         return (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg border border-yellow-200 dark:border-yellow-500/30">
                 <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300">No Active Subscription</h3>
