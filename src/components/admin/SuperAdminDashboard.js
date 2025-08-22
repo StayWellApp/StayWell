@@ -1,46 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import ClientListView from './ClientListView';
 import ClientDetailView from './ClientDetailView';
 import DashboardMetrics from './DashboardMetrics';
+import SubscriptionsEndingSoon from './SubscriptionsEndingSoon'; // Import new panel
+import RecentActivity from './RecentActivity'; // Import new panel
 
 const SuperAdminDashboard = ({ user, initialView }) => {
     const [selectedClient, setSelectedClient] = useState(null);
-    const [currentView, setCurrentView] = useState('dashboard');
 
-    useEffect(() => {
-        if (initialView === 'clients') {
-            setCurrentView('clients');
-        }
-    }, [initialView]);
-
-    const handleSelectClient = (client) => {
-        setSelectedClient(client);
-        setCurrentView('clientDetail');
-    };
-
-    const handleBackToList = () => {
-        setSelectedClient(null);
-        setCurrentView('clients');
-    };
-
-    const renderContent = () => {
-        if (selectedClient) {
-            return <ClientDetailView client={selectedClient} onBack={handleBackToList} />;
-        }
-        // This is not a great way to handle routing, but works for now.
-        // We can refactor this later if needed.
-        if (initialView === 'clients') {
-            return <ClientListView onSelectClient={handleSelectClient} />;
-        }
-        
+    // Simplified view logic
+    if (initialView === 'clients' && !selectedClient) {
         return (
-            <>
-                <DashboardMetrics />
-                <ClientListView onSelectClient={handleSelectClient} />
-            </>
+            <div className="p-4 sm:p-6 md:p-8">
+                <ClientListView onSelectClient={setSelectedClient} />
+            </div>
         );
-    };
+    }
+    
+    if (selectedClient) {
+        return (
+            <div className="p-4 sm:p-6 md:p-8">
+                <ClientDetailView client={selectedClient} onBack={() => setSelectedClient(null)} />
+            </div>
+        );
+    }
 
+    // Default Dashboard View
     return (
         <div className="p-4 sm:p-6 md:p-8">
             <header className="mb-8">
@@ -49,7 +34,11 @@ const SuperAdminDashboard = ({ user, initialView }) => {
             </header>
 
             <main className="space-y-8">
-                {renderContent()}
+                <DashboardMetrics />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <SubscriptionsEndingSoon />
+                    <RecentActivity />
+                </div>
             </main>
         </div>
     );

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { logAdminAction } from './auditLogUtils'; // We will create this next
+import { logAdminAction } from './auditLogUtils';
 
 const ClientSubscriptionManager = ({ client }) => {
     const [plans, setPlans] = useState([]);
@@ -31,18 +31,24 @@ const ClientSubscriptionManager = ({ client }) => {
         const toastId = toast.loading("Updating client subscription...");
         try {
             const clientDocRef = doc(db, 'users', client.id);
+            
+            // Calculate next renewal date (30 days from now)
+            const renewalDate = new Date();
+            renewalDate.setDate(renewalDate.getDate() + 30);
+
             const newSubscriptionData = newPlanId ? {
                 planId: selectedPlan.id,
                 planName: selectedPlan.name,
                 price: selectedPlan.price,
                 status: 'active',
-            } : null; // Set to null if "None" is selected
+                assignedAt: Timestamp.now(),
+                renewalDate: Timestamp.fromDate(renewalDate), // Add renewal date
+            } : null;
 
             await updateDoc(clientDocRef, {
                 subscription: newSubscriptionData
             });
             
-            // Log this important action
             const message = newPlanId
                 ? `Assigned plan "${selectedPlan.name}" to client ${client.email}.`
                 : `Removed subscription from client ${client.email}.`;
@@ -52,7 +58,7 @@ const ClientSubscriptionManager = ({ client }) => {
         } catch (error) {
             console.error("Error updating subscription:", error);
             toast.update(toastId, { render: "Failed to update subscription.", type: "error", isLoading: false, autoClose: 5000 });
-            setSelectedPlanId(client.subscription?.planId || ''); // Revert on error
+            setSelectedPlanId(client.subscription?.planId || '');
         }
     };
 
