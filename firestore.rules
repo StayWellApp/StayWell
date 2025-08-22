@@ -4,65 +4,56 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Default Deny: By default, no one can access anything.
-    // We will grant access specifically below.
     match /{document=**} {
       allow read, write: if false;
     }
 
     // == SUPER ADMIN RULES ==
-    // Super Admins can read all user data for the admin dashboard.
-    // They cannot write to user documents to prevent accidental changes.
     match /users/{userId} {
       allow read: if request.auth.token.superAdmin == true;
-      allow write, create: if request.auth.uid == userId; // Users can create/update their own doc
+      allow write, create: if request.auth.uid == userId;
+    }
+
+    // Super Admins can manage global app settings and subscription plans
+    match /appSettings/{docId} {
+      allow read, write: if request.auth.token.superAdmin == true;
+    }
+    match /subscriptionPlans/{planId} {
+      allow read, write: if request.auth.token.superAdmin == true;
     }
 
     // == USER DATA RULES ==
-
-    // Users can only access their own userSettings document.
-    match /userSettings/{userId} {
-        allow read, write: if request.auth.uid == userId;
-    }
-
-    // Users can only access their own custom roles.
-    match /customRoles/{roleId} {
-        allow read, write: if request.auth.uid == resource.data.ownerId;
-    }
-
-    // == PROPERTY & TASK RULES ==
-    // A user can access a document if they are the owner.
-    // This applies to properties, bookings, storage locations, and checklists.
+    // ... (rest of the user rules are unchanged)
     function isOwner(resource) {
       return request.auth.uid == resource.data.ownerId;
     }
+    match /userSettings/{userId} {
+        allow read, write: if request.auth.uid == userId;
+    }
+    match /customRoles/{roleId} {
+        allow read, write: if isOwner(resource);
+    }
 
+    // == PROPERTY & TASK RULES ==
+    // ... (rest of the property and task rules are unchanged)
     match /properties/{propertyId} {
       allow read, write: if isOwner(resource);
     }
-
     match /bookings/{bookingId} {
       allow read, write: if isOwner(resource);
     }
-    
     match /storageLocations/{locationId} {
         allow read, write: if isOwner(resource);
     }
-    
     match /storageLocations/{locationId}/supplies/{supplyId} {
-        // To access a subcollection, the user must have access to the parent document.
         allow read, write: if get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid;
     }
-
     match /checklistTemplates/{templateId} {
         allow read, write: if isOwner(resource);
     }
-
-    // For tasks, either the owner or the person assigned the task can access it.
     match /tasks/{taskId} {
       allow read, write: if isOwner(resource) || request.auth.uid == resource.data.assignedTo;
     }
-    
-    // For task comments, anyone who can read the parent task can read/write comments.
     match /tasks/{taskId}/comments/{commentId} {
         allow read, create: if get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid || get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
     }
