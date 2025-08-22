@@ -43,6 +43,7 @@ function App() {
                     if (claims.superAdmin) {
                         setIsSuperAdmin(true);
                         setActiveView('adminDashboard'); // Default view for admins
+                        setIsLoading(false); // Super admin can proceed without a user doc
                     } else {
                         setIsSuperAdmin(false);
                     }
@@ -58,7 +59,8 @@ function App() {
     }, []);
 
     useEffect(() => {
-        if (user) {
+        // This effect should not run for super admins without a user doc
+        if (user && !isSuperAdmin) {
             const userDocRef = doc(db, "users", user.uid);
             const unsubscribeSnapshot = onSnapshot(userDocRef,
                 (doc) => {
@@ -76,7 +78,7 @@ function App() {
             );
             return () => unsubscribeSnapshot();
         }
-    }, [user]);
+    }, [user, isSuperAdmin]);
 
     const handleSelectProperty = (property) => {
         setSelectedProperty(property);
@@ -91,6 +93,11 @@ function App() {
     };
 
     const renderActiveView = () => {
+        // For super admin, we bypass permission checks for their dashboard
+        if (activeView === 'adminDashboard' && isSuperAdmin) {
+            return <SuperAdminDashboard user={user} />;
+        }
+
         if (loadingPermissions) {
             return <div className="flex items-center justify-center h-full"><p className="text-gray-500">Checking permissions...</p></div>;
         }
@@ -107,8 +114,6 @@ function App() {
         }
 
         switch (activeView) {
-            case 'adminDashboard': // New case for the admin view
-                return isSuperAdmin ? <SuperAdminDashboard user={user} /> : null;
             case 'dashboard':
                 return hasPermission('properties_view_all') || hasPermission('team_manage')
                     ? <ClientDashboard user={user} setActiveView={handleSetActiveView} />
@@ -128,6 +133,8 @@ function App() {
             case 'settings':
                  return hasPermission('team_manage') ? <SettingsView user={user} /> : null;
             default:
+                // If a super admin somehow ends up on a non-admin view, send them back.
+                if (isSuperAdmin) return <SuperAdminDashboard user={user} />;
                 return hasPermission('properties_view_all')
                     ? <ClientDashboard user={user} setActiveView={handleSetActiveView} />
                     : <StaffDashboard user={user} userData={userData} />;
@@ -152,7 +159,8 @@ function App() {
         );
     }
 
-    if (loadingPermissions || !userData) {
+    // Corrected loading check for regular users
+    if (!isSuperAdmin && (loadingPermissions || !userData)) {
         return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading User Profile...</p></div>;
     }
 
@@ -160,16 +168,19 @@ function App() {
         <ThemeProvider>
             <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
 
-            <Layout user={user} userData={{ ...userData, isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
+            {/* Provide a default object for userData if it's null (for super admin) */}
+            <Layout user={user} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
                 {renderActiveView()}
             </Layout>
 
-            {/* Floating button now sets the active view to 'chat' */}
-            <div className="fixed bottom-4 right-4 z-50">
-                <button onClick={() => setActiveView('chat')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
-                    <MessageSquare size={24} />
-                </button>
-            </div>
+            {/* Do not show the chat button for super admins */}
+            {!isSuperAdmin && (
+                <div className="fixed bottom-4 right-4 z-50">
+                    <button onClick={() => setActiveView('chat')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
+                        <MessageSquare size={24} />
+                    </button>
+                </div>
+            )}
 
         </ThemeProvider>
     );
