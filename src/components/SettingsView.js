@@ -1,11 +1,11 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { db, storage, auth } from '../firebase-config';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { toast } from 'react-toastify';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, ImageIcon, Upload } from 'lucide-react';
+import { User, Shield, Palette, Bell, AlertCircle, Plus, Trash2, Edit, Globe, Upload } from 'lucide-react';
 import { PERMISSION_CATEGORIES, INITIAL_PERMISSIONS_STATE, STANDARD_ROLES } from '../config/permissions';
 import CustomSelect from './CustomSelect';
 

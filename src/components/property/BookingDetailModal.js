@@ -3,7 +3,7 @@ import React from 'react';
 import { db } from '../../firebase-config';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { Trash2, X, Calendar, User, Home } from 'lucide-react';
+import { Trash2, Calendar, User, Home } from 'lucide-react';
 
 export const BookingDetailModal = ({ booking, onClose }) => {
     if (!booking) return null;
