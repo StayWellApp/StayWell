@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { db, storage } from '../../firebase-config';
 // CORRECTED IMPORT PATH
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
@@ -271,7 +271,7 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
     const [checklist, setChecklist] = useState([]);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
 
-    const debouncedUpdate = useCallback(
+    const debouncedUpdate = useMemo(() =>
         debounce(async (taskId, data) => {
             const taskRef = doc(db, 'tasks', taskId);
             try {
@@ -282,8 +282,14 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
                 toast.error("Failed to save changes.");
             }
         }, 1000),
-        []
-    );
+    []);
+
+    useEffect(() => {
+        // Cleanup function to cancel the debounced call if the component unmounts
+        return () => {
+            debouncedUpdate.cancel();
+        };
+    }, [debouncedUpdate]);
 
     useEffect(() => {
         const taskRef = doc(db, 'tasks', task.id);
