@@ -3,7 +3,7 @@ import { auth } from '../firebase-config';
 import { signOut } from 'firebase/auth';
 import {
     LayoutDashboard, Building, ListChecks, Calendar, Users, Archive, Settings,
-    LogOut, Sun, Moon, Bell, ChevronDown, Check, MessageSquare, SlidersHorizontal, FileClock, DollarSign
+    LogOut, Sun, Moon, Bell, ChevronDown, Check, MessageSquare, SlidersHorizontal, FileClock, DollarSign, CreditCard
 } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 
@@ -143,10 +143,11 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
         ...(hasPermission('storage_view') ? [{ id: 'storage', label: 'Storage', icon: Archive }] : []),
     ];
 
-    const adminNavLinks = [
+  const adminNavLinks = [
         { id: 'adminDashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'adminClients', label: 'Clients', icon: Users },
         { id: 'adminBilling', label: 'Billing', icon: DollarSign },
+        { id: 'adminSubscriptions', label: 'Subscriptions', icon: CreditCard }, // New link
         { id: 'adminSettings', label: 'Settings', icon: SlidersHorizontal },
         { id: 'adminAuditLog', label: 'Audit Log', icon: FileClock },
     ];
