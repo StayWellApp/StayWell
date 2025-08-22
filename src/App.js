@@ -94,8 +94,15 @@ function App() {
 
     const renderActiveView = () => {
         // For super admin, we bypass permission checks for their dashboard
-        if (activeView === 'adminDashboard' && isSuperAdmin) {
-            return <SuperAdminDashboard user={user} />;
+        if (isSuperAdmin) {
+             switch (activeView) {
+                case 'adminDashboard':
+                    return <SuperAdminDashboard user={user} />;
+                case 'adminClients':
+                    return <SuperAdminDashboard user={user} initialView="clients" />; // We'll use a prop to show the client list
+                default:
+                    return <SuperAdminDashboard user={user} />;
+            }
         }
 
         if (loadingPermissions) {
@@ -133,7 +140,6 @@ function App() {
             case 'settings':
                  return hasPermission('team_manage') ? <SettingsView user={user} /> : null;
             default:
-                // If a super admin somehow ends up on a non-admin view, send them back.
                 if (isSuperAdmin) return <SuperAdminDashboard user={user} />;
                 return hasPermission('properties_view_all')
                     ? <ClientDashboard user={user} setActiveView={handleSetActiveView} />
@@ -159,7 +165,6 @@ function App() {
         );
     }
 
-    // Corrected loading check for regular users
     if (!isSuperAdmin && (loadingPermissions || !userData)) {
         return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading User Profile...</p></div>;
     }
@@ -167,13 +172,10 @@ function App() {
     return (
         <ThemeProvider>
             <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
-
-            {/* Provide a default object for userData if it's null (for super admin) */}
             <Layout user={user} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
                 {renderActiveView()}
             </Layout>
 
-            {/* Do not show the chat button for super admins */}
             {!isSuperAdmin && (
                 <div className="fixed bottom-4 right-4 z-50">
                     <button onClick={() => setActiveView('chat')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">

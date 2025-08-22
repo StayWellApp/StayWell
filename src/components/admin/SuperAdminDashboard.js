@@ -1,17 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ClientListView from './ClientListView';
 import ClientDetailView from './ClientDetailView';
-import DashboardMetrics from './DashboardMetrics'; // Import the new component
+import DashboardMetrics from './DashboardMetrics';
 
-const SuperAdminDashboard = ({ user }) => {
+const SuperAdminDashboard = ({ user, initialView }) => {
     const [selectedClient, setSelectedClient] = useState(null);
+    const [currentView, setCurrentView] = useState('dashboard');
+
+    useEffect(() => {
+        if (initialView === 'clients') {
+            setCurrentView('clients');
+        }
+    }, [initialView]);
 
     const handleSelectClient = (client) => {
         setSelectedClient(client);
+        setCurrentView('clientDetail');
     };
 
     const handleBackToList = () => {
         setSelectedClient(null);
+        setCurrentView('clients');
+    };
+
+    const renderContent = () => {
+        if (selectedClient) {
+            return <ClientDetailView client={selectedClient} onBack={handleBackToList} />;
+        }
+        // This is not a great way to handle routing, but works for now.
+        // We can refactor this later if needed.
+        if (initialView === 'clients') {
+            return <ClientListView onSelectClient={handleSelectClient} />;
+        }
+        
+        return (
+            <>
+                <DashboardMetrics />
+                <ClientListView onSelectClient={handleSelectClient} />
+            </>
+        );
     };
 
     return (
@@ -22,15 +49,7 @@ const SuperAdminDashboard = ({ user }) => {
             </header>
 
             <main className="space-y-8">
-                {selectedClient ? (
-                    <ClientDetailView client={selectedClient} onBack={handleBackToList} />
-                ) : (
-                    <>
-                        {/* Add the metrics component here */}
-                        <DashboardMetrics />
-                        <ClientListView onSelectClient={handleSelectClient} />
-                    </>
-                )}
+                {renderContent()}
             </main>
         </div>
     );

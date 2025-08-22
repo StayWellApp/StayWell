@@ -6,6 +6,8 @@ import {
     LogOut, Sun, Moon, Bell, ChevronDown, Check, MessageSquare // Import MessageSquare
 } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
+import Sidebar from './Sidebar';
+import AdminSidebar from './admin/AdminSidebar'; // Import the new admin sideba
 
 // Helper hook to detect clicks outside a component
 const useClickOutside = (ref, handler) => {
@@ -172,6 +174,37 @@ const Layout = ({ children, user, userData, activeView, setActiveView, hasPermis
                     {children}
                 </main>
             </div>
+        </div>
+    );
+};
+
+const Layout = ({ user, userData, activeView, setActiveView, hasPermission, children }) => {
+    // Check if the user is a super admin from the userData prop
+    const isSuperAdmin = userData?.isSuperAdmin;
+
+    return (
+        <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+            {isSuperAdmin ? (
+                // Render Admin Layout
+                <>
+                    <AdminSidebar activeView={activeView} setActiveView={setActiveView} />
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                            {children}
+                        </main>
+                    </div>
+                </>
+            ) : (
+                // Render Regular User Layout
+                <>
+                    <Sidebar user={user} userData={userData} activeView={activeView} setActiveView={setActiveView} hasPermission={hasPermission} />
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                            {children}
+                        </main>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
