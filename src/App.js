@@ -1,6 +1,5 @@
 // staywellapp/staywell/StayWell-70115a3c7a3657dd4709bca4cc01a8d068f44fe5/src/App.js
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from "firebase/firestore";
@@ -24,16 +23,14 @@ import BillingView from './components/admin/BillingView';
 import ClientListView from './components/admin/ClientListView';
 import ClientDetailView from './components/admin/ClientDetailView';
 import AdminSubscriptionsView from './components/admin/AdminSubscriptionsView';
-import ImpersonationBanner from './components/ImpersonationBanner'; // This path is correct
-import ImpersonateLogin from './components/ImpersonateLogin'; // CORRECTED PATH
+import EndImpersonationBanner from './components/EndImpersonationBanner'; // <-- IMPORT THE CORRECT BANNER
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// AppContent component remains the same...
-const AppContent = () => {
+function App() {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -42,7 +39,6 @@ const AppContent = () => {
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
     const [selectedAdminClient, setSelectedAdminClient] = useState(null);
-
     const { hasPermission, loadingPermissions } = usePermissions(userData);
 
     useEffect(() => {
@@ -53,8 +49,10 @@ const AppContent = () => {
                     const claims = idTokenResult.claims;
                     if (claims.superAdmin) {
                         setIsSuperAdmin(true);
-                        setActiveView('adminDashboard');
-                        setIsLoading(false);
+                        // Prevents view from resetting when admin logs back in
+                        if (!localStorage.getItem('impersonating_admin_uid')) {
+                           setActiveView('adminDashboard');
+                        }
                     } else {
                         setIsSuperAdmin(false);
                     }
@@ -63,8 +61,8 @@ const AppContent = () => {
                 setUser(null);
                 setUserData(null);
                 setIsSuperAdmin(false);
-                setIsLoading(false);
             }
+            setIsLoading(false);
         });
         return () => unsubscribeAuth();
     }, []);
@@ -72,25 +70,14 @@ const AppContent = () => {
     useEffect(() => {
         if (user) {
             const userDocRef = doc(db, "users", user.uid);
-            const unsubscribeSnapshot = onSnapshot(userDocRef,
-                (doc) => {
-                    if (doc.exists()) {
-                        setUserData(doc.data());
-                    } else {
-                        setUserData(null);
-                    }
-                    if (!isSuperAdmin) {
-                        setIsLoading(false);
-                    }
-                },
-                (error) => {
-                    console.error("Firestore snapshot error:", error);
-                    setIsLoading(false);
-                }
-            );
+            const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
+                setUserData(doc.exists() ? doc.data() : null);
+            }, (error) => {
+                console.error("Firestore snapshot error:", error);
+            });
             return () => unsubscribeSnapshot();
         }
-    }, [user, isSuperAdmin]);
+    }, [user]);
 
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
@@ -148,6 +135,8 @@ const AppContent = () => {
         }
     };
 
+    const isImpersonating = !!localStorage.getItem('impersonating_admin_uid');
+
     if (isLoading) {
         return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading StayWell...</p></div>;
     }
@@ -165,44 +154,26 @@ const AppContent = () => {
         );
     }
 
-    if (!isSuperAdmin && (loadingPermissions || !userData)) {
+    if (!isSuperAdmin && !isImpersonating && (loadingPermissions || !userData)) {
         return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading User Profile...</p></div>;
     }
 
     return (
-        <>
-            <Layout user={user} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
-                {renderActiveView()}
-            </Layout>
-
-            {!isSuperAdmin && (
-                <div className="fixed bottom-4 right-4 z-50">
-                    <button onClick={() => setActiveView('chat')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
-                        <MessageSquare size={24} />
-                    </button>
-                </div>
-            )}
-        </>
-    );
-};
-
-
-// Main App component remains the same...
-function App() {
-    const isImpersonating = sessionStorage.getItem('isImpersonating') === 'true';
-
-    return (
         <ThemeProvider>
             <ToastContainer position="bottom-center" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
-            <Router>
-                <ImpersonationBanner />
-                <div className={isImpersonating ? 'pt-10' : ''}>
-                    <Routes>
-                        <Route path="/auth/impersonate" element={<ImpersonateLogin />} />
-                        <Route path="/*" element={<AppContent />} />
-                    </Routes>
-                </div>
-            </Router>
+            <EndImpersonationBanner />
+            <div className={isImpersonating ? 'pt-10' : ''}>
+                <Layout user={user} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
+                    {renderActiveView()}
+                </Layout>
+                {!isSuperAdmin && (
+                    <div className="fixed bottom-4 right-4 z-50">
+                        <button onClick={() => setActiveView('chat')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
+                            <MessageSquare size={24} />
+                        </button>
+                    </div>
+                )}
+            </div>
         </ThemeProvider>
     );
 }
