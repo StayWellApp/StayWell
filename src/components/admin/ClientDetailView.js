@@ -1,19 +1,14 @@
 import React from 'react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import { ArrowLeft, UserCheck } from 'lucide-react';
 import FeatureFlagManager from './FeatureFlagManager';
-import ClientSubscriptionManager from './ClientSubscriptionManager'; // Import the new component
+import ClientSubscriptionManager from './ClientSubscriptionManager';
 
 const ClientDetailView = ({ client, onBack }) => {
     if (!client) return null;
 
     const handleImpersonate = async () => {
-        if (!window.confirm(`Are you sure you want to log in as ${client.email}? You will be logged out of your admin account.`)) {
-            return;
-        }
-
         const toastId = toast.loading("Generating impersonation session...");
         try {
             const functions = getFunctions();
@@ -22,17 +17,17 @@ const ClientDetailView = ({ client, onBack }) => {
             const result = await createImpersonationToken({ uid: client.id });
             const token = result.data.token;
 
-            const auth = getAuth();
-            await signInWithCustomToken(auth, token);
+            // Store the token in sessionStorage to be picked up by the new tab
+            sessionStorage.setItem('impersonationToken', token);
+
+            // Open the impersonation login route in a new tab
+            window.open('/auth/impersonate', '_blank');
             
-            toast.update(toastId, { render: "Successfully signed in as client!", type: "success", isLoading: false, autoClose: 3000 });
-            // The onAuthStateChanged listener in App.js will handle the redirect.
-            // You may need to manually reload if it doesn't happen automatically.
-            window.location.reload();
+            toast.update(toastId, { render: "Impersonation tab opened successfully!", type: "success", isLoading: false, autoClose: 3000 });
 
         } catch (error) {
             console.error("Impersonation failed:", error);
-            toast.update(toastId, { render: `Impersonation failed: ${error.message}`, type: "error", isLoading: false, autoClose: 5000 });
+            toast.update(toastId, { render: `Failed to start session: ${error.message}`, type: "error", isLoading: false, autoClose: 5000 });
         }
     };
 
@@ -61,7 +56,7 @@ const ClientDetailView = ({ client, onBack }) => {
                                 <UserCheck size={16} className="mr-2" />
                                 Impersonate User
                             </button>
-                             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">Log in as this user to troubleshoot issues.</p>
+                             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">Log in as this user in a new tab to troubleshoot issues.</p>
                         </div>
                     </div>
                 </div>
