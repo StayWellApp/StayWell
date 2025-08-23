@@ -628,3 +628,75 @@ exports.logAdminAction = functions.https.onCall(async (data, context) => {
 
   return { success: true };
 });
+
+// staywellapp/staywell/StayWell-70115a3c7a3657dd4709bca4cc01a8d068f44fe5/functions/index.js
+
+// ... (existing code)
+
+// --- SEND WELCOME EMAIL ---
+// This is a placeholder for your actual email sending logic (e.g., using SendGrid, Mailgun)
+const sendWelcomeEmail = async (email, companyName) => {
+    functions.logger.log(`Sending welcome email to ${email} for company ${companyName}.`);
+    // In a real application, you would integrate with an email service here.
+    // For example:
+    // const msg = {
+    //   to: email,
+    //   from: 'welcome@staywellapp.com',
+    //   subject: 'Welcome to StayWell!',
+    //   html: `<strong>Welcome, ${companyName}!</strong> Get started by setting up your properties.`,
+    // };
+    // await sgMail.send(msg);
+    return { success: true };
+};
+
+// --- CREATE CLIENT FUNCTION ---
+exports.createClient = functions.https.onCall(async (data, context) => {
+    if (!context.auth || !context.auth.token.superAdmin) {
+        throw new functions.https.HttpsError(
+            "permission-denied",
+            "This function can only be called by a super admin.",
+        );
+    }
+
+    const { companyName, email, plan, planExpiration } = data;
+
+    if (!companyName || !email || !plan) {
+        throw new functions.https.HttpsError(
+            "invalid-argument",
+            "Missing required fields: companyName, email, plan.",
+        );
+    }
+
+    try {
+        // Create user in Firebase Auth
+        const userRecord = await admin.auth().createUser({
+            email: email,
+            emailVerified: false, // Or true, depending on your flow
+            displayName: companyName,
+        });
+
+        // Add user to Firestore 'users' collection
+        await db.collection('users').doc(userRecord.uid).set({
+            companyName: companyName,
+            email: email,
+            role: 'owner',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            subscription: {
+                plan: plan,
+                status: 'active',
+                expiresAt: planExpiration ? new Date(planExpiration) : null,
+            },
+        });
+
+        // Send a welcome email
+        await sendWelcomeEmail(email, companyName);
+
+        return { success: true, uid: userRecord.uid };
+    } catch (error) {
+        functions.logger.error("Error creating client:", error);
+        throw new functions.https.HttpsError(
+            "internal",
+            "An internal error occurred while creating the client.",
+        );
+    }
+});
