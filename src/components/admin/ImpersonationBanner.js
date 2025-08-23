@@ -1,4 +1,4 @@
-// staywellapp/staywell/StayWell-70115a3c7a3657dd4709bca4cc01a8d068f44fe5/src/components/ImpersonationBanner.js
+// src/components/ImpersonationBanner.js
 import React, { useState, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
 

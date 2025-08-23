@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Import router
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from "firebase/firestore";
@@ -21,14 +22,17 @@ import AuditLogView from './components/admin/AuditLogView';
 import BillingView from './components/admin/BillingView';
 import ClientListView from './components/admin/ClientListView';
 import ClientDetailView from './components/admin/ClientDetailView';
-import AdminSubscriptionsView from './components/admin/AdminSubscriptionsView'; // Import the new view
+import AdminSubscriptionsView from './components/admin/AdminSubscriptionsView';
+import ImpersonationBanner from './components/ImpersonationBanner'; // Import banner
+import ImpersonateLogin from './components/auth/ImpersonateLogin'; // Import impersonation login component
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-function App() {
+// This component contains the original logic of your app
+const AppContent = () => {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -98,25 +102,19 @@ function App() {
     };
     
     const renderActiveView = () => {
+        // This entire function is the same as your original
         if (isSuperAdmin) {
             if (selectedAdminClient) {
                 return <ClientDetailView client={selectedAdminClient} onBack={() => setSelectedAdminClient(null)} />;
             }
             switch (activeView) {
-                case 'adminDashboard':
-                    return <SuperAdminDashboard user={user} />;
-                case 'adminClients':
-                    return <ClientListView onSelectClient={handleSelectAdminClient} />;
-                case 'adminBilling':
-                    return <BillingView />;
-                case 'adminSubscriptions': // Add this case
-                    return <AdminSubscriptionsView />;
-                case 'adminSettings':
-                    return <AdminSettingsView />;
-                case 'adminAuditLog':
-                    return <AuditLogView />;
-                default:
-                    return <SuperAdminDashboard user={user} />;
+                case 'adminDashboard': return <SuperAdminDashboard user={user} />;
+                case 'adminClients': return <ClientListView onSelectClient={handleSelectAdminClient} />;
+                case 'adminBilling': return <BillingView />;
+                case 'adminSubscriptions': return <AdminSubscriptionsView />;
+                case 'adminSettings': return <AdminSettingsView />;
+                case 'adminAuditLog': return <AuditLogView />;
+                default: return <SuperAdminDashboard user={user} />;
             }
         }
 
@@ -125,18 +123,12 @@ function App() {
         }
 
         if (selectedProperty) {
-            return <PropertyDetailView
-                        property={selectedProperty}
-                        onBack={() => { setSelectedProperty(null); setActiveView('properties'); }}
-                        user={user}
-                    />;
+            return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); setActiveView('properties'); }} user={user} />;
         }
 
         switch (activeView) {
             case 'dashboard':
-                return hasPermission('properties_view_all') || hasPermission('team_manage')
-                    ? <ClientDashboard user={user} setActiveView={handleSetActiveView} />
-                    : <StaffDashboard user={user} userData={userData} />;
+                return hasPermission('properties_view_all') || hasPermission('team_manage') ? <ClientDashboard user={user} setActiveView={handleSetActiveView} /> : <StaffDashboard user={user} userData={userData} />;
             case 'properties':
                 return <PropertiesView onSelectProperty={setSelectedProperty} user={user} userData={userData} hasPermission={hasPermission} />;
             case 'chat':
@@ -152,9 +144,7 @@ function App() {
             case 'settings':
                  return hasPermission('team_manage') ? <SettingsView user={user} userData={userData} /> : null;
             default:
-                return hasPermission('properties_view_all')
-                    ? <ClientDashboard user={user} setActiveView={handleSetActiveView} />
-                    : <StaffDashboard user={user} userData={userData} />;
+                return hasPermission('properties_view_all') ? <ClientDashboard user={user} setActiveView={handleSetActiveView} /> : <StaffDashboard user={user} userData={userData} />;
         }
     };
 
@@ -170,7 +160,6 @@ function App() {
                     <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-4 text-center text-sm text-blue-600 dark:text-blue-400 hover:underline">
                         {isRegistering ? 'Already have an account? Log in.' : "Don't have an account? Sign up."}
                     </button>
-                    <ToastContainer position="bottom-center" />
                 </div>
             </div>
         );
@@ -181,8 +170,7 @@ function App() {
     }
 
     return (
-        <ThemeProvider>
-            <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
+        <>
             <Layout user={user} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
                 {renderActiveView()}
             </Layout>
@@ -194,6 +182,25 @@ function App() {
                     </button>
                 </div>
             )}
+        </>
+    );
+};
+
+function App() {
+    const isImpersonating = sessionStorage.getItem('isImpersonating') === 'true';
+
+    return (
+        <ThemeProvider>
+            <ToastContainer position="bottom-center" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
+            <Router>
+                <ImpersonationBanner />
+                <div className={isImpersonating ? 'pt-10' : ''}>
+                    <Routes>
+                        <Route path="/auth/impersonate" element={<ImpersonateLogin />} />
+                        <Route path="/*" element={<AppContent />} />
+                    </Routes>
+                </div>
+            </Router>
         </ThemeProvider>
     );
 }
