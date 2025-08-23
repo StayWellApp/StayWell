@@ -1,6 +1,6 @@
-// staywellapp/staywell/StayWell-70115a3c7a3657dd4709bca4cc01a8d068f44fe5/src/components/auth/ImpersonateLogin.js
 import React, { useEffect } from 'react';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+// Import the necessary auth functions, including setPersistence
+import { getAuth, setPersistence, browserSessionPersistence, signInWithCustomToken } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 
 const ImpersonateLogin = () => {
@@ -11,27 +11,34 @@ const ImpersonateLogin = () => {
         const token = sessionStorage.getItem('impersonationToken');
 
         if (token) {
-            signInWithCustomToken(auth, token)
+            // **THIS IS THE FIX**: Set persistence to SESSION for this tab only.
+            // This stops it from affecting other tabs.
+            setPersistence(auth, browserSessionPersistence)
                 .then(() => {
+                    // Once persistence is set, sign in with the custom token.
+                    return signInWithCustomToken(auth, token);
+                })
+                .then(() => {
+                    // On successful sign-in, clean up and set the flag for the banner.
                     sessionStorage.removeItem('impersonationToken');
                     sessionStorage.setItem('isImpersonating', 'true');
-                    navigate('/dashboard'); // Redirect to your main dashboard
+                    // Navigate to the dashboard. The banner will now appear.
+                    navigate('/');
                 })
                 .catch((error) => {
                     console.error("Impersonation sign-in failed:", error);
                     sessionStorage.removeItem('impersonationToken');
+                    document.body.innerHTML = `<h1>Impersonation Failed</h1><p>${error.message}</p><p>Please close this tab.</p>`;
                 });
         } else {
-            console.error("No impersonation token found.");
-            navigate('/login');
+            // If there's no token, redirect away.
+            navigate('/');
         }
     }, [auth, navigate]);
 
     return (
         <div className="flex justify-center items-center h-screen">
-            <div className="text-center">
-                <p className="text-lg">Logging in as impersonated user...</p>
-            </div>
+            <p className="text-lg">Initiating secure impersonation session...</p>
         </div>
     );
 };

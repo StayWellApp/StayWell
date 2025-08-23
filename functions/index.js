@@ -700,3 +700,31 @@ exports.createClient = functions.https.onCall(async (data, context) => {
         );
     }
 });
+
+// --- SUPER ADMIN RE-AUTHENTICATION FUNCTION ---
+exports.createReauthenticationToken = functions.https.onCall(async (data, context) => {
+    // This function must be called by an authenticated user (the impersonated client).
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "User must be authenticated to end impersonation.");
+    }
+
+    const adminUid = data.adminUid;
+    if (!adminUid) {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with an 'adminUid'.");
+    }
+    
+    // Security check: Make sure the target UID belongs to a user with superAdmin privileges.
+    try {
+        const adminUserRecord = await admin.auth().getUser(adminUid);
+        if (!adminUserRecord.customClaims || !adminUserRecord.customClaims.superAdmin) {
+             throw new functions.https.HttpsError("permission-denied", "The target user is not a super admin.");
+        }
+    } catch (error) {
+        functions.logger.error("Error fetching admin user record:", error);
+        throw new functions.https.HttpsError("not-found", "The specified admin user does not exist.");
+    }
+
+    // If the check passes, generate a new custom token for the admin.
+    const customToken = await admin.auth().createCustomToken(adminUid);
+    return { token: customToken };
+});
