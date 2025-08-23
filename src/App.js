@@ -1,5 +1,6 @@
+// staywellapp/staywell/StayWell-70115a3c7a3657dd4709bca4cc01a8d068f44fe5/src/App.js
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Import router
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from "firebase/firestore";
@@ -23,15 +24,15 @@ import BillingView from './components/admin/BillingView';
 import ClientListView from './components/admin/ClientListView';
 import ClientDetailView from './components/admin/ClientDetailView';
 import AdminSubscriptionsView from './components/admin/AdminSubscriptionsView';
-import ImpersonationBanner from './components/ImpersonationBanner'; // Import banner
-import ImpersonateLogin from './components/auth/ImpersonateLogin'; // Import impersonation login component
+import ImpersonationBanner from './components/ImpersonationBanner'; // This path is correct
+import ImpersonateLogin from './components/ImpersonateLogin'; // CORRECTED PATH
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// This component contains the original logic of your app
+// AppContent component remains the same...
 const AppContent = () => {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
@@ -102,7 +103,6 @@ const AppContent = () => {
     };
     
     const renderActiveView = () => {
-        // This entire function is the same as your original
         if (isSuperAdmin) {
             if (selectedAdminClient) {
                 return <ClientDetailView client={selectedAdminClient} onBack={() => setSelectedAdminClient(null)} />;
@@ -186,6 +186,8 @@ const AppContent = () => {
     );
 };
 
+
+// Main App component remains the same...
 function App() {
     const isImpersonating = sessionStorage.getItem('isImpersonating') === 'true';
 
