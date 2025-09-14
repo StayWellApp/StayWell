@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { db, auth } from '../firebase-config';
+import { db } from '../firebase-config';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import debounce from 'lodash.debounce';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -11,7 +11,7 @@ import 'react-resizable/css/styles.css';
 
 // Component Imports
 import { TaskDetailModal } from './TaskViews';
-import DashboardWidget from './DashboardWidget'; // Using the generic widget wrapper
+import DashboardWidget from './DashboardWidget';
 
 // Icon Imports
 import { Building, AlertTriangle, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X, ClipboardCheck } from 'lucide-react';
@@ -22,13 +22,12 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 // Default layout definition for new users
 const defaultLayouts = {
     lg: [
-        { i: 'properties', x: 0, y: 0, w: 1, h: 1 },
-        { i: 'openTasks', x: 1, y: 0, w: 1, h: 1 },
-        { i: 'lowStock', x: 2, y: 0, w: 1, h: 1 },
-        { i: 'todaysTasks', x: 0, y: 1, w: 1, h: 3, minH: 3 },
-        { i: 'pendingTasks', x: 1, y: 1, w: 1, h: 3, minH: 3 },
-        { i: 'taskStatus', x: 2, y: 1, w: 1, h: 2 },
-        { i: 'upcomingBookings', x: 0, y: 4, w: 3, h: 3, minH: 3 },
+        { i: 'properties', x: 0, y: 0, w: 1, h: 2 },
+        { i: 'openTasks', x: 1, y: 0, w: 1, h: 2 },
+        { i: 'lowStock', x: 2, y: 0, w: 1, h: 2 },
+        { i: 'todaysTasks', x: 0, y: 2, w: 2, h: 3, minH: 3 },
+        { i: 'taskStatus', x: 2, y: 2, w: 1, h: 3, minH: 2 },
+        { i: 'upcomingBookings', x: 0, y: 5, w: 3, h: 2, minH: 2 },
     ],
 };
 
@@ -45,6 +44,39 @@ const sanitizeLayout = (layout) => {
         return sanitizedItem;
     });
 };
+
+const PropertiesWidgetContent = ({ stats, setActiveView }) => (
+    <div className="h-full flex flex-col justify-between text-center cursor-pointer" onClick={() => setActiveView('properties')}>
+        <div className="flex-grow flex flex-col items-center justify-center">
+            <Building className="text-blue-500 mb-3" size={36} />
+            <p className="text-5xl font-bold text-gray-800 dark:text-gray-100">{stats.properties}</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Total Properties</p>
+        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 hover:underline">Click to manage</p>
+    </div>
+);
+
+const OpenTasksWidgetContent = ({ stats, openModal }) => (
+     <div className="h-full flex flex-col justify-between text-center cursor-pointer" onClick={openModal}>
+        <div className="flex-grow flex flex-col items-center justify-center">
+            <ListTodo className="text-green-500 mb-3" size={36} />
+            <p className="text-5xl font-bold text-gray-800 dark:text-gray-100">{stats.openTasks}</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Open Tasks</p>
+        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 hover:underline">Click to view all</p>
+    </div>
+);
+
+const LowStockWidgetContent = ({ stats, openModal }) => (
+     <div className="h-full flex flex-col justify-between text-center cursor-pointer" onClick={openModal}>
+        <div className="flex-grow flex flex-col items-center justify-center">
+            <AlertTriangle className="text-red-500 mb-3" size={36} />
+            <p className="text-5xl font-bold text-gray-800 dark:text-gray-100">{stats.lowStockItems}</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Low Stock Items</p>
+        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 hover:underline">Click to view</p>
+    </div>
+);
 
 
 const ClientDashboard = ({ user, setActiveView }) => {
@@ -71,8 +103,7 @@ const ClientDashboard = ({ user, setActiveView }) => {
 
     useEffect(() => {
         if (!user) return;
-        setLoading(true);
-
+        
         const propertiesUnsubscribe = onSnapshot(query(collection(db, "properties"), where("ownerId", "==", user.uid)), (snapshot) => {
             setStats(prev => ({ ...prev, properties: snapshot.size }));
         });
@@ -120,16 +151,13 @@ const ClientDashboard = ({ user, setActiveView }) => {
             setStats(prev => ({ ...prev, lowStockItems: lowItems.length }));
         };
         
-        fetchLowStockItems().finally(() => setLoading(false));
-
+        fetchLowStockItems();
+        
         const loadLayout = async () => {
             const layoutDocRef = doc(db, 'users', user.uid, 'configs', 'clientDashboardLayout');
             const docSnap = await getDoc(layoutDocRef);
-            if (docSnap.exists() && docSnap.data().lg) {
-                setLayouts(docSnap.data());
-            } else {
-                setLayouts(defaultLayouts);
-            }
+            setLayouts((docSnap.exists() && docSnap.data().lg) ? docSnap.data() : defaultLayouts);
+            setLoading(false);
         };
         loadLayout();
 
@@ -174,36 +202,31 @@ const ClientDashboard = ({ user, setActiveView }) => {
                 onLayoutChange={onLayoutChange}
                 breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                 cols={{ lg: 3, md: 2, sm: 1, xs: 1, xxs: 1 }}
-                rowHeight={100}
+                rowHeight={80}
                 draggableHandle=".drag-handle"
             >
                 <div key="properties">
-                    <DashboardWidget title="Properties">
-                        <StatCard icon={<Building size={24} />} value={stats.properties} color="blue" onClick={() => setActiveView('properties')} />
+                    <DashboardWidget showDragHandle={false}>
+                       <PropertiesWidgetContent stats={stats} setActiveView={setActiveView} />
                     </DashboardWidget>
                 </div>
                 <div key="openTasks">
-                    <DashboardWidget title="Open Tasks">
-                        <StatCard icon={<ListTodo size={24} />} value={stats.openTasks} color="green" onClick={() => setIsTasksModalOpen(true)} />
+                    <DashboardWidget showDragHandle={false}>
+                       <OpenTasksWidgetContent stats={stats} openModal={() => setIsTasksModalOpen(true)} />
                     </DashboardWidget>
                 </div>
                 <div key="lowStock">
-                    <DashboardWidget title="Low Stock">
-                        <StatCard icon={<AlertTriangle size={24} />} value={stats.lowStockItems} color="red" onClick={() => setIsStockModalOpen(true)} />
+                    <DashboardWidget showDragHandle={false}>
+                        <LowStockWidgetContent stats={stats} openModal={() => setIsStockModalOpen(true)} />
                     </DashboardWidget>
                 </div>
                 <div key="todaysTasks">
                     <DashboardWidget title="Today's Tasks">
-                        <TaskList tasks={todaysTasks} onTaskClick={handleOpenTask} emptyMessage="No tasks for today." />
-                    </DashboardWidget>
-                </div>
-                <div key="pendingTasks">
-                    <DashboardWidget title="Pending Tasks">
-                        <TaskList tasks={pendingTasks} onTaskClick={handleOpenTask} emptyMessage="No tasks are pending." />
+                        <TaskList tasks={todaysTasks} onTaskClick={handleOpenTask} emptyMessage="No tasks scheduled for today." />
                     </DashboardWidget>
                 </div>
                 <div key="taskStatus">
-                    <DashboardWidget title="Task Status">
+                    <DashboardWidget title="Task Status Overview">
                         <TaskStatusChart data={taskStatusData} />
                     </DashboardWidget>
                 </div>
@@ -212,14 +235,13 @@ const ClientDashboard = ({ user, setActiveView }) => {
                          {upcomingBookings.length > 0 ? (
                             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                                 {upcomingBookings.map(booking => (
-                                    <li key={booking.id} className="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50" onClick={() => setSelectedBooking(booking)}>
+                                    <li key={booking.id} className="py-2 flex justify-between items-center" onClick={() => setSelectedBooking(booking)}>
                                         <div>
                                             <p className="font-medium text-gray-800 dark:text-gray-100">{booking.guestName}</p>
                                             <p className="text-sm text-gray-500 dark:text-gray-400">{booking.propertyName}</p>
                                         </div>
                                         <div className="text-right">
                                             <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{new Date(booking.checkIn).toLocaleDateString()}</span>
-                                            <p className="text-xs text-gray-400">{booking.platform}</p>
                                         </div>
                                     </li>
                                 ))}
@@ -237,23 +259,7 @@ const ClientDashboard = ({ user, setActiveView }) => {
     );
 };
 
-// --- FIX: Replaced placeholders with your actual component implementations ---
-
-const StatCard = ({ icon, value, color, onClick }) => {
-    const colors = {
-        blue: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300',
-        green: 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-300',
-        red: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-300',
-    };
-    return (
-        <div onClick={onClick} className="p-6 flex items-center space-x-4 cursor-pointer h-full">
-            <div className={`p-3 rounded-full ${colors[color]}`}>{icon}</div>
-            <div>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-            </div>
-        </div>
-    );
-};
+// --- Reusable Components ---
 
 const TaskList = ({ tasks, onTaskClick, emptyMessage }) => {
     if (tasks.length === 0) {
@@ -280,9 +286,9 @@ const TaskStatusChart = ({ data }) => {
     if (chartData.length === 0) return <p className="text-center py-4 text-gray-500 dark:text-gray-400">No task data.</p>;
     
     return (
-        <ResponsiveContainer width="100%" height={150} debounce={1}>
+        <ResponsiveContainer width="100%" height="90%">
             <PieChart>
-                <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5}>
+                <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={5}>
                     {chartData.map((entry) => <Cell key={`cell-${entry.name}`} fill={COLORS[entry.name]} stroke={0} />)}
                 </Pie>
                 <Tooltip contentStyle={{ backgroundColor: 'rgba(31, 41, 55, 0.8)', backdropFilter: 'blur(4px)', border: '1px solid #4b5563', borderRadius: '0.75rem' }} />
