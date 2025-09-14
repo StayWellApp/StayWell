@@ -77,3 +77,9 @@
 .dark .fc-toolbar-title {
     color: theme('colors.gray.100');
 }
+
+body {
+    /* Add default text colors for light and dark modes here */
+    @apply bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200;
+    font-family: 'Inter', sans-serif;
+}
