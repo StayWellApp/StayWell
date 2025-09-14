@@ -91,7 +91,7 @@ const SuperAdminDashboard = () => {
                 setDoc(layoutDocRef, sanitizedLayouts, { merge: true });
             }
         }, 1000),
-        []
+        [] // Corrected dependency array
     );
 
     const onLayoutChange = (layout, newLayouts) => {
