@@ -14,12 +14,11 @@ import { TaskDetailModal } from './TaskViews';
 import DashboardWidget from './DashboardWidget';
 
 // Icon Imports
-import { Building, AlertTriangle, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X, ClipboardCheck } from 'lucide-react';
+import { Building, AlertTriangle, ListTodo, X } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-// Default layout definition for new users
 const defaultLayouts = {
     lg: [
         { i: 'properties', x: 0, y: 0, w: 1, h: 2 },
@@ -31,7 +30,6 @@ const defaultLayouts = {
     ],
 };
 
-// Helper to clean layout data before saving to Firestore
 const sanitizeLayout = (layout) => {
     const requiredKeys = ['w', 'h', 'x', 'y', 'i', 'minW', 'maxW', 'minH', 'maxH', 'static', 'isDraggable', 'isResizable'];
     return layout.map(item => {
@@ -83,7 +81,6 @@ const ClientDashboard = ({ user, setActiveView }) => {
     const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
     const [allOpenTasks, setAllOpenTasks] = useState([]);
     const [todaysTasks, setTodaysTasks] = useState([]);
-    const [pendingTasks, setPendingTasks] = useState([]);
     const [taskStatusData, setTaskStatusData] = useState([]);
     const [lowStockItems, setLowStockItems] = useState([]);
     const [team, setTeam] = useState([]);
@@ -115,8 +112,7 @@ const ClientDashboard = ({ user, setActiveView }) => {
             
             setAllOpenTasks(openTasks);
             setTodaysTasks(allTasks.filter(task => task.scheduledDate === todayISO && task.status !== 'Completed'));
-            setPendingTasks(allTasks.filter(task => task.status === 'Pending'));
-
+            
             const statusCounts = allTasks.reduce((acc, task) => {
                 acc[task.status] = (acc[task.status] || 0) + 1;
                 return acc;
@@ -136,19 +132,19 @@ const ClientDashboard = ({ user, setActiveView }) => {
 
         const fetchLowStockItems = async () => {
              const locationsQuery = query(collection(db, "storageLocations"), where("ownerId", "==", user.uid));
-            const locationsSnapshot = await getDocs(locationsQuery);
-            let lowItems = [];
-            for (const locationDoc of locationsSnapshot.docs) {
-                const suppliesSnapshot = await getDocs(collection(db, `storageLocations/${locationDoc.id}/supplies`));
-                suppliesSnapshot.forEach(supplyDoc => {
-                    const supply = supplyDoc.data();
-                    if (parseInt(supply.currentStock) < parseInt(supply.parLevel)) {
-                        lowItems.push({ ...supply, id: supplyDoc.id, locationName: locationDoc.data().name });
-                    }
-                });
-            }
-            setLowStockItems(lowItems);
-            setStats(prev => ({ ...prev, lowStockItems: lowItems.length }));
+             const locationsSnapshot = await getDocs(locationsQuery);
+             let lowItems = [];
+             for (const locationDoc of locationsSnapshot.docs) {
+                 const suppliesSnapshot = await getDocs(collection(db, `storageLocations/${locationDoc.id}/supplies`));
+                 suppliesSnapshot.forEach(supplyDoc => {
+                     const supply = supplyDoc.data();
+                     if (parseInt(supply.currentStock) < parseInt(supply.parLevel)) {
+                         lowItems.push({ ...supply, id: supplyDoc.id, locationName: locationDoc.data().name });
+                     }
+                 });
+             }
+             setLowStockItems(lowItems);
+             setStats(prev => ({ ...prev, lowStockItems: lowItems.length }));
         };
         
         fetchLowStockItems();
@@ -168,13 +164,16 @@ const ClientDashboard = ({ user, setActiveView }) => {
         };
     }, [user]);
 
-    const saveLayoutToFirestore = useCallback(debounce((newLayouts) => {
-        if (user) {
-            const sanitizedLayouts = { lg: sanitizeLayout(newLayouts.lg || []) };
-            const layoutDocRef = doc(db, 'users', user.uid, 'configs', 'clientDashboardLayout');
-            setDoc(layoutDocRef, sanitizedLayouts, { merge: true });
-        }
-    }, 1000), [user]);
+    const saveLayoutToFirestore = useCallback(
+        debounce((newLayouts) => {
+            if (user) {
+                const sanitizedLayouts = { lg: sanitizeLayout(newLayouts.lg || []) };
+                const layoutDocRef = doc(db, 'users', user.uid, 'configs', 'clientDashboardLayout');
+                setDoc(layoutDocRef, sanitizedLayouts, { merge: true });
+            }
+        }, 1000),
+        [user]
+    );
 
     const onLayoutChange = (layout, newLayouts) => {
         setLayouts(newLayouts);
@@ -259,10 +258,8 @@ const ClientDashboard = ({ user, setActiveView }) => {
     );
 };
 
-// --- Reusable Components ---
-
 const TaskList = ({ tasks, onTaskClick, emptyMessage }) => {
-    if (tasks.length === 0) {
+    if (!tasks || tasks.length === 0) {
         return <p className="text-center py-4 text-gray-500 dark:text-gray-400">{emptyMessage}</p>;
     }
     return (
@@ -284,7 +281,7 @@ const TaskStatusChart = ({ data }) => {
     const COLORS = { 'Pending': '#facc15', 'In Progress': '#3b82f6', 'Completed': '#22c55e' };
     const chartData = data.filter(d => d.value > 0);
     if (chartData.length === 0) return <p className="text-center py-4 text-gray-500 dark:text-gray-400">No task data.</p>;
-    
+
     return (
         <ResponsiveContainer width="100%" height="90%">
             <PieChart>
