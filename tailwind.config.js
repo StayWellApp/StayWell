@@ -1,9 +1,6 @@
-// --- tailwind.config.js ---
-// Replace the entire contents of your tailwind.config.js file with this code.
-
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // ✨ NEW: Enable dark mode using the 'class' strategy
+  // Your darkMode setting is correct
   darkMode: 'class', 
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
@@ -26,5 +23,11 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  // --- MERGED CHANGE ---
+  // Added the official Tailwind forms plugin to handle dark mode in form inputs.
+  plugins: [
+    require('@tailwindcss/forms')({
+      strategy: 'class', // This ensures it respects your dark mode setting
+    }),
+  ],
 }
