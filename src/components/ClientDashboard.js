@@ -1,9 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import { db } from '../firebase-config';
+import React, { useState, useEffect, useCallback } from 'react';
+import { db, auth } from '../firebase-config';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import debounce from 'lodash.debounce';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+// Grid Layout Imports
+import { Responsive, WidthProvider } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+
+// Component Imports
+import { TaskDetailModal } from './TaskViews';
+import DashboardWidget from './DashboardWidget'; // Using the generic widget wrapper
+
+// Icon Imports
 import { Building, AlertTriangle, ListTodo, Calendar, PieChart as PieChartIcon, Siren, X, ClipboardCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TaskDetailModal } from './TaskViews';
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
+
+// Default layout definition for new users
+const defaultLayouts = {
+    lg: [
+        { i: 'properties', x: 0, y: 0, w: 1, h: 1 },
+        { i: 'openTasks', x: 1, y: 0, w: 1, h: 1 },
+        { i: 'lowStock', x: 2, y: 0, w: 1, h: 1 },
+        { i: 'todaysTasks', x: 0, y: 1, w: 1, h: 3, minH: 3 },
+        { i: 'pendingTasks', x: 1, y: 1, w: 1, h: 3, minH: 3 },
+        { i: 'taskStatus', x: 2, y: 1, w: 1, h: 2 },
+        { i: 'upcomingBookings', x: 0, y: 4, w: 3, h: 3, minH: 3 },
+    ],
+};
+
+// Helper to clean layout data before saving to Firestore
+const sanitizeLayout = (layout) => {
+    const requiredKeys = ['w', 'h', 'x', 'y', 'i', 'minW', 'maxW', 'minH', 'maxH', 'static', 'isDraggable', 'isResizable'];
+    return layout.map(item => {
+        const sanitizedItem = {};
+        for (const key of requiredKeys) {
+            if (item[key] !== undefined) {
+                sanitizedItem[key] = item[key];
+            }
+        }
+        return sanitizedItem;
+    });
+};
+
 
 const ClientDashboard = ({ user, setActiveView }) => {
     const [stats, setStats] = useState({ properties: 0, openTasks: 0, lowStockItems: 0 });
@@ -15,13 +57,12 @@ const ClientDashboard = ({ user, setActiveView }) => {
     const [team, setTeam] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // Modal states
     const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
     const [selectedBooking, setSelectedBooking] = useState(null);
+    const [layouts, setLayouts] = useState(null);
 
-    // Hardcoded upcoming bookings data
     const upcomingBookings = [
         { id: 'booking-1', propertyName: 'Seaside Villa', guestName: 'John Doe', checkIn: '2025-07-10', platform: 'Airbnb' },
         { id: 'booking-2', propertyName: 'Downtown Loft', guestName: 'Jane Smith', checkIn: '2025-07-12', platform: 'Booking.com' },
@@ -36,11 +77,8 @@ const ClientDashboard = ({ user, setActiveView }) => {
             setStats(prev => ({ ...prev, properties: snapshot.size }));
         });
 
-        // This listener gets all tasks for the user to categorize them
         const tasksUnsubscribe = onSnapshot(query(collection(db, "tasks"), where("ownerId", "==", user.uid)), (snapshot) => {
             const allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // --- Categorize tasks ---
             const openTasks = allTasks.filter(task => task.status !== 'Completed');
             const todayISO = new Date().toISOString().split('T')[0];
             
@@ -48,7 +86,6 @@ const ClientDashboard = ({ user, setActiveView }) => {
             setTodaysTasks(allTasks.filter(task => task.scheduledDate === todayISO && task.status !== 'Completed'));
             setPendingTasks(allTasks.filter(task => task.status === 'Pending'));
 
-            // --- Aggregate data for stats and charts ---
             const statusCounts = allTasks.reduce((acc, task) => {
                 acc[task.status] = (acc[task.status] || 0) + 1;
                 return acc;
@@ -67,23 +104,34 @@ const ClientDashboard = ({ user, setActiveView }) => {
         });
 
         const fetchLowStockItems = async () => {
-            const locationsQuery = query(collection(db, "storageLocations"), where("ownerId", "==", user.uid));
-            const locationsSnapshot = await getDocs(locationsQuery);
-            let lowItems = [];
-            for (const locationDoc of locationsSnapshot.docs) {
-                const suppliesSnapshot = await getDocs(collection(db, `storageLocations/${locationDoc.id}/supplies`));
-                suppliesSnapshot.forEach(supplyDoc => {
-                    const supply = supplyDoc.data();
-                    if (parseInt(supply.currentStock) < parseInt(supply.parLevel)) {
-                        lowItems.push({ ...supply, id: supplyDoc.id, locationName: locationDoc.data().name });
-                    }
-                });
-            }
-            setLowStockItems(lowItems);
-            setStats(prev => ({ ...prev, lowStockItems: lowItems.length }));
+             const locationsQuery = query(collection(db, "storageLocations"), where("ownerId", "==", user.uid));
+            const locationsSnapshot = await getDocs(locationsQuery);
+            let lowItems = [];
+            for (const locationDoc of locationsSnapshot.docs) {
+                const suppliesSnapshot = await getDocs(collection(db, `storageLocations/${locationDoc.id}/supplies`));
+                suppliesSnapshot.forEach(supplyDoc => {
+                    const supply = supplyDoc.data();
+                    if (parseInt(supply.currentStock) < parseInt(supply.parLevel)) {
+                        lowItems.push({ ...supply, id: supplyDoc.id, locationName: locationDoc.data().name });
+                    }
+                });
+            }
+            setLowStockItems(lowItems);
+            setStats(prev => ({ ...prev, lowStockItems: lowItems.length }));
         };
         
         fetchLowStockItems().finally(() => setLoading(false));
+
+        const loadLayout = async () => {
+            const layoutDocRef = doc(db, 'users', user.uid, 'configs', 'clientDashboardLayout');
+            const docSnap = await getDoc(layoutDocRef);
+            if (docSnap.exists() && docSnap.data().lg) {
+                setLayouts(docSnap.data());
+            } else {
+                setLayouts(defaultLayouts);
+            }
+        };
+        loadLayout();
 
         return () => {
             propertiesUnsubscribe();
@@ -92,9 +140,26 @@ const ClientDashboard = ({ user, setActiveView }) => {
         };
     }, [user]);
 
+    const saveLayoutToFirestore = useCallback(debounce((newLayouts) => {
+        if (user) {
+            const sanitizedLayouts = { lg: sanitizeLayout(newLayouts.lg || []) };
+            const layoutDocRef = doc(db, 'users', user.uid, 'configs', 'clientDashboardLayout');
+            setDoc(layoutDocRef, sanitizedLayouts, { merge: true });
+        }
+    }, 1000), [user]);
+
+    const onLayoutChange = (layout, newLayouts) => {
+        setLayouts(newLayouts);
+        saveLayoutToFirestore(newLayouts);
+    };
+
     const handleOpenTask = (task) => {
         setSelectedTask(task);
     };
+
+    if (loading || !layouts) {
+        return <p className="text-center text-gray-500 dark:text-gray-400 p-8">Loading dashboard...</p>;
+    }
 
     return (
         <div className="p-4 sm:p-6 md:p-8">
@@ -103,33 +168,48 @@ const ClientDashboard = ({ user, setActiveView }) => {
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Here’s a summary of your operations.</p>
             </header>
 
-            {loading ? <p className="text-center text-gray-500 dark:text-gray-400">Loading dashboard...</p> : (
-                <div className="space-y-8">
-                    {/* --- Top Row: 3 Stat Cards --- */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <StatCard icon={<Building size={24} />} title="Total Properties" value={stats.properties} color="blue" onClick={() => setActiveView('properties')} />
-                        <StatCard icon={<ListTodo size={24} />} title="Open Tasks" value={stats.openTasks} color="green" onClick={() => setIsTasksModalOpen(true)} />
-                        <StatCard icon={<AlertTriangle size={24} />} title="Low Stock Items" value={stats.lowStockItems} color="red" onClick={() => setIsStockModalOpen(true)} />
-                    </div>
-                    
-                    {/* --- Middle Row: Today's Tasks, Pending Tasks, Pie Chart --- */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <DashboardCard icon={<ClipboardCheck size={22} />} title="Today's Tasks">
-                            <TaskList tasks={todaysTasks} onTaskClick={handleOpenTask} emptyMessage="No tasks scheduled for today." />
-                        </DashboardCard>
-                        
-                        <DashboardCard icon={<Siren size={22} />} title="Pending Tasks">
-                            <TaskList tasks={pendingTasks} onTaskClick={handleOpenTask} emptyMessage="No tasks are pending." />
-                        </DashboardCard>
-
-                        <DashboardCard icon={<PieChartIcon size={22} />} title="Task Status">
-                            <TaskStatusChart data={taskStatusData} />
-                        </DashboardCard>
-                    </div>
-
-                    {/* --- Bottom Row: Upcoming Bookings --- */}
-                    <DashboardCard icon={<Calendar size={22} />} title="Upcoming Bookings">
-                        {upcomingBookings.length > 0 ? (
+            <ResponsiveGridLayout
+                className="layout"
+                layouts={layouts}
+                onLayoutChange={onLayoutChange}
+                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                cols={{ lg: 3, md: 2, sm: 1, xs: 1, xxs: 1 }}
+                rowHeight={100}
+                draggableHandle=".drag-handle"
+            >
+                <div key="properties">
+                    <DashboardWidget title="Properties">
+                        <StatCard icon={<Building size={24} />} value={stats.properties} color="blue" onClick={() => setActiveView('properties')} />
+                    </DashboardWidget>
+                </div>
+                <div key="openTasks">
+                    <DashboardWidget title="Open Tasks">
+                        <StatCard icon={<ListTodo size={24} />} value={stats.openTasks} color="green" onClick={() => setIsTasksModalOpen(true)} />
+                    </DashboardWidget>
+                </div>
+                <div key="lowStock">
+                    <DashboardWidget title="Low Stock">
+                        <StatCard icon={<AlertTriangle size={24} />} value={stats.lowStockItems} color="red" onClick={() => setIsStockModalOpen(true)} />
+                    </DashboardWidget>
+                </div>
+                <div key="todaysTasks">
+                    <DashboardWidget title="Today's Tasks">
+                        <TaskList tasks={todaysTasks} onTaskClick={handleOpenTask} emptyMessage="No tasks for today." />
+                    </DashboardWidget>
+                </div>
+                <div key="pendingTasks">
+                    <DashboardWidget title="Pending Tasks">
+                        <TaskList tasks={pendingTasks} onTaskClick={handleOpenTask} emptyMessage="No tasks are pending." />
+                    </DashboardWidget>
+                </div>
+                <div key="taskStatus">
+                    <DashboardWidget title="Task Status">
+                        <TaskStatusChart data={taskStatusData} />
+                    </DashboardWidget>
+                </div>
+                <div key="upcomingBookings">
+                    <DashboardWidget title="Upcoming Bookings">
+                         {upcomingBookings.length > 0 ? (
                             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                                 {upcomingBookings.map(booking => (
                                     <li key={booking.id} className="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50" onClick={() => setSelectedBooking(booking)}>
@@ -145,11 +225,10 @@ const ClientDashboard = ({ user, setActiveView }) => {
                                 ))}
                             </ul>
                         ) : <p className="text-center py-4 text-gray-500 dark:text-gray-400">No upcoming bookings.</p>}
-                    </DashboardCard>
+                    </DashboardWidget>
                 </div>
-            )}
+            </ResponsiveGridLayout>
 
-            {/* Modals */}
             {isTasksModalOpen && <TasksModal tasks={allOpenTasks} onOpenTask={handleOpenTask} onClose={() => setIsTasksModalOpen(false)} />}
             {isStockModalOpen && <StockModal items={lowStockItems} onClose={() => setIsStockModalOpen(false)} />}
             {selectedTask && <TaskDetailModal task={selectedTask} team={team} user={user} onClose={() => setSelectedTask(null)} />}
@@ -158,29 +237,23 @@ const ClientDashboard = ({ user, setActiveView }) => {
     );
 };
 
+// --- FIX: Replaced placeholders with your actual component implementations ---
 
-// --- Reusable Components ---
-
-const StatCard = ({ icon, title, value, color, onClick }) => {
+const StatCard = ({ icon, value, color, onClick }) => {
     const colors = {
         blue: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300',
         green: 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-300',
         red: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-300',
     };
     return (
-        <div onClick={onClick} className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center space-x-4 transition-all hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer">
+        <div onClick={onClick} className="p-6 flex items-center space-x-4 cursor-pointer h-full">
             <div className={`p-3 rounded-full ${colors[color]}`}>{icon}</div>
-            <div><p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p><p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p></div>
+            <div>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+            </div>
         </div>
     );
 };
-
-const DashboardCard = ({ icon, title, children, className = '' }) => (
-    <div className={`bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm ${className} h-full flex flex-col`}>
-        <div className="flex items-center mb-4 flex-shrink-0"><div className="text-gray-500 dark:text-gray-400">{icon}</div><h3 className="ml-3 text-xl font-semibold text-gray-800 dark:text-gray-100">{title}</h3></div>
-        <div className="mt-2 flex-grow">{children}</div>
-    </div>
-);
 
 const TaskList = ({ tasks, onTaskClick, emptyMessage }) => {
     if (tasks.length === 0) {
@@ -218,8 +291,6 @@ const TaskStatusChart = ({ data }) => {
         </ResponsiveContainer>
     );
 };
-
-// --- Modal Components ---
 
 const TasksModal = ({ tasks, onOpenTask, onClose }) => (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
