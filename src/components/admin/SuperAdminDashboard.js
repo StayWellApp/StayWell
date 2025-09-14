@@ -1,4 +1,3 @@
-// src/components/admin/SuperAdminDashboard.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import { db, auth } from '../../firebase-config';
@@ -46,7 +45,6 @@ const sanitizeLayout = (layout) => {
     });
 };
 
-// --- FIX: Replaced placeholder comments with actual component definitions ---
 const TotalRevenueWidget = () => (
     <div className="text-center">
         <h4 className="text-4xl font-bold text-gray-800 dark:text-gray-100">$12,450</h4>
@@ -85,19 +83,22 @@ const SuperAdminDashboard = () => {
         loadLayout();
     }, []);
 
-    const saveLayoutToFirestore = useCallback(debounce((newLayouts) => {
-        if (auth.currentUser) {
-            const sanitizedLayouts = { lg: sanitizeLayout(newLayouts.lg || []) };
-            const layoutDocRef = doc(db, 'users', auth.currentUser.uid, 'configs', 'dashboardLayout');
-            setDoc(layoutDocRef, sanitizedLayouts, { merge: true });
-        }
-    }, 1000), []);
+    const saveLayoutToFirestore = useCallback(
+        debounce((newLayouts) => {
+            if (auth.currentUser) {
+                const sanitizedLayouts = { lg: sanitizeLayout(newLayouts.lg || []) };
+                const layoutDocRef = doc(db, 'users', auth.currentUser.uid, 'configs', 'dashboardLayout');
+                setDoc(layoutDocRef, sanitizedLayouts, { merge: true });
+            }
+        }, 1000),
+        []
+    );
 
     const onLayoutChange = (layout, newLayouts) => {
         setLayouts(newLayouts);
         saveLayoutToFirestore(newLayouts);
     };
-    
+
     if (selectedClient) {
         return <ClientDetailView client={selectedClient} onBack={() => setSelectedClient(null)} />;
     }
@@ -105,7 +106,7 @@ const SuperAdminDashboard = () => {
     if (!layouts) {
         return <div className="text-center p-8">Loading Dashboard...</div>;
     }
-    
+
     return (
         <div className="p-4 md:p-8">
             <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Super Admin Dashboard</h1>
