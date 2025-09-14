@@ -20,8 +20,33 @@ import 'react-resizable/css/styles.css';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-// We are defining the metric widgets directly here for simplicity
-// In a larger app, these could be their own files.
+const defaultLayouts = {
+    lg: [
+        { i: 'revenue', x: 0, y: 0, w: 1, h: 1 },
+        { i: 'newClients', x: 1, y: 0, w: 1, h: 1 },
+        { i: 'subscriptions', x: 2, y: 0, w: 1, h: 1 },
+        { i: 'signups', x: 3, y: 0, w: 1, h: 2, minH: 2 },
+        { i: 'clientList', x: 0, y: 1, w: 3, h: 4, minW: 2, minH: 3 },
+        { i: 'growthChart', x: 0, y: 5, w: 2, h: 2 },
+        { i: 'planChart', x: 2, y: 5, w: 2, h: 2 },
+        { i: 'endingSoon', x: 3, y: 2, w: 1, h: 2, minH: 2 },
+    ],
+};
+
+const sanitizeLayout = (layout) => {
+    const requiredKeys = ['w', 'h', 'x', 'y', 'i', 'minW', 'maxW', 'minH', 'maxH', 'static', 'isDraggable', 'isResizable'];
+    return layout.map(item => {
+        const sanitizedItem = {};
+        for (const key of requiredKeys) {
+            if (item[key] !== undefined) {
+                sanitizedItem[key] = item[key];
+            }
+        }
+        return sanitizedItem;
+    });
+};
+
+// --- FIX: Replaced placeholder comments with actual component definitions ---
 const TotalRevenueWidget = () => (
     <div className="text-center">
         <h4 className="text-4xl font-bold text-gray-800 dark:text-gray-100">$12,450</h4>
@@ -45,26 +70,12 @@ const SuperAdminDashboard = () => {
     const [layouts, setLayouts] = useState(null);
     const [selectedClient, setSelectedClient] = useState(null);
 
-    const defaultLayouts = {
-        lg: [
-            { i: 'revenue', x: 0, y: 0, w: 1, h: 1 },
-            { i: 'newClients', x: 1, y: 0, w: 1, h: 1 },
-            { i: 'subscriptions', x: 2, y: 0, w: 1, h: 1 },
-            { i: 'signups', x: 3, y: 0, w: 1, h: 2, minH: 2 },
-            { i: 'clientList', x: 0, y: 1, w: 3, h: 4, minW: 2, minH: 3 },
-            { i: 'growthChart', x: 0, y: 5, w: 2, h: 2 },
-            { i: 'planChart', x: 2, y: 5, w: 2, h: 2 },
-            { i: 'endingSoon', x: 3, y: 2, w: 1, h: 2, minH: 2 },
-        ],
-    };
-
-    // Load layout from Firestore on mount
     useEffect(() => {
         const loadLayout = async () => {
             if (auth.currentUser) {
                 const layoutDocRef = doc(db, 'users', auth.currentUser.uid, 'configs', 'dashboardLayout');
                 const docSnap = await getDoc(layoutDocRef);
-                if (docSnap.exists()) {
+                if (docSnap.exists() && docSnap.data().lg) {
                     setLayouts(docSnap.data());
                 } else {
                     setLayouts(defaultLayouts);
@@ -74,11 +85,11 @@ const SuperAdminDashboard = () => {
         loadLayout();
     }, []);
 
-    // Debounced save function
     const saveLayoutToFirestore = useCallback(debounce((newLayouts) => {
         if (auth.currentUser) {
+            const sanitizedLayouts = { lg: sanitizeLayout(newLayouts.lg || []) };
             const layoutDocRef = doc(db, 'users', auth.currentUser.uid, 'configs', 'dashboardLayout');
-            setDoc(layoutDocRef, newLayouts);
+            setDoc(layoutDocRef, sanitizedLayouts, { merge: true });
         }
     }, 1000), []);
 
@@ -87,7 +98,6 @@ const SuperAdminDashboard = () => {
         saveLayoutToFirestore(newLayouts);
     };
     
-    // Conditional rendering for Client Detail View
     if (selectedClient) {
         return <ClientDetailView client={selectedClient} onBack={() => setSelectedClient(null)} />;
     }
@@ -108,46 +118,14 @@ const SuperAdminDashboard = () => {
                 rowHeight={150}
                 draggableHandle=".drag-handle"
             >
-                <div key="revenue">
-                    <DashboardWidget title="Total Revenue">
-                        <TotalRevenueWidget />
-                    </DashboardWidget>
-                </div>
-                <div key="newClients">
-                    <DashboardWidget title="New Clients (30d)">
-                       <NewClientsWidget />
-                    </DashboardWidget>
-                </div>
-                <div key="subscriptions">
-                     <DashboardWidget title="Active Subscriptions">
-                       <ActiveSubscriptionsWidget />
-                    </DashboardWidget>
-                </div>
-                 <div key="clientList">
-                    <DashboardWidget title="Clients" showDragHandle={false}>
-                       <ClientListView onSelectClient={setSelectedClient} />
-                    </DashboardWidget>
-                </div>
-                <div key="growthChart">
-                    <DashboardWidget title="Customer Growth">
-                        <CustomerGrowthChart />
-                    </DashboardWidget>
-                </div>
-                <div key="planChart">
-                    <DashboardWidget title="Revenue By Plan">
-                        <RevenueByPlanChart />
-                    </DashboardWidget>
-                </div>
-                <div key="signups">
-                    <DashboardWidget title="New Signups">
-                        <NewSignupsPanel />
-                    </DashboardWidget>
-                </div>
-                <div key="endingSoon">
-                    <DashboardWidget title="Subscriptions Ending Soon">
-                        <SubscriptionsEndingSoon />
-                    </DashboardWidget>
-                </div>
+                <div key="revenue"><DashboardWidget title="Total Revenue"><TotalRevenueWidget /></DashboardWidget></div>
+                <div key="newClients"><DashboardWidget title="New Clients (30d)"><NewClientsWidget /></DashboardWidget></div>
+                <div key="subscriptions"><DashboardWidget title="Active Subscriptions"><ActiveSubscriptionsWidget /></DashboardWidget></div>
+                <div key="clientList"><DashboardWidget title="Clients" showDragHandle={false}><ClientListView onSelectClient={setSelectedClient} /></DashboardWidget></div>
+                <div key="growthChart"><DashboardWidget title="Customer Growth"><CustomerGrowthChart /></DashboardWidget></div>
+                <div key="planChart"><DashboardWidget title="Revenue By Plan"><RevenueByPlanChart /></DashboardWidget></div>
+                <div key="signups"><DashboardWidget title="New Signups"><NewSignupsPanel /></DashboardWidget></div>
+                <div key="endingSoon"><DashboardWidget title="Subscriptions Ending Soon"><SubscriptionsEndingSoon /></DashboardWidget></div>
             </ResponsiveGridLayout>
         </div>
     );
