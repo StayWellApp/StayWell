@@ -9,7 +9,6 @@ import {
 import { toast } from 'react-toastify';
 import { Eye, EyeOff, AlertCircle, Building } from 'lucide-react';
 
-// Main container for the authentication screen
 const AuthLayout = ({ children }) => (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center items-center p-4">
         <div className="w-full max-w-md">
@@ -78,7 +77,7 @@ const Login = () => {
                             </div>
                         )}
                         <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input-field" placeholder="Email address" />
-                        <button type="submit" disabled={loading} className="button-primary w-full">
+                        <button type="submit" disabled={loading} className="button-primary">
                             {loading ? 'Sending...' : 'Send Reset Link'}
                         </button>
                     </form>
@@ -104,22 +103,21 @@ const Login = () => {
                             <AlertCircle className="mr-2 flex-shrink-0" size={20} /> {error}
                         </div>
                     )}
-                    {/* --- FIX: Removed label and added a div for consistent sizing --- */}
-                    <div>
+                    {/* --- FIX: Wrapped both inputs in a relative div for identical structure --- */}
+                    <div className="relative">
                         <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input-field" placeholder="Email address" />
                     </div>
                     <div className="relative">
-                        <input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required className="input-field pr-10" placeholder="Password" />
+                        <input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required className="input-field" placeholder="Password" />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                     </div>
                     
-                    <button type="submit" disabled={loading} className="button-primary w-full !mt-8">
+                    <button type="submit" disabled={loading} className="button-primary !mt-8">
                         {loading ? 'Signing in...' : 'Sign in'}
                     </button>
 
-                    {/* --- FIX: Moved and reworded "Forgot password?" link --- */}
                     <div className="text-center pt-4">
                         <button type="button" onClick={() => setView('forgotPassword')} className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
                             Forgot password?
@@ -131,22 +129,25 @@ const Login = () => {
     );
 };
 
-// --- SignUp component remains unchanged ---
-const SignUp = () => {
+const SignUp = ({ onSwitchToLogin }) => { // Added prop
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [companyName, setCompanyName] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const handleSignUp = async (e) => {
         e.preventDefault();
+        setLoading(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             await updateProfile(userCredential.user, { displayName: companyName });
-            toast.success("Account created successfully! Please log in.");
+            toast.success("Account created! Please sign in to continue.");
+            onSwitchToLogin(); // Switch to login view
         } catch (error) {
             toast.error(`Sign up failed: ${error.message}`);
         }
+        setLoading(false);
     };
 
     return (
@@ -156,19 +157,21 @@ const SignUp = () => {
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create a new account</h2>
                 </div>
                 <form className="space-y-6" onSubmit={handleSignUp}>
-                    <div>
+                    <div className="relative">
                         <input id="companyName" type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="input-field" placeholder="Company Name" />
                     </div>
-                    <div>
+                    <div className="relative">
                         <input id="email-signup" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input-field" placeholder="Email address" />
                     </div>
                     <div className="relative">
-                        <input id="password-signup" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required className="input-field pr-10" placeholder="Password" />
+                        <input id="password-signup" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required className="input-field" placeholder="Password" />
                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                     </div>
-                    <button type="submit" className="button-primary w-full !mt-8">Sign up</button>
+                    <button type="submit" disabled={loading} className="button-primary !mt-8">
+                       {loading ? 'Creating account...' : 'Sign up'}
+                    </button>
                 </form>
             </div>
         </AuthLayout>
