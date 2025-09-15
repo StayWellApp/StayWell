@@ -8,24 +8,42 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // == SUPER ADMIN RULES ==
-    match /users/{userId} {
-      allow read: if request.auth.token.superAdmin == true;
-      allow write, create: if request.auth.uid == userId;
-    }
-    match /appSettings/{docId} {
-      allow read, write: if request.auth.token.superAdmin == true;
-    }
-    match /subscriptionPlans/{planId} {
-      allow read, write: if request.auth.token.superAdmin == true;
-    }
-    match /auditLog/{logId} {
-      allow read: if request.auth.token.superAdmin == true;
+    // A function to check if the user is a super admin
+    function isSuperAdmin() {
+      return request.auth.token.superAdmin == true;
     }
 
-    // == USER DATA RULES ==
+    // A function to check if the user is the owner of a resource
     function isOwner(resource) {
       return request.auth.uid == resource.data.ownerId;
+    }
+
+    // == SUPER ADMIN & USER RULES ==
+    match /users/{userId} {
+      allow get: if request.auth.uid == userId || isSuperAdmin();
+      allow list: if isSuperAdmin();
+      // THIS IS THE CORRECTED RULE
+      allow write, create: if request.auth.uid == userId || isSuperAdmin();
+    }
+    match /users/{userId}/configs/{configId} {
+      allow read, write: if request.auth.uid == userId || isSuperAdmin();
+    }
+
+    // == PROPERTY RULES ==
+    match /properties/{propertyId} {
+      allow read: if isOwner(resource) || isSuperAdmin();
+      allow write: if isOwner(resource);
+    }
+    
+    // Other rules for your application...
+    match /appSettings/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+    match /subscriptionPlans/{planId} {
+      allow read, write: if isSuperAdmin();
+    }
+    match /auditLog/{logId} {
+      allow read: if isSuperAdmin();
     }
     match /userSettings/{userId} {
         allow read, write: if request.auth.uid == userId;
@@ -33,13 +51,8 @@ service cloud.firestore {
     match /customRoles/{roleId} {
         allow read, write: if isOwner(resource);
     }
-
-    // == PROPERTY & TASK RULES ==
-    match /properties/{propertyId} {
-      allow read, write: if isOwner(resource);
-    }
     match /bookings/{bookingId} {
-      allow read, write: if isOwner(resource);
+      allow read, write: if isOwner(resource) || isSuperAdmin();
     }
     match /storageLocations/{locationId} {
         allow read, write: if isOwner(resource);
@@ -54,7 +67,8 @@ service cloud.firestore {
       allow read, write: if isOwner(resource) || request.auth.uid == resource.data.assignedTo;
     }
     match /tasks/{taskId}/comments/{commentId} {
-        allow read, create: if get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid || get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
+        allow read, create: if get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid ||
+                           get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
     }
   }
 }

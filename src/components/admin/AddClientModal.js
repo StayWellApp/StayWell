@@ -6,6 +6,7 @@ import { httpsCallable } from 'firebase/functions';
 const AddClientModal = ({ isOpen, onClose, onClientAdded }) => {
     const [companyName, setCompanyName] = useState('');
     const [email, setEmail] = useState('');
+    const [contactPerson, setContactPerson] = useState(''); // New state
     const [plan, setPlan] = useState('basic');
     const [planExpiration, setPlanExpiration] = useState('');
     const [error, setError] = useState(null);
@@ -16,7 +17,8 @@ const AddClientModal = ({ isOpen, onClose, onClientAdded }) => {
         setError(null);
         try {
             const createClient = httpsCallable(functions, 'createClient');
-            await createClient({ companyName, email, plan, planExpiration });
+            // Pass the new fields to the cloud function
+            await createClient({ companyName, email, plan, planExpiration, contactPerson });
             onClientAdded();
             onClose();
         } catch (err) {
@@ -45,6 +47,14 @@ const AddClientModal = ({ isOpen, onClose, onClientAdded }) => {
                         placeholder="Contact Email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    />
+                    {/* New input for Contact Person */}
+                    <input
+                        type="text"
+                        placeholder="Key Contact Person"
+                        value={contactPerson}
+                        onChange={(e) => setContactPerson(e.target.value)}
                         className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                     />
                     <select

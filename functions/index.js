@@ -614,7 +614,7 @@ exports.logAdminAction = functions.https.onCall(async (data, context) => {
   const message = data.message;
 
   if (!message) {
-     throw new functions.https.HttpsError(
+      throw new functions.https.HttpsError(
         "invalid-argument",
         "The function must be called with a 'message' argument.",
     );
@@ -629,23 +629,11 @@ exports.logAdminAction = functions.https.onCall(async (data, context) => {
   return { success: true };
 });
 
-// staywellapp/staywell/StayWell-70115a3c7a3657dd4709bca4cc01a8d068f44fe5/functions/index.js
-
-// ... (existing code)
-
 // --- SEND WELCOME EMAIL ---
 // This is a placeholder for your actual email sending logic (e.g., using SendGrid, Mailgun)
 const sendWelcomeEmail = async (email, companyName) => {
     functions.logger.log(`Sending welcome email to ${email} for company ${companyName}.`);
     // In a real application, you would integrate with an email service here.
-    // For example:
-    // const msg = {
-    //   to: email,
-    //   from: 'welcome@staywellapp.com',
-    //   subject: 'Welcome to StayWell!',
-    //   html: `<strong>Welcome, ${companyName}!</strong> Get started by setting up your properties.`,
-    // };
-    // await sgMail.send(msg);
     return { success: true };
 };
 
@@ -671,7 +659,7 @@ exports.createClient = functions.https.onCall(async (data, context) => {
         // Create user in Firebase Auth
         const userRecord = await admin.auth().createUser({
             email: email,
-            emailVerified: false, // Or true, depending on your flow
+            emailVerified: false,
             displayName: companyName,
         });
 

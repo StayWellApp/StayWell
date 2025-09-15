@@ -48,7 +48,8 @@ const AdminSubscriptionsView = () => {
         }
 
         const planData = {
-            name: planName,
+            // **FIX:** Changed 'name' to 'planName' to be consistent
+            planName: planName,
             pricePerProperty: Number(pricePerProperty),
             teamMemberLimit: Number(teamMemberLimit),
             features: features,
@@ -71,7 +72,8 @@ const AdminSubscriptionsView = () => {
 
     const handleEdit = (plan) => {
         setIsEditing(plan);
-        setPlanName(plan.name);
+        // **FIX:** Use 'planName' when editing
+        setPlanName(plan.planName);
         setPricePerProperty(plan.pricePerProperty);
         setTeamMemberLimit(plan.teamMemberLimit || 0);
         setFeatures(plan.features || { chatAccess: false, advancedAnalytics: false, automationModule: false });
@@ -139,7 +141,8 @@ const AdminSubscriptionsView = () => {
                                 <div key={plan.id} className="p-4 rounded-lg border dark:border-gray-700">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <p className="font-semibold text-lg">{plan.name}</p>
+                                            {/* **FIX:** Use 'planName' when displaying */}
+                                            <p className="font-semibold text-lg">{plan.planName}</p>
                                             <p className="text-sm text-gray-500 dark:text-gray-400">
                                                 €{plan.pricePerProperty}/property/mo | Up to {plan.teamMemberLimit} team members
                                             </p>

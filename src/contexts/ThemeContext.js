@@ -1,36 +1,48 @@
-import React, { createContext, useState, useEffect, useMemo } from 'react';
+// src/contexts/ThemeContext.js
+
+import React, { createContext, useState, useEffect } from 'react';
 
 export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-    // Initialize state from localStorage or default to 'light'
-    const [theme, setTheme] = useState(() => {
-        const storedTheme = localStorage.getItem('theme');
-        return storedTheme || 'light';
-    });
+  const [theme, setTheme] = useState('light'); // Default theme
 
-    useEffect(() => {
-        const root = window.document.documentElement;
-
-        // Remove the old theme class and add the new one
-        const oldTheme = theme === 'dark' ? 'light' : 'dark';
-        root.classList.remove(oldTheme);
-        root.classList.add(theme);
-
-        // Save the theme to localStorage
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    const toggleTheme = () => {
-        setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-    };
+  useEffect(() => {
+    const root = window.document.documentElement;
     
-    // Memoize the value to prevent unnecessary re-renders
-    const value = useMemo(() => ({ theme, toggleTheme }), [theme]);
+    // --- ADDED: Logic to detect and apply system theme ---
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    setTheme(systemTheme);
 
-    return (
-        <ThemeContext.Provider value={value}>
-            {children}
-        </ThemeContext.Provider>
-    );
+    // Add listener for changes in system theme
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+        const newTheme = mediaQuery.matches ? 'dark' : 'light';
+        setTheme(newTheme);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    
+    // Set the class on the root HTML element
+    root.classList.remove('light', 'dark');
+    root.classList.add(systemTheme);
+
+    // Cleanup listener on component unmount
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []); // Only runs once on initial load
+
+  // This function can be used later to allow manual theme switching
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    const root = window.document.documentElement;
+    root.classList.remove(theme);
+    root.classList.add(newTheme);
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 };

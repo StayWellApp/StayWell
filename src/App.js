@@ -1,9 +1,11 @@
+// src/App.js
+
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from "firebase/firestore";
 import { usePermissions } from './hooks/usePermissions';
-import { Login, SignUp } from './components/Auth';
+import { Auth } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
 import StaffDashboard from './components/StaffDashboard';
@@ -22,7 +24,8 @@ import BillingView from './components/admin/BillingView';
 import ClientListView from './components/admin/ClientListView';
 import ClientDetailView from './components/admin/ClientDetailView';
 import AdminSubscriptionsView from './components/admin/AdminSubscriptionsView';
-import EndImpersonationBanner from './components/EndImpersonationBanner'; // <-- IMPORT THE CORRECT BANNER
+import EndImpersonationBanner from './components/EndImpersonationBanner';
+import AddClientModal from './components/admin/AddClientModal';
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import 'flag-icons/css/flag-icons.min.css';
@@ -34,23 +37,24 @@ function App() {
     const [userData, setUserData] = useState(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [isRegistering, setIsRegistering] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
-    const [selectedAdminClient, setSelectedAdminClient] = useState(null);
+    const [selectedClient, setSelectedClient] = useState(null); 
     const { hasPermission, loadingPermissions } = usePermissions(userData);
+    const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
+
+    const handleOpenAddClientModal = () => setAddClientModalOpen(true);
+    const handleCloseAddClientModal = () => setAddClientModalOpen(false);
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                currentUser.getIdTokenResult().then(idTokenResult => {
-                    const claims = idTokenResult.claims;
-                    if (claims.superAdmin) {
+                currentUser.getIdTokenResult(true).then(idTokenResult => {
+                    if (idTokenResult.claims.superAdmin === true) {
                         setIsSuperAdmin(true);
-                        // Prevents view from resetting when admin logs back in
-                        if (!localStorage.getItem('impersonating_admin_uid')) {
-                           setActiveView('adminDashboard');
+                        if (!localStorage.getItem('impersonating_admin_uid') && !selectedClient) {
+                            setActiveView('adminDashboard');
                         }
                     } else {
                         setIsSuperAdmin(false);
@@ -60,6 +64,7 @@ function App() {
                 setUser(null);
                 setUserData(null);
                 setIsSuperAdmin(false);
+                setSelectedClient(null);
             }
             setIsLoading(false);
         });
@@ -67,45 +72,58 @@ function App() {
     }, []);
 
     useEffect(() => {
-        if (user) {
+        if (user && !isSuperAdmin) {
             const userDocRef = doc(db, "users", user.uid);
             const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
                 setUserData(doc.exists() ? doc.data() : null);
-            }, (error) => {
-                console.error("Firestore snapshot error:", error);
-            });
+            }, (error) => console.error("Firestore snapshot error:", error));
             return () => unsubscribeSnapshot();
         }
-    }, [user]);
+    }, [user, isSuperAdmin]);
 
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
-        setSelectedAdminClient(null);
+        setSelectedClient(null);
         setActiveView(view);
     };
     
-    const handleSelectAdminClient = (client) => {
-        setSelectedAdminClient(client);
+    const handleSelectClient = (client) => setSelectedClient(client);
+
+    const handleBackToClientList = () => {
+        setSelectedClient(null);
+        setActiveView('adminClients');
     };
     
     const renderActiveView = () => {
         if (isSuperAdmin) {
-            if (selectedAdminClient) {
-                return <ClientDetailView client={selectedAdminClient} onBack={() => setSelectedAdminClient(null)} />;
+            if (selectedClient) {
+                return <ClientDetailView client={selectedClient} onBack={handleBackToClientList} />;
             }
             switch (activeView) {
-                case 'adminDashboard': return <SuperAdminDashboard user={user} />;
-                case 'adminClients': return <ClientListView onSelectClient={handleSelectAdminClient} />;
+                case 'adminDashboard': 
+                    return <SuperAdminDashboard 
+                                onSelectClient={handleSelectClient} 
+                                setActiveView={handleSetActiveView} 
+                           />;
+                case 'adminClients': 
+                    return <ClientListView 
+                                onSelectClient={handleSelectClient} 
+                                onAddClient={handleOpenAddClientModal} 
+                           />;
                 case 'adminBilling': return <BillingView />;
                 case 'adminSubscriptions': return <AdminSubscriptionsView />;
                 case 'adminSettings': return <AdminSettingsView />;
                 case 'adminAuditLog': return <AuditLogView />;
-                default: return <SuperAdminDashboard user={user} />;
+                default: 
+                    return <SuperAdminDashboard 
+                                onSelectClient={handleSelectClient} 
+                                setActiveView={handleSetActiveView} 
+                           />;
             }
         }
 
         if (loadingPermissions) {
-            return <div className="flex items-center justify-center h-full"><p className="text-gray-500">Checking permissions...</p></div>;
+            return <div className="flex items-center justify-center h-full"><p>Checking permissions...</p></div>;
         }
 
         if (selectedProperty) {
@@ -128,7 +146,7 @@ function App() {
             case 'calendar':
                 return hasPermission('tasks_view_all') ? <MasterCalendarView user={user} userData={userData} /> : <StaffDashboard user={user} userData={userData} />;
             case 'settings':
-                 return hasPermission('team_manage') ? <SettingsView user={user} userData={userData} /> : null;
+                return hasPermission('team_manage') ? <SettingsView user={user} userData={userData} /> : null;
             default:
                 return hasPermission('properties_view_all') ? <ClientDashboard user={user} setActiveView={handleSetActiveView} /> : <StaffDashboard user={user} userData={userData} />;
         }
@@ -137,24 +155,15 @@ function App() {
     const isImpersonating = !!localStorage.getItem('impersonating_admin_uid');
 
     if (isLoading) {
-        return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading StayWell...</p></div>;
+        return <div className="flex items-center justify-center h-screen"><p>Loading StayWell...</p></div>;
     }
 
     if (!user) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
-                <div className="w-full max-w-md p-4">
-                    {isRegistering ? <SignUp /> : <Login />}
-                    <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-4 text-center text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                        {isRegistering ? 'Already have an account? Log in.' : "Don't have an account? Sign up."}
-                    </button>
-                </div>
-            </div>
-        );
+        return <Auth />;
     }
 
     if (!isSuperAdmin && !isImpersonating && (loadingPermissions || !userData)) {
-        return <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900"><p className="text-gray-500">Loading User Profile...</p></div>;
+        return <div className="flex items-center justify-center h-screen"><p>Loading User Profile...</p></div>;
     }
 
     return (
@@ -173,6 +182,10 @@ function App() {
                     </div>
                 )}
             </div>
+            <AddClientModal 
+              isOpen={isAddClientModalOpen} 
+              onClose={handleCloseAddClientModal} 
+            />
         </ThemeProvider>
     );
 }

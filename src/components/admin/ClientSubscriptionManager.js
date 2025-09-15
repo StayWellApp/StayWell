@@ -5,8 +5,9 @@ import { toast } from 'react-toastify';
 import { logAdminAction } from './auditLogUtils';
 
 const ClientSubscriptionManager = ({ client }) => {
+    // --- All Hooks are now called at the top level ---
     const [plans, setPlans] = useState([]);
-    const [selectedPlanId, setSelectedPlanId] = useState(client.subscription?.planId || '');
+    const [selectedPlanId, setSelectedPlanId] = useState(client?.subscription?.plan || '');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -17,6 +18,17 @@ const ClientSubscriptionManager = ({ client }) => {
         });
         return () => unsubscribe();
     }, []);
+    
+    // Update selectedPlanId if the client prop changes
+    useEffect(() => {
+        setSelectedPlanId(client?.subscription?.plan || '');
+    }, [client]);
+
+
+    // --- Safeguard is now placed AFTER the hooks ---
+    if (!client) {
+        return null;
+    }
 
     const handleSubscriptionChange = async (e) => {
         const newPlanId = e.target.value;
@@ -36,11 +48,11 @@ const ClientSubscriptionManager = ({ client }) => {
             renewalDate.setDate(renewalDate.getDate() + 30);
 
             const newSubscriptionData = newPlanId ? {
-                planId: selectedPlan.id,
-                planName: selectedPlan.name,
+                plan: selectedPlan.id,
+                planName: selectedPlan.planName, 
                 pricePerProperty: selectedPlan.pricePerProperty,
                 teamMemberLimit: selectedPlan.teamMemberLimit,
-                features: selectedPlan.features,
+                features: selectedPlan.features || [],
                 status: 'active',
                 assignedAt: Timestamp.now(),
                 renewalDate: Timestamp.fromDate(renewalDate),
@@ -51,7 +63,7 @@ const ClientSubscriptionManager = ({ client }) => {
             });
             
             const message = newPlanId
-                ? `Assigned plan "${selectedPlan.name}" to client ${client.email}.`
+                ? `Assigned plan "${selectedPlan.planName}" to client ${client.email}.`
                 : `Removed subscription from client ${client.email}.`;
             await logAdminAction(message);
 
@@ -59,7 +71,7 @@ const ClientSubscriptionManager = ({ client }) => {
         } catch (error) {
             console.error("Error updating subscription:", error);
             toast.update(toastId, { render: "Failed to update subscription.", type: "error", isLoading: false, autoClose: 5000 });
-            setSelectedPlanId(client.subscription?.planId || '');
+            setSelectedPlanId(client.subscription?.plan || '');
         }
     };
 
@@ -73,12 +85,12 @@ const ClientSubscriptionManager = ({ client }) => {
                         id="plan-select"
                         value={selectedPlanId}
                         onChange={handleSubscriptionChange}
-                        className="mt-1 input-style w-full"
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     >
                         <option value="">None (Trial/Suspended)</option>
                         {plans.map(plan => (
                             <option key={plan.id} value={plan.id}>
-                                {plan.name} (€{plan.pricePerProperty}/property)
+                                {plan.planName} (€{plan.pricePerProperty}/property)
                             </option>
                         ))}
                     </select>
