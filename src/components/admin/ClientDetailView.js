@@ -1,8 +1,8 @@
 // src/components/admin/ClientDetailView.js
-// Refactored to import and use individual tab components.
+// Added mock subscription dates to client data
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, updateDoc, query, where, Timestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { db } from '../../firebase-config';
@@ -12,11 +12,8 @@ import {
     ChatBubbleLeftRightIcon, BanknotesIcon, DocumentTextIcon, PencilSquareIcon
 } from '@heroicons/react/24/outline';
 
-// Import other necessary components
 import EditClientModal from './EditClientModal';
 import ClientAnalyticsView from './ClientAnalyticsView';
-
-// Import the new tab components
 import OverviewTab from './tabs/OverviewTab';
 import PropertiesTab from './tabs/PropertiesTab';
 import CommunicationTab from './tabs/CommunicationTab';
@@ -76,9 +73,21 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
         const docRef = doc(db, 'users', client.id); 
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-            setClientData({ id: docSnap.id, ...docSnap.data() });
+            const data = docSnap.data();
+            // --- ADDING MOCK DATES FOR DEMO ---
+            if (data.subscription && !data.subscription.startDate) {
+                data.subscription.startDate = Timestamp.fromDate(new Date('2025-01-20T00:00:00'));
+                data.subscription.renewalDate = Timestamp.fromDate(new Date('2026-01-20T00:00:00'));
+            }
+            setClientData({ id: docSnap.id, ...data });
         }
     };
+    
+    // Refresh data on initial load to add mock dates
+    useEffect(() => {
+        refreshClientData();
+    }, [client.id]);
+
 
     const handleUpdateClient = async (updatedDetails) => {
         try {
