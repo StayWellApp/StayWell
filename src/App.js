@@ -13,12 +13,12 @@ import PropertiesView from './components/PropertiesView';
 import TeamView from './components/TeamView';
 
 // --- FIXED IMPORTS ---
-// Corrected the path and changed from a named import to a default import.
-import PropertyDetailView from './components/property/PropertyDetailView'; 
-// Changed from a named import to a default import.
-import ChecklistsView from './components/ChecklistViews';
-// Changed from a named import to a default import.
-import StorageView from './components/StorageViews';
+// Corrected the path and changed back to a named import.
+import { PropertyDetailView } from './components/property/PropertyDetailView'; 
+// Changed back to a named import.
+import { ChecklistsView } from './components/ChecklistViews';
+// Changed back to a named import.
+import { StorageView } from './components/StorageViews';
 
 import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
