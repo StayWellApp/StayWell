@@ -1,8 +1,8 @@
 // src/components/Auth.js
 
 import React, { useContext, useState, useEffect } from "react";
-import { auth, googleProvider, db } from "../firebase-config"; // Import db
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // Import firestore functions
+import { auth, googleProvider, db } from "../firebase-config";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -11,10 +11,9 @@ import {
   signOut,
   sendPasswordResetEmail
 } from "firebase/auth";
-// Import new icons
 import { Mail, Lock, Building2, User, Phone, Globe, Sun, Moon } from 'lucide-react'; 
 
-// --- Auth Context (UPDATED) ---
+// --- Auth Context (No changes needed) ---
 const AuthContext = React.createContext();
 
 export function useAuth() {
@@ -25,20 +24,18 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // UPDATED: Signup function now accepts additional data
   async function signup(email, password, additionalData) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     if (user) {
-      // Create a document in Firestore for the new user
       const userDocRef = doc(db, 'users', user.uid);
       await setDoc(userDocRef, {
         uid: user.uid,
         email: user.email,
         ...additionalData,
-        roles: ['client_admin'], // Assign a default role
+        roles: ['client_admin'],
         createdAt: serverTimestamp(),
-        ownerId: user.uid, // Set the ownerId for data scoping
+        ownerId: user.uid,
       });
     }
     return userCredential;
@@ -81,7 +78,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-// --- SVG Icons ---
+// --- SVG Icons (No changes needed) ---
 const GoogleIcon = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5" {...props}>
       <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
@@ -102,22 +99,23 @@ const MicrosoftIcon = (props) => (
 
 // --- Simple Theme Toggle Component ---
 const ThemeToggle = () => {
-    // A simple theme toggle. In a real app, this would use the ThemeContext.
+    const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
+    
     const toggleTheme = () => {
-        document.documentElement.classList.toggle('dark');
+        const isCurrentlyDark = document.documentElement.classList.toggle('dark');
+        setIsDark(isCurrentlyDark);
     };
+
     return (
-        <button onClick={toggleTheme} className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-            <Sun className="h-5 w-5 hidden dark:block" />
-            <Moon className="h-5 w-5 block dark:hidden" />
+        <button onClick={toggleTheme} className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
     );
 };
 
-// --- Auth Component (with Expanded Signup) ---
+// --- Auth Component (with Final Polish) ---
 export const Auth = () => {
   const [view, setView] = useState('signIn');
-  // State for all form fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -174,7 +172,6 @@ export const Auth = () => {
       setCountry('');
   }
 
-  // Helper component for input fields to reduce repetition
   const InputField = ({ id, type, placeholder, value, onChange, icon: Icon }) => (
     <div className="relative">
       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -189,7 +186,6 @@ export const Auth = () => {
 
   const renderContent = () => {
     if (view === 'forgotPassword') {
-      // ... (Forgot password form remains the same)
       return (
         <>
           <div className="text-center lg:text-left mb-10">
@@ -216,7 +212,6 @@ export const Auth = () => {
       );
     }
     
-    // Sign In and Sign Up forms
     return (
       <>
         <div className="text-center lg:text-left mb-10">
@@ -243,7 +238,6 @@ export const Auth = () => {
           )}
           <div>
             <InputField id="password" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} icon={Lock} />
-            {/* REPOSITIONED: Forgot password link */}
             {view === 'signIn' && (
                 <div className="text-right mt-2">
                     <button type="button" onClick={() => { setView('forgotPassword'); resetState(false); }} className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
@@ -288,25 +282,37 @@ export const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex">
-      <div className="hidden lg:flex w-1/2 bg-gray-50 dark:bg-gray-800 items-center justify-center p-12 relative">
-        <div className="text-center">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex relative">
+      {/* ADDED: Toggles moved to top-right */}
+      <div className="absolute top-6 right-6 flex items-center space-x-4 z-10">
+        <ThemeToggle />
+        <div className="relative">
+          <select className="appearance-none bg-gray-200 dark:bg-gray-700 border-none rounded-full py-2 pl-4 pr-8 text-sm text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option>English</option>
+            <option>Español</option>
+            <option>Français</option>
+          </select>
+          <Globe className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400" />
+        </div>
+      </div>
+      
+      {/* Left Side: Branding */}
+      <div className="hidden lg:flex w-1/2 bg-gray-50 dark:bg-gray-800 items-center justify-center p-12 relative overflow-hidden">
+        {/* ADDED: Subtle background pattern */}
+        <div 
+          className="absolute inset-0 opacity-5 dark:opacity-10"
+          style={{
+            backgroundImage: 'url(\'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><path fill="%239ca3af" d="M0 0h20v20H0zM20 20h20v20H20z"/></svg>\')',
+            backgroundRepeat: 'repeat',
+          }}
+        />
+        <div className="text-center z-10">
           <h1 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">StayWell</h1>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Management, simplified.</p>
         </div>
-        {/* ADDED: Theme and Language Toggles */}
-        <div className="absolute bottom-8 left-8 flex items-center space-x-4">
-            <ThemeToggle />
-            <div className="relative">
-                <select className="appearance-none bg-gray-200 dark:bg-gray-700 border-none rounded-full py-2 pl-4 pr-8 text-sm text-gray-600 dark:text-gray-300">
-                    <option>English</option>
-                    <option>Español</option>
-                    <option>Français</option>
-                </select>
-                <Globe className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400" />
-            </div>
-        </div>
       </div>
+
+      {/* Right Side: Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md">
           {renderContent()}
