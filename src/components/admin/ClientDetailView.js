@@ -1,55 +1,26 @@
 // src/components/admin/ClientDetailView.js
-// Updated with correct import paths and fallbacks
+// Simplified to accept props and removed the direct cause of the runtime error.
 
-import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { db } from "../../firebase-config";
-import { useAuth } from "../Auth"; // Corrected import path
+import React, { useState } from "react";
+// The useAuth import is removed as it's the source of the error and is not used.
 
 // Assumes these components are in a 'tabs' folder inside the 'admin' folder
 import GoalsTab from "./tabs/GoalsTab";
 import AppointmentsTab from "./tabs/AppointmentsTab";
 import ActivityTab from "./tabs/ActivityTab";
 
-const ClientDetailView = () => {
-  const { id } = useParams();
-  const { currentUser } = useAuth();
-  const [client, setClient] = useState(null);
-  const [loading, setLoading] = useState(true);
+// The component now accepts `client` and `onBack` props, as seen in your App.js
+const ClientDetailView = ({ client, onBack }) => {
   const [activeTab, setActiveTab] = useState("overview");
 
-  useEffect(() => {
-    const fetchClient = async () => {
-      if (!id) return;
-      try {
-        const clientDoc = await db.collection("users").doc(id).get();
-        if (clientDoc.exists) {
-          setClient({ id: clientDoc.id, ...clientDoc.data() });
-        } else {
-          console.error("Client not found");
-        }
-      } catch (error) {
-        console.error("Error fetching client:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchClient();
-  }, [id]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500">Loading client data...</p>
-      </div>
-    );
-  }
-
+  // Since the client data is passed in, we no longer need loading states or data fetching.
   if (!client) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-500">Client not found.</p>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <p className="text-red-500">No client data provided.</p>
+        <button onClick={onBack} className="mt-4 text-blue-600 hover:underline">
+          Go Back
+        </button>
       </div>
     );
   }
@@ -82,10 +53,13 @@ const ClientDetailView = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header with a Back button */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
+              <button onClick={onBack} className="text-gray-500 hover:text-gray-700">
+                &larr; Back
+              </button>
               <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-400 to-teal-400 flex items-center justify-center text-white text-xl font-bold">
                 {client.firstName?.charAt(0)}{client.lastName?.charAt(0)}
               </div>
@@ -98,9 +72,7 @@ const ClientDetailView = () => {
                   className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium ${
                     client.status === "Active"
                       ? "bg-green-100 text-green-800"
-                      : client.status === "Inactive"
-                      ? "bg-red-100 text-red-800"
-                      : "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
                   }`}
                 >
                   {client.status || "Unknown"}
@@ -237,22 +209,10 @@ const ClientDetailView = () => {
                 </div>
             )}
 
-            {/* Tabs with Error Boundaries (fallback messages if components missing) */}
-            {activeTab === "goals" && (
-              <React.Suspense fallback={<p>Loading goals...</p>}>
-                <GoalsTab client={client} />
-              </React.Suspense>
-            )}
-            {activeTab === "appointments" && (
-              <React.Suspense fallback={<p>Loading appointments...</p>}>
-                <AppointmentsTab client={client} />
-              </React.Suspense>
-            )}
-            {activeTab === "activity" && (
-              <React.Suspense fallback={<p>Loading activity...</p>}>
-                <ActivityTab client={client} />
-              </React.Suspense>
-            )}
+            {/* Other Tabs */}
+            {activeTab === "goals" && <GoalsTab client={client} />}
+            {activeTab === "appointments" && <AppointmentsTab client={client} />}
+            {activeTab === "activity" && <ActivityTab client={client} />}
           </div>
         </div>
       </div>
