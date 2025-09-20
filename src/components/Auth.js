@@ -1,18 +1,20 @@
 // src/components/Auth.js
 
 import React, { useContext, useState, useEffect } from "react";
-import { auth, googleProvider } from "../firebase-config";
+import { auth, googleProvider, db } from "../firebase-config"; // Import db
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // Import firestore functions
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
   onAuthStateChanged,
   signOut,
-  sendPasswordResetEmail // <-- ADDED: Import for password reset
+  sendPasswordResetEmail
 } from "firebase/auth";
-import { Mail, Lock } from 'lucide-react';
+// Import new icons
+import { Mail, Lock, Building2, User, Phone, Globe, Sun, Moon } from 'lucide-react'; 
 
-// --- Auth Context (No changes needed here) ---
+// --- Auth Context (UPDATED) ---
 const AuthContext = React.createContext();
 
 export function useAuth() {
@@ -23,8 +25,23 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  function signup(email, password) {
-    return createUserWithEmailAndPassword(auth, email, password);
+  // UPDATED: Signup function now accepts additional data
+  async function signup(email, password, additionalData) {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    if (user) {
+      // Create a document in Firestore for the new user
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, {
+        uid: user.uid,
+        email: user.email,
+        ...additionalData,
+        roles: ['client_admin'], // Assign a default role
+        createdAt: serverTimestamp(),
+        ownerId: user.uid, // Set the ownerId for data scoping
+      });
+    }
+    return userCredential;
   }
 
   function login(email, password) {
@@ -64,7 +81,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-// --- SVG Icons (No changes needed here) ---
+// --- SVG Icons ---
 const GoogleIcon = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5" {...props}>
       <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
@@ -83,15 +100,33 @@ const MicrosoftIcon = (props) => (
     </svg>
 );
 
+// --- Simple Theme Toggle Component ---
+const ThemeToggle = () => {
+    // A simple theme toggle. In a real app, this would use the ThemeContext.
+    const toggleTheme = () => {
+        document.documentElement.classList.toggle('dark');
+    };
+    return (
+        <button onClick={toggleTheme} className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+            <Sun className="h-5 w-5 hidden dark:block" />
+            <Moon className="h-5 w-5 block dark:hidden" />
+        </button>
+    );
+};
 
-// --- Auth Component (with Forgot Password) ---
+// --- Auth Component (with Expanded Signup) ---
 export const Auth = () => {
-  // ADDED: view state to switch between forms
-  const [view, setView] = useState('signIn'); // 'signIn', 'signUp', 'forgotPassword'
+  const [view, setView] = useState('signIn');
+  // State for all form fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("");
+
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState(""); // For success feedback
+  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login, signup, signInWithGoogle } = useAuth();
 
@@ -108,32 +143,53 @@ export const Auth = () => {
     }
   };
   
-  // ADDED: Handler for the forgot password form
-  const handleForgotPassword = async (e) => {
+  const handleForgotPassword = (e) => {
     e.preventDefault();
     handleAuthAction(async () => {
-        await sendPasswordResetEmail(auth, email);
-        setSuccessMessage('Check your email for a password reset link.');
+      await sendPasswordResetEmail(auth, email);
+      setSuccessMessage('Check your email for a password reset link.');
     });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const authFn = view === 'signUp' ? () => signup(email, password) : () => login(email, password);
-    handleAuthAction(authFn);
+    if (view === 'signUp') {
+      const additionalData = { companyName, fullName, phone, country, displayName: fullName };
+      handleAuthAction(() => signup(email, password, additionalData));
+    } else {
+      handleAuthAction(() => login(email, password));
+    }
   };
   
   const handleSignInWithGoogle = () => handleAuthAction(signInWithGoogle);
 
-  const resetState = () => {
+  const resetState = (clearEmail = true) => {
       setErrorMessage('');
       setSuccessMessage('');
-      setEmail('');
+      if (clearEmail) setEmail('');
       setPassword('');
+      setCompanyName('');
+      setFullName('');
+      setPhone('');
+      setCountry('');
   }
+
+  // Helper component for input fields to reduce repetition
+  const InputField = ({ id, type, placeholder, value, onChange, icon: Icon }) => (
+    <div className="relative">
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <Icon className="h-5 w-5 text-gray-400" />
+      </div>
+      <input id={id} name={id} type={type} required
+        className="block w-full pl-10 pr-3 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        placeholder={placeholder} value={value} onChange={onChange}
+      />
+    </div>
+  );
 
   const renderContent = () => {
     if (view === 'forgotPassword') {
+      // ... (Forgot password form remains the same)
       return (
         <>
           <div className="text-center lg:text-left mb-10">
@@ -141,18 +197,7 @@ export const Auth = () => {
             <p className="text-gray-500 dark:text-gray-400 mt-2">Enter your email to receive a reset link.</p>
           </div>
           <form className="space-y-5" onSubmit={handleForgotPassword}>
-            <div>
-              <label htmlFor="email" className="sr-only">Email address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input id="email" name="email" type="email" autoComplete="email" required
-                  className="block w-full pl-10 pr-3 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
+            <InputField id="email" type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} icon={Mail} />
             {successMessage && <p className="text-sm text-center text-green-600 dark:text-green-400">{successMessage}</p>}
             {errorMessage && <p className="text-sm text-center text-red-600 dark:text-red-400">{errorMessage}</p>}
             <div>
@@ -170,74 +215,69 @@ export const Auth = () => {
         </>
       );
     }
-
-    // Default view: Sign In and Sign Up
+    
+    // Sign In and Sign Up forms
     return (
       <>
         <div className="text-center lg:text-left mb-10">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {view === 'signUp' ? 'Create Account' : 'Welcome Back'}
+            {view === 'signUp' ? 'Create Your Account' : 'Welcome Back'}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mt-2">
-            {view === 'signUp' ? 'Get started with your new account.' : 'Please enter your details to sign in.'}
+            {view === 'signUp' ? 'Let\'s get you started.' : 'Please enter your details to sign in.'}
           </p>
         </div>
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          {/* Email Input */}
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          {view === 'signUp' && (
+            <>
+              <InputField id="companyName" type="text" placeholder="Company Name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} icon={Building2} />
+              <InputField id="fullName" type="text" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} icon={User} />
+            </>
+          )}
+          <InputField id="email" type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} icon={Mail} />
+          {view === 'signUp' && (
+            <>
+                <InputField id="phone" type="tel" placeholder="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} icon={Phone} />
+                <InputField id="country" type="text" placeholder="Country" value={country} onChange={(e) => setCountry(e.target.value)} icon={Globe} />
+            </>
+          )}
           <div>
-            <label htmlFor="email" className="sr-only">Email address</label>
-            <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Mail className="h-5 w-5 text-gray-400" /></div>
-                <input id="email" name="email" type="email" autoComplete="email" required
-                  className="block w-full pl-10 pr-3 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)}
-                />
-            </div>
-          </div>
-          {/* Password Input */}
-          <div>
-            <label htmlFor="password" className="sr-only">Password</label>
-            <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Lock className="h-5 w-5 text-gray-400" /></div>
-                <input id="password" name="password" type="password" autoComplete="current-password" required
-                  className="block w-full pl-10 pr-3 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)}
-                />
-            </div>
-          </div>
-
-          {/* ADDED: Forgot password link */}
-          {view === 'signIn' && (
-            <div className="flex items-center justify-end">
-                <div className="text-sm">
-                    <button type="button" onClick={() => { setView('forgotPassword'); resetState(); }} className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
+            <InputField id="password" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} icon={Lock} />
+            {/* REPOSITIONED: Forgot password link */}
+            {view === 'signIn' && (
+                <div className="text-right mt-2">
+                    <button type="button" onClick={() => { setView('forgotPassword'); resetState(false); }} className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
                         Forgot password?
                     </button>
                 </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {errorMessage && <p className="text-sm text-center text-red-600 dark:text-red-400">{errorMessage}</p>}
-          <div>
+          <div className="pt-2">
             <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors">
               {isLoading ? 'Processing...' : (view === 'signUp' ? 'Create Account' : 'Sign In')}
             </button>
           </div>
         </form>
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300 dark:border-gray-600" /></div>
-            <div className="relative flex justify-center text-sm"><span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or</span></div>
-          </div>
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button onClick={handleSignInWithGoogle} disabled={isLoading} className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-              <GoogleIcon /><span className="ml-3">Google</span>
-            </button>
-            <button onClick={() => alert('Microsoft sign-in coming soon!')} disabled={isLoading} className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-              <MicrosoftIcon /><span className="ml-3">Microsoft</span>
-            </button>
-          </div>
-        </div>
+        {view === 'signIn' && (
+            <>
+                <div className="mt-6">
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300 dark:border-gray-600" /></div>
+                        <div className="relative flex justify-center text-sm"><span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or</span></div>
+                    </div>
+                    <div className="mt-6 grid grid-cols-2 gap-3">
+                        <button onClick={handleSignInWithGoogle} disabled={isLoading} className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                        <GoogleIcon /><span className="ml-3">Google</span>
+                        </button>
+                        <button onClick={() => alert('Microsoft sign-in coming soon!')} disabled={isLoading} className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                        <MicrosoftIcon /><span className="ml-3">Microsoft</span>
+                        </button>
+                    </div>
+                </div>
+            </>
+        )}
         <div className="mt-8 text-sm text-center">
           <button type="button" onClick={() => { setView(view === 'signIn' ? 'signUp' : 'signIn'); resetState(); }} className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
             {view === 'signIn' ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
@@ -249,14 +289,24 @@ export const Auth = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex">
-      {/* Left Side: Branding */}
-      <div className="hidden lg:flex w-1/2 bg-gray-50 dark:bg-gray-800 items-center justify-center p-12">
+      <div className="hidden lg:flex w-1/2 bg-gray-50 dark:bg-gray-800 items-center justify-center p-12 relative">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">StayWell</h1>
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Management, simplified. Welcome back.</p>
+          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Management, simplified.</p>
+        </div>
+        {/* ADDED: Theme and Language Toggles */}
+        <div className="absolute bottom-8 left-8 flex items-center space-x-4">
+            <ThemeToggle />
+            <div className="relative">
+                <select className="appearance-none bg-gray-200 dark:bg-gray-700 border-none rounded-full py-2 pl-4 pr-8 text-sm text-gray-600 dark:text-gray-300">
+                    <option>English</option>
+                    <option>Español</option>
+                    <option>Français</option>
+                </select>
+                <Globe className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400" />
+            </div>
         </div>
       </div>
-      {/* Right Side: Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md">
           {renderContent()}
