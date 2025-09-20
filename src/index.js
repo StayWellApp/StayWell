@@ -1,6 +1,6 @@
 // --- src/index.js ---
 // Replace the entire contents of your index.js file with this code.
-
+import './i18n'; // Import the i18n configuration
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
