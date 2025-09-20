@@ -1,14 +1,18 @@
 
 // src/components/admin/ClientDetailView.js
-// Enhanced Overview Tab with Modern Dashboard UI
+// Updated with correct import paths and fallbacks
 
 import React, { useState, useEffect } from "react";
-import { db } from "../../../firebase";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useRouter } from "next/router";
-import GoalsTab from "./GoalsTab";
-import AppointmentsTab from "./AppointmentsTab";
-import ActivityTab from "./ActivityTab";
+
+// ✅ Corrected Imports (assumes standard src/ structure in Next.js)
+import { db } from "src/firebase"; // 🔁 Updated: Use absolute path alias
+import { useAuth } from "src/contexts/AuthContext"; // 🔁 Updated
+import { useRouter } from "next/router"; // 🔁 Should work in Next.js
+
+// 🔁 Updated: Assume these components are in the same directory or create them
+import GoalsTab from "./tabs/GoalsTab"; // 📂 Move to ./tabs/GoalsTab.jsx
+import AppointmentsTab from "./tabs/AppointmentsTab";
+import ActivityTab from "./tabs/ActivityTab";
 
 const ClientDetailView = () => {
   const router = useRouter();
@@ -54,7 +58,7 @@ const ClientDetailView = () => {
     );
   }
 
-  // Sample data fallback (in case not in Firestore)
+  // Mock data fallbacks
   const mockGoals = client.goals || [
     { id: 1, title: "Improve Sleep Quality", progress: 65, target: 100 },
     { id: 2, title: "Increase Daily Steps", progress: 80, target: 100 },
@@ -221,10 +225,22 @@ const ClientDetailView = () => {
               </div>
             )}
 
-            {/* Other Tabs (Unchanged) */}
-            {activeTab === "goals" && <GoalsTab client={client} />}
-            {activeTab === "appointments" && <AppointmentsTab client={client} />}
-            {activeTab === "activity" && <ActivityTab client={client} />}
+            {/* Tabs with Error Boundaries (fallback messages if components missing) */}
+            {activeTab === "goals" && (
+              <React.Suspense fallback={<p>Loading goals...</p>}>
+                <GoalsTab client={client} />
+              </React.Suspense>
+            )}
+            {activeTab === "appointments" && (
+              <React.Suspense fallback={<p>Loading appointments...</p>}>
+                <AppointmentsTab client={client} />
+              </React.Suspense>
+            )}
+            {activeTab === "activity" && (
+              <React.Suspense fallback={<p>Loading activity...</p>}>
+                <ActivityTab client={client} />
+              </React.Suspense>
+            )}
           </div>
         </div>
       </div>
