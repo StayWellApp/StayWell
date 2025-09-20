@@ -1,11 +1,12 @@
 // src/App.js
 
 import React, { useState, useEffect } from 'react';
-import { auth, db } from './firebase-config';
-import { onAuthStateChanged } from 'firebase/auth';
+// Import AuthProvider and useAuth to provide and consume authentication state
+import { AuthProvider, useAuth } from './components/Auth';
+import { db } from './firebase-config';
 import { doc, onSnapshot } from "firebase/firestore";
 import { usePermissions } from './hooks/usePermissions';
-import { Auth } from './components/Auth';
+import { Auth } from './components/Auth'; // This is your login form component
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
 import StaffDashboard from './components/StaffDashboard';
@@ -32,11 +33,14 @@ import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-function App() {
-    const [user, setUser] = useState(null);
+// Your application's main logic is now inside AppContent
+function AppContent() {
+    // Get the current user and authentication loading status from the context
+    const { currentUser, loading: authLoading } = useAuth();
+    
+    // The local user state is removed, as we now use `currentUser` from the context.
     const [userData, setUserData] = useState(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
     const [selectedClient, setSelectedClient] = useState(null); 
@@ -46,40 +50,36 @@ function App() {
     const handleOpenAddClientModal = () => setAddClientModalOpen(true);
     const handleCloseAddClientModal = () => setAddClientModalOpen(false);
 
+    // This useEffect now handles logic that depends on the user's auth state from the context.
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-                currentUser.getIdTokenResult(true).then(idTokenResult => {
-                    if (idTokenResult.claims.superAdmin === true) {
-                        setIsSuperAdmin(true);
-                        if (!localStorage.getItem('impersonating_admin_uid') && !selectedClient) {
-                            setActiveView('adminDashboard');
-                        }
-                    } else {
-                        setIsSuperAdmin(false);
+        if (currentUser) {
+            currentUser.getIdTokenResult(true).then(idTokenResult => {
+                if (idTokenResult.claims.superAdmin === true) {
+                    setIsSuperAdmin(true);
+                    if (!localStorage.getItem('impersonating_admin_uid') && !selectedClient) {
+                        setActiveView('adminDashboard');
                     }
-                });
-            } else {
-                setUser(null);
-                setUserData(null);
-                setIsSuperAdmin(false);
-                setSelectedClient(null);
-            }
-            setIsLoading(false);
-        });
-        return () => unsubscribeAuth();
-    }, []);
+                } else {
+                    setIsSuperAdmin(false);
+                }
+            });
+        } else {
+            // Reset state when user logs out
+            setUserData(null);
+            setIsSuperAdmin(false);
+            setSelectedClient(null);
+        }
+    }, [currentUser, selectedClient]);
 
     useEffect(() => {
-        if (user && !isSuperAdmin) {
-            const userDocRef = doc(db, "users", user.uid);
+        if (currentUser && !isSuperAdmin) {
+            const userDocRef = doc(db, "users", currentUser.uid);
             const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
                 setUserData(doc.exists() ? doc.data() : null);
             }, (error) => console.error("Firestore snapshot error:", error));
             return () => unsubscribeSnapshot();
         }
-    }, [user, isSuperAdmin]);
+    }, [currentUser, isSuperAdmin]);
 
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
@@ -127,38 +127,38 @@ function App() {
         }
 
         if (selectedProperty) {
-            return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); setActiveView('properties'); }} user={user} />;
+            return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); setActiveView('properties'); }} user={currentUser} />;
         }
 
         switch (activeView) {
             case 'dashboard':
-                return hasPermission('properties_view_all') || hasPermission('team_manage') ? <ClientDashboard user={user} setActiveView={handleSetActiveView} /> : <StaffDashboard user={user} userData={userData} />;
+                return hasPermission('properties_view_all') || hasPermission('team_manage') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />;
             case 'properties':
-                return <PropertiesView onSelectProperty={setSelectedProperty} user={user} userData={userData} hasPermission={hasPermission} />;
+                return <PropertiesView onSelectProperty={setSelectedProperty} user={currentUser} userData={userData} hasPermission={hasPermission} />;
             case 'chat':
                 return <ChatLayout userData={userData} />;
             case 'team':
-                return hasPermission('team_manage') ? <TeamView user={user} /> : null;
+                return hasPermission('team_manage') ? <TeamView user={currentUser} /> : null;
             case 'templates':
-                return hasPermission('templates_manage') ? <ChecklistsView user={user} /> : null;
+                return hasPermission('templates_manage') ? <ChecklistsView user={currentUser} /> : null;
             case 'storage':
-                return hasPermission('storage_view') ? <StorageView user={user} ownerId={userData?.ownerId || user.uid} hasPermission={hasPermission} /> : null;
+                return hasPermission('storage_view') ? <StorageView user={currentUser} ownerId={userData?.ownerId || currentUser.uid} hasPermission={hasPermission} /> : null;
             case 'calendar':
-                return hasPermission('tasks_view_all') ? <MasterCalendarView user={user} userData={userData} /> : <StaffDashboard user={user} userData={userData} />;
+                return hasPermission('tasks_view_all') ? <MasterCalendarView user={currentUser} userData={userData} /> : <StaffDashboard user={currentUser} userData={userData} />;
             case 'settings':
-                return hasPermission('team_manage') ? <SettingsView user={user} userData={userData} /> : null;
+                return hasPermission('team_manage') ? <SettingsView user={currentUser} userData={userData} /> : null;
             default:
-                return hasPermission('properties_view_all') ? <ClientDashboard user={user} setActiveView={handleSetActiveView} /> : <StaffDashboard user={user} userData={userData} />;
+                return hasPermission('properties_view_all') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />;
         }
     };
 
     const isImpersonating = !!localStorage.getItem('impersonating_admin_uid');
 
-    if (isLoading) {
+    if (authLoading) {
         return <div className="flex items-center justify-center h-screen"><p>Loading StayWell...</p></div>;
     }
 
-    if (!user) {
+    if (!currentUser) {
         return <Auth />;
     }
 
@@ -171,7 +171,7 @@ function App() {
             <ToastContainer position="bottom-center" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
             <EndImpersonationBanner />
             <div className={isImpersonating ? 'pt-10' : ''}>
-                <Layout user={user} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
+                <Layout user={currentUser} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
                     {renderActiveView()}
                 </Layout>
                 {!isSuperAdmin && (
@@ -188,6 +188,15 @@ function App() {
             />
         </ThemeProvider>
     );
+}
+
+// The main App component now simply provides the authentication context to the rest of the app.
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
 }
 
 export default App;
