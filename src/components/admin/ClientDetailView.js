@@ -1,186 +1,199 @@
-// src/components/admin/ClientDetailView.js
-// Added handleUpdateNotes function to save notes to Firestore.
+// src/components/admin/ClientListView.js
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, collection, getDocs, updateDoc, query, where, Timestamp } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import React, { useState, useMemo, useEffect } from 'react';
 import { db } from '../../firebase-config';
-import { toast } from 'react-toastify';
-import { 
-    UserCircleIcon, ChartBarIcon, Cog6ToothIcon, ArrowLeftIcon, BuildingOfficeIcon, 
-    ChatBubbleLeftRightIcon, BanknotesIcon, DocumentTextIcon, PencilSquareIcon
-} from '@heroicons/react/24/outline';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { Plus, Settings, Search, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
-import EditClientModal from './EditClientModal';
-import ClientAnalyticsView from './ClientAnalyticsView';
-import OverviewTab from './tabs/OverviewTab';
-import PropertiesTab from './tabs/PropertiesTab';
-import CommunicationTab from './tabs/CommunicationTab';
-import ManagementTab from './tabs/ManagementTab';
-import BillingTab from './tabs/BillingTab';
-import DocumentsTab from './tabs/DocumentsTab';
+const ALL_COLUMNS = [
+  { key: 'companyName', label: 'Company' },
+  { key: 'fullName', label: 'Contact Name' }, // Use fullName to match user data
+  { key: 'email', label: 'Email' },
+  { key: 'subscriptionTier', label: 'Plan' },
+  { key: 'status', label: 'Status' },
+  { key: 'subscriptionEndDate', label: 'Subscription Ends' },
+  { key: 'country', label: 'Country' },
+  { key: 'createdAt', label: 'Joined Date' },
+];
 
-const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
-    const [properties, setProperties] = useState([]);
-    const [loadingProperties, setLoadingProperties] = useState(true);
-    const [subscriptionPlans, setSubscriptionPlans] = useState({});
-    const [loadingPlans, setLoadingPlans] = useState(true);
-    const [activeTab, setActiveTab] = useState('overview');
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [clientData, setClientData] = useState(client);
+const DEFAULT_COLUMNS = ['companyName', 'fullName', 'subscriptionTier', 'status', 'subscriptionEndDate', 'country'];
 
-    const fetchClientProperties = useCallback(async () => {
-        if (!clientData?.id) return;
-        setLoadingProperties(true);
-        try {
-            const q = query(collection(db, "properties"), where("ownerId", "==", clientData.id));
-            const snapshot = await getDocs(q);
-            const propsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), status: 'Active', nextBooking: '2025-10-05', avgNightlyRate: 275 }));
-            setProperties(propsList);
-        } catch (error) { toast.error("Failed to load properties."); } 
-        finally { setLoadingProperties(false); }
-    }, [clientData]);
+const ClientListView = ({ onSelectClient, onAddClient }) => {
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sortConfig, setSortConfig] = useState({ key: 'companyName', direction: 'ascending' });
+  const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-    useEffect(() => {
-        const fetchPlans = async () => {
-            setLoadingPlans(true);
-            try {
-                const snapshot = await getDocs(collection(db, 'subscriptionPlans'));
-                const plans = {};
-                snapshot.forEach(doc => plans[doc.id] = { id: doc.id, ...doc.data() });
-                setSubscriptionPlans(plans);
-            } catch (error) { toast.error("Could not load subscription plans."); } 
-            finally { setLoadingPlans(false); }
-        };
-        fetchPlans();
-        fetchClientProperties();
-    }, [fetchClientProperties]);
-    
-    const refreshClientData = useCallback(async () => {
-        const docRef = doc(db, 'users', client.id); 
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.subscription && !data.subscription.startDate) {
-                data.subscription.startDate = Timestamp.fromDate(new Date('2025-01-20T00:00:00'));
-                data.subscription.renewalDate = Timestamp.fromDate(new Date('2026-01-20T00:00:00'));
-            }
-            setClientData({ id: docSnap.id, ...data });
-        }
-    }, [client.id]);
-    
-    useEffect(() => {
-        refreshClientData();
-    }, [refreshClientData]);
-
-    const handleUpdateClient = async (updatedDetails) => {
-        try {
-            await updateDoc(doc(db, 'users', clientData.id), updatedDetails);
-            await refreshClientData();
-            setIsEditModalOpen(false);
-            toast.success("Client details updated successfully!");
-        } catch (error) { toast.error(`Failed to update client: ${error.message}`); }
-    };
-
-    // --- NEW: Function to handle saving the notes array to Firestore ---
-    const handleUpdateNotes = async (updatedNotes) => {
-        try {
-            await updateDoc(doc(db, 'users', clientData.id), { adminNotes: updatedNotes });
-            await refreshClientData(); // Refresh data to show the changes
-            toast.success("Notes updated!");
-        } catch (error) {
-            toast.error(`Failed to update notes: ${error.message}`);
-        }
-    };
-
-    const handleImpersonate = async () => {
-        const auth = getAuth();
-        const adminUser = auth.currentUser;
-        if (!adminUser) return toast.error("Admin user not found.");
-        const toastId = toast.loading("Initiating impersonation...");
-        try {
-            const functions = getFunctions();
-            const createImpersonationToken = httpsCallable(functions, 'createImpersonationToken');
-            const result = await createImpersonationToken({ uid: clientData.id });
-            localStorage.setItem('impersonating_admin_uid', adminUser.uid);
-            await signInWithCustomToken(auth, result.data.token);
-            toast.update(toastId, { render: "Success!", type: "success", isLoading: false, autoClose: 2000, onClose: () => window.location.reload() });
-        } catch (error) {
-            localStorage.removeItem('impersonating_admin_uid');
-            toast.update(toastId, { render: `Failed: ${error.message}`, type: "error", isLoading: false, autoClose: 5000 });
-        }
-    };
-
-    if (!clientData) {
-        return <div className="text-center p-10">Client data is missing.</div>;
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const storedColumns = localStorage.getItem('visibleClientColumns');
+      return storedColumns ? JSON.parse(storedColumns) : DEFAULT_COLUMNS;
+    } catch (error) {
+      return DEFAULT_COLUMNS;
     }
+  });
 
-    const planId = clientData.subscription?.plan;
-    const planDetails = loadingPlans ? null : subscriptionPlans[planId];
-    const monthlyRevenue = planDetails?.pricePerProperty ? (planDetails.pricePerProperty * properties.length) : 0;
-    const occupancyRate = properties.length > 0 ? (properties.filter(p => p.status === 'Active').length / properties.length) * 100 : 0;
+  useEffect(() => {
+    localStorage.setItem('visibleClientColumns', JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
 
-    const tabs = [
-        { name: 'overview', label: 'Overview', icon: UserCircleIcon }, { name: 'properties', label: 'Properties', icon: BuildingOfficeIcon },
-        { name: 'analytics', label: 'Analytics', icon: ChartBarIcon }, { name: 'communication', label: 'Communication', icon: ChatBubbleLeftRightIcon },
-        { name: 'billing', label: 'Billing', icon: BanknotesIcon }, { name: 'documents', label: 'Documents', icon: DocumentTextIcon },
-        { name: 'management', label: 'Management', icon: Cog6ToothIcon },
-    ];
+  useEffect(() => {
+    setLoading(true);
+    // --- THE FIX: Query for users where 'roles' array contains 'client_admin' ---
+    const q = query(collection(db, "users"), where("roles", "array-contains", "client_admin"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setClients(clientsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching clients: ", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-    const renderActiveTab = () => {
-        switch (activeTab) {
-            case 'overview':
-                return <OverviewTab 
-                            clientData={clientData} 
-                            properties={properties} 
-                            loadingProperties={loadingProperties}
-                            planDetails={planDetails}
-                            monthlyRevenue={monthlyRevenue}
-                            occupancyRate={occupancyRate}
-                            onUpdateNotes={handleUpdateNotes} // Pass the save function
-                        />;
-            case 'properties':
-                return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
-            case 'analytics':
-                return <ClientAnalyticsView client={clientData} properties={properties} />;
-            case 'communication':
-                return <CommunicationTab />;
-            case 'billing':
-                return <BillingTab />;
-            case 'documents':
-                return <DocumentsTab />;
-            case 'management':
-                return <ManagementTab clientData={clientData} refreshClientData={refreshClientData} allPlans={subscriptionPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate}/>;
-            default:
-                return null;
-        }
-    };
+  const filteredAndSortedClients = useMemo(() => {
+    let filteredClients = [...clients];
+    if (searchTerm) {
+      filteredClients = filteredClients.filter(client =>
+        Object.values(client).some(value => 
+          String(value).toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+    if (sortConfig.key) {
+      filteredClients.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'ascending' ? 1 : -1;
+        return 0;
+      });
+    }
+    return filteredClients;
+  }, [clients, sortConfig, searchTerm]);
 
-    return (
-        <div className="p-4 sm:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <button onClick={onBack} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-500 font-semibold"><ArrowLeftIcon className="w-5 h-5" />Back to Client List</button>
-                    <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mt-2">{clientData.companyName || clientData.name}</h1>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button onClick={() => setIsEditModalOpen(true)} className="button-secondary flex items-center gap-2"><PencilSquareIcon className="w-5 h-5"/>Edit Client</button>
-                </div>
-            </div>
-            <div>
-                <div className="border-b border-gray-200 dark:border-gray-700">
-                    <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
-                        {tabs.map((tab) => (
-                            <button key={tab.name} onClick={() => setActiveTab(tab.name)} className={`${activeTab === tab.name ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}><tab.icon className="w-5 h-5"/>{tab.label}</button>
-                        ))}
-                    </nav>
-                </div>
-                <div className="mt-8">{renderActiveTab()}</div>
-            </div>
-            {isEditModalOpen && <EditClientModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} client={clientData} onSave={handleUpdateClient}/>}
-        </div>
+  const requestSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'ascending' ? 'descending' : 'ascending'
+    }));
+  };
+
+  const handleColumnToggle = (columnKey) => {
+    setVisibleColumns(prev =>
+      prev.includes(columnKey) ? prev.filter(key => key !== columnKey) : [...prev, columnKey]
     );
+  };
+  
+  const resetColumns = () => {
+      setVisibleColumns(DEFAULT_COLUMNS);
+  }
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'ascending' ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />;
+  };
+
+  const renderCell = (client, columnKey) => {
+    const cellValue = client[columnKey];
+    switch (columnKey) {
+      case 'companyName':
+        return (
+          <div className="flex items-center">
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4 flex-shrink-0">
+                {client.companyName ? client.companyName.charAt(0) : '?'}
+            </div>
+            <span className="font-medium text-gray-900 dark:text-white">{cellValue}</span>
+          </div>
+        );
+      case 'status':
+        const statusColor = cellValue === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+        return <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${statusColor}`}>{cellValue || 'Inactive'}</span>;
+      case 'createdAt':
+      case 'subscriptionEndDate':
+        return cellValue?.seconds ? new Date(cellValue.seconds * 1000).toLocaleDateString() : 'N/A';
+      case 'country':
+        return client.country || 'N/A';
+      default:
+        return cellValue || 'N/A';
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden h-full flex flex-col">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Clients</h2>
+          <div className="flex items-center space-x-2">
+            <div className="relative">
+              <button onClick={() => setDropdownOpen(!isDropdownOpen)} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-700 rounded-md shadow-lg z-10">
+                  <div className="flex justify-between items-center px-3 py-2 border-b dark:border-gray-600">
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Visible Columns</div>
+                      <button onClick={resetColumns} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center">
+                          <RotateCcw className="h-3 w-3 mr-1"/> Reset
+                      </button>
+                  </div>
+                  <div className="py-1">
+                    {ALL_COLUMNS.map(col => (
+                      <label key={col.key} className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
+                        <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500" checked={visibleColumns.includes(col.key)} onChange={() => handleColumnToggle(col.key)} />
+                        <span className="ml-2">{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            {onAddClient && (
+              <button onClick={onAddClient} className="flex items-center px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
+                <Plus className="h-4 w-4 mr-1" /> Add Client
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="max-w-md">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input type="text" placeholder="Search clients..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+        </div>
+      </div>
+      <div className="overflow-x-auto flex-grow">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700">
+            <tr>
+              {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => (
+                <th key={col.key} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" onClick={() => requestSort(col.key)}>
+                  <div className="flex items-center">{col.label}{getSortIcon(col.key)}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {loading ? (
+              <tr><td colSpan={visibleColumns.length} className="text-center p-4">Loading clients...</td></tr>
+            ) : filteredAndSortedClients.length === 0 ? (
+              <tr><td colSpan={visibleColumns.length} className="text-center p-4">No clients found.</td></tr>
+            ) : (
+              filteredAndSortedClients.map((client) => (
+                <tr key={client.id} onClick={() => onSelectClient && onSelectClient(client)} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                  {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => (
+                    <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      {renderCell(client, col.key)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
-export default ClientDetailView;
+export default ClientListView;
