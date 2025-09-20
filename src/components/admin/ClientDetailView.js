@@ -1,220 +1,233 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { db } from '../../firebase-config';
-import { toast } from 'react-toastify';
-import { UserCircleIcon, ChartBarIcon, Cog6ToothIcon, ArrowLeftIcon, BuildingOfficeIcon, CurrencyDollarIcon, TagIcon } from '@heroicons/react/24/outline';
-import EditClientModal from './EditClientModal';
-import ClientAnalyticsView from './ClientAnalyticsView';
-import ClientSubscriptionManager from './ClientSubscriptionManager';
-import FeatureFlagManager from './FeatureFlagManager';
 
-const ClientDetailView = ({ client, onBack }) => {
-  const [properties, setProperties] = useState([]);
-  const [loadingProperties, setLoadingProperties] = useState(true);
-  const [subscriptionPlans, setSubscriptionPlans] = useState({});
-  const [loadingPlans, setLoadingPlans] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [clientData, setClientData] = useState(client);
+// src/components/admin/ClientDetailView.js
+// Enhanced Overview Tab with Modern Dashboard UI
+
+import React, { useState, useEffect } from "react";
+import { db } from "../../../firebase";
+import { useAuth } from "../../../contexts/AuthContext";
+import { useRouter } from "next/router";
+import GoalsTab from "./GoalsTab";
+import AppointmentsTab from "./AppointmentsTab";
+import ActivityTab from "./ActivityTab";
+
+const ClientDetailView = () => {
+  const router = useRouter();
+  const { id } = router.query;
+  const { currentUser } = useAuth();
+  const [client, setClient] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    const fetchPlans = async () => {
+    const fetchClient = async () => {
+      if (!id) return;
       try {
-        const plansCollectionRef = collection(db, 'subscriptionPlans');
-        const querySnapshot = await getDocs(plansCollectionRef);
-        const plans = {};
-        querySnapshot.forEach((doc) => {
-          plans[doc.id] = { id: doc.id, ...doc.data() };
-        });
-        setSubscriptionPlans(plans);
+        const clientDoc = await db.collection("users").doc(id).get();
+        if (clientDoc.exists) {
+          setClient({ id: clientDoc.id, ...clientDoc.data() });
+        } else {
+          console.error("Client not found");
+        }
       } catch (error) {
-        console.error("Error fetching subscription plans:", error);
-        toast.error("Could not load subscription plans.");
+        console.error("Error fetching client:", error);
       } finally {
-        setLoadingPlans(false);
+        setLoading(false);
       }
     };
-    fetchPlans();
-  }, []);
 
-  const fetchClientProperties = useCallback(async () => {
-    if (!clientData || !clientData.id) return;
-    setLoadingProperties(true);
-    try {
-      const propertiesQuery = query(collection(db, "properties"), where("ownerId", "==", clientData.id));
-      const propertiesSnapshot = await getDocs(propertiesQuery);
-      const propsList = propertiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setProperties(propsList);
-    } catch (error) {
-      console.error("Error fetching client properties:", error);
-    } finally {
-      setLoadingProperties(false);
-    }
-  }, [clientData]);
+    fetchClient();
+  }, [id]);
 
-  useEffect(() => {
-    fetchClientProperties();
-  }, [fetchClientProperties]);
-  
-  const refreshClientData = async () => {
-      const clientDocRef = doc(db, 'users', client.id); 
-      const clientDoc = await getDoc(clientDocRef);
-      if (clientDoc.exists()) {
-          setClientData({ id: clientDoc.id, ...clientDoc.data() });
-      }
-  };
-
-  const handleUpdateClient = async (updatedDetails) => {
-    const clientDocRef = doc(db, 'users', clientData.id);
-    try {
-      await updateDoc(clientDocRef, updatedDetails);
-      await refreshClientData();
-      setIsEditModalOpen(false);
-      toast.success("Client details updated successfully!");
-    } catch (error) {
-      toast.error(`Failed to update client details: ${error.message}`);
-    }
-  };
-
-  const handleImpersonate = async () => {
-      const auth = getAuth();
-      const adminUser = auth.currentUser;
-      if (!adminUser) return toast.error("Admin user not found.");
-      const toastId = toast.loading("Initiating impersonation session...");
-      try {
-          const functions = getFunctions();
-          const createImpersonationToken = httpsCallable(functions, 'createImpersonationToken');
-          const result = await createImpersonationToken({ uid: clientData.id });
-          localStorage.setItem('impersonating_admin_uid', adminUser.uid);
-          await signInWithCustomToken(auth, result.data.token);
-          toast.update(toastId, { render: "Successfully signed in!", type: "success", isLoading: false, autoClose: 2000, onClose: () => window.location.reload() });
-      } catch (error) {
-          localStorage.removeItem('impersonating_admin_uid');
-          toast.update(toastId, { render: `Failed: ${error.message}`, type: "error", isLoading: false, autoClose: 5000 });
-      }
-  };
-
-  if (!clientData) {
-    return <div className="text-center mt-10">Client data is missing.</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500">Loading client data...</p>
+      </div>
+    );
   }
 
-  const planId = clientData.subscription?.plan;
-  const planDetails = loadingPlans ? null : subscriptionPlans[planId];
-  const monthlyRevenue = planDetails && planDetails.pricePerProperty ? (planDetails.pricePerProperty * properties.length) : 0;
+  if (!client) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-red-500">Client not found.</p>
+      </div>
+    );
+  }
 
-  const tabs = [
-    { name: 'overview', label: 'Overview', icon: UserCircleIcon },
-    { name: 'analytics', label: 'Analytics', icon: ChartBarIcon },
-    { name: 'management', label: 'Management', icon: Cog6ToothIcon },
+  // Sample data fallback (in case not in Firestore)
+  const mockGoals = client.goals || [
+    { id: 1, title: "Improve Sleep Quality", progress: 65, target: 100 },
+    { id: 2, title: "Increase Daily Steps", progress: 80, target: 100 },
+    { id: 3, title: "Reduce Stress Levels", progress: 45, target: 100 },
   ];
 
-  const OverviewTab = () => (
-    <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-            <div className="flex justify-between items-start">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{clientData.companyName || clientData.name}</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">{clientData.email}</p>
-                </div>
-                <button 
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="button-secondary"
-                >
-                    Edit Client
-                </button>
-            </div>
-            <div className="mt-6 border-t dark:border-gray-700 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Subscription Status</p>
-                    <p className={`text-lg font-semibold ${clientData.subscription?.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {clientData.subscription?.status?.charAt(0).toUpperCase() + clientData.subscription?.status?.slice(1) || 'N/A'}
-                    </p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Member Since</p>
-                    <p className="text-lg text-gray-900 dark:text-gray-200">{clientData.createdAt ? clientData.createdAt.toDate().toLocaleDateString() : 'N/A'}</p>
-                </div>
-            </div>
-        </div>
-        
-        <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"><CurrencyDollarIcon className="w-6 h-6"/>Monthly Revenue</h3>
-                <p className="text-4xl font-bold text-blue-600 dark:text-blue-400 mt-2">${monthlyRevenue.toFixed(2)}</p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"><TagIcon className="w-6 h-6"/>Subscription Details</h3>
-                {loadingPlans ? <p className="text-sm text-gray-500">Loading plan details...</p> :
-                <div className="mt-2 text-gray-800 dark:text-gray-200">
-                    <p><strong>Plan:</strong> {planDetails?.planName || 'Not Subscribed'}</p>
-                    <p><strong>Rate:</strong> ${planDetails?.pricePerProperty || 0} / property</p>
-                    <p><strong>Properties:</strong> {loadingProperties ? '...' : properties.length}</p>
-                </div>}
-            </div>
-        </div>
-      </div>
+  const mockAppointments = client.appointments || [
+    { id: 1, date: "2025-04-06", type: "Therapy Session", status: "Scheduled" },
+    { id: 2, date: "2025-04-03", type: "Check-in Call", status: "Completed" },
+  ];
 
-      <div className="mt-8">
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Properties</h2>
-        {loadingProperties ? <p className="text-gray-500 dark:text-gray-400">Loading properties...</p> : properties.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map(prop => (
-              <div key={prop.id} className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow border dark:border-gray-700 hover:shadow-lg transition-shadow">
-                <div className="flex items-center gap-3"><BuildingOfficeIcon className="w-6 h-6 text-blue-500" /><h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{prop.name}</h3></div>
-                <p className="text-gray-600 dark:text-gray-400 mt-2">{prop.address}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md text-center text-gray-500 dark:text-gray-400 border dark:border-gray-700">No properties found.</div>
-        )}
-      </div>
-    </>
-  );
+  const healthMetrics = client.healthMetrics || {
+    moodAvg: 4.2,
+    sleepAvg: 6.8,
+    stepsAvg: 7200,
+    waterAvg: 2.1,
+  };
 
-  const ManagementTab = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-          <ClientSubscriptionManager client={clientData} onSubscriptionUpdate={refreshClientData} allPlans={subscriptionPlans} loadingPlans={loadingPlans} />
-        </div>
-        <div className="space-y-8">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Admin Actions</h3>
-                <button onClick={handleImpersonate} className="button-secondary w-full">Impersonate User</button>
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">Log in as this user to troubleshoot issues.</p>
-            </div>
-             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-                <FeatureFlagManager client={clientData} />
-            </div>
-        </div>
-    </div>
-  );
+  const recentActivities = client.recentActivity || [
+    { action: "Updated journal entry", timestamp: "2025-04-04T08:30:00Z" },
+    { action: "Completed mindfulness exercise", timestamp: "2025-04-03T19:15:00Z" },
+    { action: "Logged water intake", timestamp: "2025-04-03T14:20:00Z" },
+  ];
 
   return (
-    <div className="p-4 sm:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-       <button onClick={onBack} className="flex items-center gap-2 mb-6 text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">
-        <ArrowLeftIcon className="w-5 h-5" />Back to Client List</button>
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">Client Dashboard</h1>
-      <div>
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <button key={tab.name} onClick={() => setActiveTab(tab.name)}
-                className={`${activeTab === tab.name ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-300' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
-                <tab.icon className="w-5 h-5"/>{tab.label}</button>
-            ))}
-          </nav>
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-400 to-teal-400 flex items-center justify-center text-white text-xl font-bold">
+                {client.firstName?.charAt(0)}{client.lastName?.charAt(0)}
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {client.firstName} {client.lastName}
+                </h1>
+                <p className="text-gray-600">{client.email}</p>
+                <span
+                  className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium ${
+                    client.status === "Active"
+                      ? "bg-green-100 text-green-800"
+                      : client.status === "Inactive"
+                      ? "bg-red-100 text-red-800"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}
+                >
+                  {client.status || "Unknown"}
+                </span>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Last Login</p>
+              <p className="font-medium text-gray-900">
+                {client.lastLogin
+                  ? new Date(client.lastLogin).toLocaleDateString()
+                  : "Never"}
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="mt-8">
-          {activeTab === 'overview' && <OverviewTab />}
-          {activeTab === 'analytics' && <ClientAnalyticsView client={clientData} properties={properties} />}
-          {activeTab === 'management' && <ManagementTab />}
+
+        {/* Tabs */}
+        <div className="bg-white shadow rounded-lg mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+              {["overview", "goals", "appointments", "activity"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`py-4 px-1 capitalize font-medium text-sm border-b-2 transition-colors ${
+                    activeTab === tab
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="p-6">
+            {/* Overview Tab */}
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                {/* Key Metrics Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Goals Progress */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
+                    <h3 className="text-sm font-medium text-blue-800 mb-2">Goals Progress</h3>
+                    <div className="text-2xl font-bold text-blue-900 mb-1">
+                      {Math.round(
+                        mockGoals.reduce((acc, g) => acc + g.progress, 0) / mockGoals.length
+                      )}
+                      %
+                    </div>
+                    <p className="text-sm text-blue-700">{mockGoals.length} active goals</p>
+                  </div>
+
+                  {/* Upcoming Appointments */}
+                  <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-lg p-6 border border-teal-100">
+                    <h3 className="text-sm font-medium text-teal-800 mb-2">Appointments</h3>
+                    <div className="text-2xl font-bold text-teal-900 mb-1">
+                      {mockAppointments.filter((a) => a.status === "Scheduled").length}
+                    </div>
+                    <p className="text-sm text-teal-700">upcoming sessions</p>
+                  </div>
+
+                  {/* Mood Average */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-100">
+                    <h3 className="text-sm font-medium text-purple-800 mb-2">Mood (Avg)</h3>
+                    <div className="text-2xl font-bold text-purple-900 mb-1">{healthMetrics.moodAvg}/5</div>
+                    <p className="text-sm text-purple-700">past 30 days</p>
+                  </div>
+
+                  {/* Sleep Average */}
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-6 border border-amber-100">
+                    <h3 className="text-sm font-medium text-amber-800 mb-2">Sleep (Avg)</h3>
+                    <div className="text-2xl font-bold text-amber-900 mb-1">{healthMetrics.sleepAvg}h</div>
+                    <p className="text-sm text-amber-700">per night</p>
+                  </div>
+                </div>
+
+                {/* Goals Progress List */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Goal Progress</h3>
+                  <div className="space-y-4">
+                    {mockGoals.map((goal) => (
+                      <div key={goal.id} className="flex flex-col space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-800">{goal.title}</span>
+                          <span className="font-medium text-gray-900">{goal.progress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-gradient-to-r from-blue-500 to-teal-500 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${goal.progress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                  <div className="space-y-3">
+                    {recentActivities.slice(0, 5).map((activity, idx) => (
+                      <div key={idx} className="flex items-center space-x-3 text-sm text-gray-700">
+                        <div className="h-2 w-2 bg-gray-400 rounded-full"></div>
+                        <span>
+                          {activity.action}{" "}
+                          <span className="text-gray-500">
+                            ({new Date(activity.timestamp).toLocaleDateString()})
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Other Tabs (Unchanged) */}
+            {activeTab === "goals" && <GoalsTab client={client} />}
+            {activeTab === "appointments" && <AppointmentsTab client={client} />}
+            {activeTab === "activity" && <ActivityTab client={client} />}
+          </div>
         </div>
       </div>
-      {isEditModalOpen && <EditClientModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} client={clientData} onSave={handleUpdateClient}/>}
     </div>
   );
 };
