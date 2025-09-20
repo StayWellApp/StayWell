@@ -139,24 +139,44 @@ const Layout = ({ user, userData, activeView, setActiveView, hasPermission, chil
                     <div className="flex-1 px-4 flex justify-between items-center">
                         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{currentViewLabel}</h1>
                         
-                        <div className="flex-1 flex justify-center px-4 lg:px-8">
-                            <div className={`w-full max-w-lg transition-all duration-300 ${searchActive ? 'opacity-100' : 'opacity-0'}`}>
-                                <div className="relative text-gray-400 focus-within:text-gray-600">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none" />
-                                    <input
-                                        type="search"
-                                        placeholder={t('Search...')}
-                                        className="pl-10 pr-4 py-2 w-full rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
+                        <div className="flex items-center space-x-2">
+                             <div className="relative">
+                                <button onClick={() => setSearchActive(true)} className={`p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-all duration-300 ${searchActive ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}`}>
+                                    <Search className="h-5 w-5" />
+                                </button>
+                                <Transition
+                                    show={searchActive} as={Fragment}
+                                    enter="transition ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100"
+                                    leave="transition ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95"
+                                >
+                                    <div className="absolute top-1/2 right-0 -translate-y-1/2 flex items-center">
+                                        <Search className="absolute left-3 h-5 w-5 text-gray-400" />
+                                        <input
+                                            type="search" placeholder={t('Search...')} autoFocus
+                                            className="w-64 pl-10 pr-4 py-2 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                        <button onClick={() => setSearchActive(false)} className="p-2 rounded-full text-gray-500 hover:text-gray-700 ml-2">
+                                            <X className="h-5 w-5"/>
+                                        </button>
+                                    </div>
+                                </Transition>
                             </div>
-                        </div>
 
-                        <div className="flex items-center space-x-4">
-                            <button onClick={() => setSearchActive(!searchActive)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors">
-                                {searchActive ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-                            </button>
                             <ThemeToggle />
+                            
+                             {/* Language Dropdown */}
+                            <Menu as="div" className="relative">
+                                <Menu.Button className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors">
+                                    <Globe className="h-5 w-5" />
+                                </Menu.Button>
+                                <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
+                                    <Menu.Items className="origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg py-1 bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                        <Menu.Item>{({ active }) => (<button onClick={() => changeLanguage('en')} className={`${active ? 'bg-gray-100 dark:bg-gray-600' : ''} w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}>English</button>)}</Menu.Item>
+                                        <Menu.Item>{({ active }) => (<button onClick={() => changeLanguage('es')} className={`${active ? 'bg-gray-100 dark:bg-gray-600' : ''} w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}>Español</button>)}</Menu.Item>
+                                    </Menu.Items>
+                                </Transition>
+                            </Menu>
+
                             <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors">
                                 <Bell className="h-5 w-5" />
                             </button>
@@ -173,18 +193,6 @@ const Layout = ({ user, userData, activeView, setActiveView, hasPermission, chil
                                         { (finalSettingsItem.permission === undefined || finalSettingsItem.permission) &&
                                             <Menu.Item>{({ active }) => (<button onClick={() => setActiveView(finalSettingsItem.view)} className={`${active ? 'bg-gray-100 dark:bg-gray-600' : ''} w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}><Settings className="h-5 w-5 mr-3" />{t('Settings')}</button>)}</Menu.Item>
                                         }
-                                        {/* Language Submenu */}
-                                        <div onClick={(e) => e.stopPropagation()}>
-                                            <Menu as="div" className="relative w-full">
-                                                <Menu.Button className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"><Globe className="h-5 w-5 mr-3" />{t('Language')}<ChevronDown className="h-4 w-4 ml-auto" /></Menu.Button>
-                                                <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="opacity-0" enterTo="opacity-100" leave="transition ease-in duration-75" leaveFrom="opacity-100" leaveTo="opacity-0">
-                                                    <Menu.Items className="absolute -top-1/2 right-full mr-1 w-32 rounded-md shadow-lg py-1 bg-white dark:bg-gray-600 ring-1 ring-black ring-opacity-5">
-                                                        <Menu.Item>{({ active }) => (<button onClick={() => changeLanguage('en')} className={`${active ? 'bg-gray-100 dark:bg-gray-500' : ''} w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}>English</button>)}</Menu.Item>
-                                                        <Menu.Item>{({ active }) => (<button onClick={() => changeLanguage('es')} className={`${active ? 'bg-gray-100 dark:bg-gray-500' : ''} w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}>Español</button>)}</Menu.Item>
-                                                    </Menu.Items>
-                                                </Transition>
-                                            </Menu>
-                                        </div>
                                         <Menu.Item>{({ active }) => (<button onClick={handleLogout} className={`${active ? 'bg-gray-100 dark:bg-gray-600' : ''} w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}><LogOut className="h-5 w-5 mr-3" />{t('Logout')}</button>)}</Menu.Item>
                                     </Menu.Items>
                                 </Transition>
