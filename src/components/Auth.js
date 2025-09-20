@@ -12,7 +12,7 @@ import {
   sendPasswordResetEmail
 } from "firebase/auth";
 import { Mail, Lock, Building2, User, Phone, Globe, Sun, Moon } from 'lucide-react';
-import stayWellLogo from '../assets/logo.png'; // <-- ADDED: Import your new logo
+import stayWellLogo from '../assets/logo2.png'; // <-- ADDED: Import your new logo
 
 // --- Auth Context (No changes needed) ---
 const AuthContext = React.createContext();
