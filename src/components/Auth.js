@@ -11,7 +11,7 @@ import {
   signOut,
   sendPasswordResetEmail
 } from "firebase/auth";
-import { Mail, Lock, Building2, User, Phone, Globe, Sun, Moon } from 'lucide-react'; 
+import { Mail, Lock, Building2, User, Phone, Globe, Sun, Moon } from 'lucide-react';
 
 // --- Auth Context (No changes needed) ---
 const AuthContext = React.createContext();
@@ -283,7 +283,6 @@ export const Auth = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex relative">
-      {/* ADDED: Toggles moved to top-right */}
       <div className="absolute top-6 right-6 flex items-center space-x-4 z-10">
         <ThemeToggle />
         <div className="relative">
@@ -296,16 +295,10 @@ export const Auth = () => {
         </div>
       </div>
       
-      {/* Left Side: Branding */}
-      <div className="hidden lg:flex w-1/2 bg-gray-50 dark:bg-gray-800 items-center justify-center p-12 relative overflow-hidden">
-        {/* ADDED: Subtle background pattern */}
-        <div 
-          className="absolute inset-0 opacity-5 dark:opacity-10"
-          style={{
-            backgroundImage: 'url(\'data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><path fill="%239ca3af" d="M0 0h20v20H0zM20 20h20v20H20z"/></svg>\')',
-            backgroundRepeat: 'repeat',
-          }}
-        />
+      {/* Left Side: Branding with Gradient */}
+      <div className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden">
+        {/* REPLACED: Pattern with animated gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 dark:from-gray-800 dark:via-indigo-900 dark:to-purple-900 animate-gradient-xy" />
         <div className="text-center z-10">
           <h1 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">StayWell</h1>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Management, simplified.</p>
@@ -313,7 +306,7 @@ export const Auth = () => {
       </div>
 
       {/* Right Side: Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
+      <div className="w-full lg:w-2/2 flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md">
           {renderContent()}
         </div>
