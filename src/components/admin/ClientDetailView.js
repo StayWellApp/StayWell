@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { db } from "../../firebase-config";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../Auth"; // Corrected import path
 
 // Assumes these components are in a 'tabs' folder inside the 'admin' folder
 import GoalsTab from "./tabs/GoalsTab";
