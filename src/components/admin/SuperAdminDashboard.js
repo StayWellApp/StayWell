@@ -3,11 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, X } from 'lucide-react';
+import moment from 'moment';
 
-// Import the new filter
 import DateRangeFilter from './DateRangeFilter';
-
 import ClientDetailView from './ClientDetailView';
 import CustomerGrowthChart from './CustomerGrowthChart';
 import RevenueByPlanChart from './RevenueByPlanChart';
@@ -18,33 +17,63 @@ import AddClientModal from './AddClientModal';
 import ClientListWidget from './ClientListWidget';
 
 const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView }) => {
-    const [clients, setClients] = useState([]);
+    const [allClients, setAllClients] = useState([]);
+    const [filteredClients, setFilteredClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedClient, setSelectedClient] = useState(null);
     const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
-    const [dateRangeStart, setDateRangeStart] = useState(null); // State for the date filter
+    const [dateRangeStart, setDateRangeStart] = useState(null);
+    const [chartFilter, setChartFilter] = useState(null); // State for the chart filter
 
     useEffect(() => {
         let q = query(collection(db, "users"), where("roles", "array-contains", "client_admin"));
         
-        // If a start date is set, modify the query
-        if (dateRangeStart) {
-            q = query(q, where("createdAt", ">=", Timestamp.fromDate(dateRangeStart)));
-        }
-
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setClients(clientsData);
+            setAllClients(clientsData);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching clients: ", error);
             setLoading(false);
         });
         
-        // Reset loading state when the date range changes
-        setLoading(true);
         return () => unsubscribe();
-    }, [dateRangeStart]); // Re-run the effect when the date range changes
+    }, []);
+
+    // Effect to apply filters whenever the source data or filters change
+    useEffect(() => {
+        setLoading(true);
+        let clientsToFilter = [...allClients];
+
+        if (dateRangeStart) {
+            clientsToFilter = clientsToFilter.filter(client => 
+                client.createdAt && client.createdAt.toDate() >= dateRangeStart
+            );
+        }
+
+        if (chartFilter) {
+            if (chartFilter.type === 'date') {
+                 clientsToFilter = clientsToFilter.filter(client => 
+                    client.createdAt && moment(client.createdAt.toDate()).format('YYYY-MM') === chartFilter.value
+                );
+            }
+        }
+        
+        setFilteredClients(clientsToFilter);
+        setLoading(false);
+    }, [allClients, dateRangeStart, chartFilter]);
+
+
+    const handleChartBarClick = (data) => {
+        if (data && data.activePayload && data.activePayload[0]) {
+            const month = data.activePayload[0].payload.month;
+            setChartFilter({ type: 'date', value: month, label: `Month: ${month}` });
+        }
+    };
+
+    const clearChartFilter = () => {
+        setChartFilter(null);
+    };
 
     const handleSelectClient = propOnSelectClient || setSelectedClient;
 
@@ -61,37 +90,46 @@ const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView
                 </div>
                 <div className="flex items-center space-x-3">
                     <DateRangeFilter onDateChange={setDateRangeStart} />
-                    <button
-                        onClick={() => setAddClientModalOpen(true)}
-                        className="flex items-center bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition-colors"
-                    >
+                    <button onClick={() => setAddClientModalOpen(true)} className="flex items-center bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition-colors">
                         <PlusCircle className="h-5 w-5 mr-2" />
                         Add New Client
                     </button>
                 </div>
             </div>
 
-            {/* Pass the loading state and filtered clients to all widgets */}
-            <DashboardMetrics clients={clients} loading={loading} />
+            {chartFilter && (
+                <div className="bg-indigo-100 dark:bg-indigo-900 p-3 rounded-lg flex justify-between items-center">
+                    <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">
+                        Filtering by - {chartFilter.label}
+                    </p>
+                    <button onClick={clearChartFilter} className="p-1 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800">
+                        <X className="h-5 w-5 text-indigo-600 dark:text-indigo-300"/>
+                    </button>
+                </div>
+            )}
+
+            <DashboardMetrics clients={filteredClients} loading={loading} />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                    {/* This widget handles its own data fetching, so we don't pass props */}
+                    {/* Pass the filtered list to the widget now */}
                     <ClientListWidget 
+                        clients={filteredClients}
+                        loading={loading}
                         onSelectClient={handleSelectClient}
                         onViewAll={() => setActiveView('adminClients')}
                     />
                 </div>
                 
                 <div className="space-y-6">
-                    <NewSignupsPanel clients={clients} loading={loading} />
-                    <SubscriptionsEndingSoon clients={clients} loading={loading} />
+                    <NewSignupsPanel clients={filteredClients} loading={loading} />
+                    <SubscriptionsEndingSoon clients={filteredClients} loading={loading} />
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <CustomerGrowthChart clients={clients} loading={loading} />
-                <RevenueByPlanChart clients={clients} loading={loading} />
+                <CustomerGrowthChart clients={allClients} loading={loading} onBarClick={handleChartBarClick} />
+                <RevenueByPlanChart clients={allClients} loading={loading} />
             </div>
 
             <AddClientModal 

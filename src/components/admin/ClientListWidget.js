@@ -1,11 +1,8 @@
 // src/components/admin/ClientListWidget.js
 
-import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase-config';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import React from 'react';
 import { ChevronRight, Inbox } from 'lucide-react';
 
-// A simple skeleton loader component for list items
 const SkeletonItem = () => (
     <div className="py-3 flex items-center justify-between animate-pulse">
         <div className="flex items-center">
@@ -19,50 +16,30 @@ const SkeletonItem = () => (
     </div>
 );
 
-const ClientListWidget = ({ onSelectClient, onViewAll }) => {
-    const [recentClients, setRecentClients] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const q = query(
-            collection(db, "users"),
-            orderBy("createdAt", "desc"),
-            limit(5)
-        );
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setRecentClients(clientsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching recent clients:", error);
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
+const ClientListWidget = ({ clients, loading, onSelectClient, onViewAll }) => {
 
     const renderContent = () => {
         if (loading) {
             return (
-                // Show 5 skeleton items while loading
                 <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                     {[...Array(5)].map((_, i) => <li key={i}><SkeletonItem /></li>)}
                 </ul>
             );
         }
 
-        if (recentClients.length === 0) {
+        if (clients.length === 0) {
             return (
                 <div className="text-center py-10">
                     <Inbox className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">No Recent Clients</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">New clients will appear here as they sign up.</p>
+                    <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">No Clients Found</h3>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">No clients match the current filters.</p>
                 </div>
             );
         }
 
         return (
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                {recentClients.map(client => (
+                {clients.slice(0, 5).map(client => (
                     <li key={client.id} onClick={() => onSelectClient(client)} className="py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg -mx-2 px-2 transition-colors">
                         <div className="flex items-center">
                             <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4 flex-shrink-0">
@@ -83,7 +60,7 @@ const ClientListWidget = ({ onSelectClient, onViewAll }) => {
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-full">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Recent Clients</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Clients</h3>
                 <button onClick={onViewAll} className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
                     View All
                 </button>

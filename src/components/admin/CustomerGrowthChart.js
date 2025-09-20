@@ -14,13 +14,13 @@ const ChartPlaceholder = ({ title }) => (
     </div>
 );
 
-const CustomerGrowthChart = ({ clients, loading }) => {
+const CustomerGrowthChart = ({ clients, loading, onBarClick }) => {
     if (loading) {
         return <ChartPlaceholder title="Customer Growth" />;
     }
 
     const data = clients
-        .filter(c => c.createdAt) // Ensure createdAt exists
+        .filter(c => c.createdAt)
         .reduce((acc, client) => {
             const month = moment(client.createdAt.toDate()).format('YYYY-MM');
             const found = acc.find(item => item.month === month);
@@ -37,7 +37,7 @@ const CustomerGrowthChart = ({ clients, loading }) => {
          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-80">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Customer Growth</h3>
             <ResponsiveContainer width="100%" height="90%">
-                <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 40 }}>
+                <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 40 }} onClick={onBarClick}>
                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} stroke="currentColor" />
                     <XAxis dataKey="month" angle={-45} textAnchor="end" height={60} tick={{ fill: 'currentColor', fontSize: 12 }} />
                     <YAxis tick={{ fill: 'currentColor', fontSize: 12 }} />
@@ -48,7 +48,7 @@ const CustomerGrowthChart = ({ clients, loading }) => {
                             color: '#333'
                         }} 
                     />
-                    <Bar dataKey="newClients" fill="#4f46e5" name="New Clients"/>
+                    <Bar dataKey="newClients" fill="#4f46e5" name="New Clients" style={{ cursor: 'pointer' }}/>
                 </BarChart>
             </ResponsiveContainer>
         </div>
