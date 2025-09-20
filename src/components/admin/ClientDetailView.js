@@ -1,5 +1,5 @@
 // src/components/admin/ClientDetailView.js
-// Added mock subscription dates to client data
+// Added handleUpdateNotes function to save notes to Firestore.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc, collection, getDocs, updateDoc, query, where, Timestamp } from 'firebase/firestore';
@@ -36,19 +36,10 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
         try {
             const q = query(collection(db, "properties"), where("ownerId", "==", clientData.id));
             const snapshot = await getDocs(q);
-            const propsList = snapshot.docs.map(doc => ({ 
-                id: doc.id, 
-                ...doc.data(),
-                status: 'Active',
-                nextBooking: '2025-10-05',
-                avgNightlyRate: 275 
-            }));
+            const propsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), status: 'Active', nextBooking: '2025-10-05', avgNightlyRate: 275 }));
             setProperties(propsList);
-        } catch (error) {
-            toast.error("Failed to load properties.");
-        } finally {
-            setLoadingProperties(false);
-        }
+        } catch (error) { toast.error("Failed to load properties."); } 
+        finally { setLoadingProperties(false); }
     }, [clientData]);
 
     useEffect(() => {
@@ -59,35 +50,29 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
                 const plans = {};
                 snapshot.forEach(doc => plans[doc.id] = { id: doc.id, ...doc.data() });
                 setSubscriptionPlans(plans);
-            } catch (error) {
-                toast.error("Could not load subscription plans.");
-            } finally {
-                setLoadingPlans(false);
-            }
+            } catch (error) { toast.error("Could not load subscription plans."); } 
+            finally { setLoadingPlans(false); }
         };
         fetchPlans();
         fetchClientProperties();
     }, [fetchClientProperties]);
     
-    const refreshClientData = async () => {
+    const refreshClientData = useCallback(async () => {
         const docRef = doc(db, 'users', client.id); 
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // --- ADDING MOCK DATES FOR DEMO ---
             if (data.subscription && !data.subscription.startDate) {
                 data.subscription.startDate = Timestamp.fromDate(new Date('2025-01-20T00:00:00'));
                 data.subscription.renewalDate = Timestamp.fromDate(new Date('2026-01-20T00:00:00'));
             }
             setClientData({ id: docSnap.id, ...data });
         }
-    };
+    }, [client.id]);
     
-    // Refresh data on initial load to add mock dates
     useEffect(() => {
         refreshClientData();
-    }, [client.id]);
-
+    }, [refreshClientData]);
 
     const handleUpdateClient = async (updatedDetails) => {
         try {
@@ -95,8 +80,17 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
             await refreshClientData();
             setIsEditModalOpen(false);
             toast.success("Client details updated successfully!");
+        } catch (error) { toast.error(`Failed to update client: ${error.message}`); }
+    };
+
+    // --- NEW: Function to handle saving the notes array to Firestore ---
+    const handleUpdateNotes = async (updatedNotes) => {
+        try {
+            await updateDoc(doc(db, 'users', clientData.id), { adminNotes: updatedNotes });
+            await refreshClientData(); // Refresh data to show the changes
+            toast.success("Notes updated!");
         } catch (error) {
-            toast.error(`Failed to update client: ${error.message}`);
+            toast.error(`Failed to update notes: ${error.message}`);
         }
     };
 
@@ -128,12 +122,9 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
     const occupancyRate = properties.length > 0 ? (properties.filter(p => p.status === 'Active').length / properties.length) * 100 : 0;
 
     const tabs = [
-        { name: 'overview', label: 'Overview', icon: UserCircleIcon },
-        { name: 'properties', label: 'Properties', icon: BuildingOfficeIcon },
-        { name: 'analytics', label: 'Analytics', icon: ChartBarIcon },
-        { name: 'communication', label: 'Communication', icon: ChatBubbleLeftRightIcon },
-        { name: 'billing', label: 'Billing', icon: BanknotesIcon },
-        { name: 'documents', label: 'Documents', icon: DocumentTextIcon },
+        { name: 'overview', label: 'Overview', icon: UserCircleIcon }, { name: 'properties', label: 'Properties', icon: BuildingOfficeIcon },
+        { name: 'analytics', label: 'Analytics', icon: ChartBarIcon }, { name: 'communication', label: 'Communication', icon: ChatBubbleLeftRightIcon },
+        { name: 'billing', label: 'Billing', icon: BanknotesIcon }, { name: 'documents', label: 'Documents', icon: DocumentTextIcon },
         { name: 'management', label: 'Management', icon: Cog6ToothIcon },
     ];
 
@@ -147,13 +138,10 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
                             planDetails={planDetails}
                             monthlyRevenue={monthlyRevenue}
                             occupancyRate={occupancyRate}
+                            onUpdateNotes={handleUpdateNotes} // Pass the save function
                         />;
             case 'properties':
-                return <PropertiesTab 
-                            properties={properties} 
-                            loading={loadingProperties} 
-                            onSelectProperty={onSelectProperty} 
-                        />;
+                return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
             case 'analytics':
                 return <ClientAnalyticsView client={clientData} properties={properties} />;
             case 'communication':
@@ -163,13 +151,7 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
             case 'documents':
                 return <DocumentsTab />;
             case 'management':
-                return <ManagementTab 
-                            clientData={clientData} 
-                            refreshClientData={refreshClientData} 
-                            allPlans={subscriptionPlans} 
-                            loadingPlans={loadingPlans} 
-                            onImpersonate={handleImpersonate}
-                        />;
+                return <ManagementTab clientData={clientData} refreshClientData={refreshClientData} allPlans={subscriptionPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate}/>;
             default:
                 return null;
         }
@@ -194,9 +176,7 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
                         ))}
                     </nav>
                 </div>
-                <div className="mt-8">
-                    {renderActiveTab()}
-                </div>
+                <div className="mt-8">{renderActiveTab()}</div>
             </div>
             {isEditModalOpen && <EditClientModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} client={clientData} onSave={handleUpdateClient}/>}
         </div>
