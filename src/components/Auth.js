@@ -12,6 +12,7 @@ import {
   sendPasswordResetEmail
 } from "firebase/auth";
 import { Mail, Lock, Building2, User, Phone, Globe, Sun, Moon } from 'lucide-react';
+import stayWellLogo from '../assets/logo.png'; // <-- ADDED: Import your new logo
 
 // --- Auth Context (No changes needed) ---
 const AuthContext = React.createContext();
@@ -113,7 +114,7 @@ const ThemeToggle = () => {
     );
 };
 
-// --- Auth Component (with Final Polish) ---
+// --- Auth Component ---
 export const Auth = () => {
   const [view, setView] = useState('signIn');
   const [email, setEmail] = useState("");
@@ -295,18 +296,16 @@ export const Auth = () => {
         </div>
       </div>
       
-      {/* Left Side: Branding with Gradient */}
       <div className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden">
-        {/* REPLACED: Pattern with animated gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 dark:from-gray-800 dark:via-indigo-900 dark:to-purple-900 animate-gradient-xy" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-200 via-sky-200 to-purple-200 dark:from-gray-800 dark:via-indigo-900 dark:to-purple-900 animate-gradient-xy" />
         <div className="text-center z-10">
-          <h1 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">StayWell</h1>
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Management, simplified.</p>
+          {/* REPLACED: Text with the new logo image */}
+          <img src={stayWellLogo} alt="StayWell Logo" className="w-48 h-auto mx-auto" />
+          <p className="mt-6 text-lg text-gray-600 dark:text-gray-300">Management, simplified.</p>
         </div>
       </div>
 
-      {/* Right Side: Form */}
-      <div className="w-full lg:w-2/2 flex items-center justify-center p-6 sm:p-12">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md">
           {renderContent()}
         </div>
