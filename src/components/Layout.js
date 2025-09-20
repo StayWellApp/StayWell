@@ -43,7 +43,7 @@ const ThemeToggle = () => {
 const Layout = ({ user, userData, activeView, setActiveView, hasPermission, children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [searchActive, setSearchActive] = useState(false); // State for search bar visibility
+    const [searchActive, setSearchActive] = useState(false);
     const { logout } = useAuth();
     const { t, i18n } = useTranslation();
     const { isSuperAdmin } = userData;
@@ -137,41 +137,25 @@ const Layout = ({ user, userData, activeView, setActiveView, hasPermission, chil
                         <MenuIcon className="h-6 w-6" />
                     </button>
                     <div className="flex-1 px-4 flex justify-between items-center">
-                        <div className="flex-1 flex">
-                            {/* Title takes up space, search input overlays it */}
-                            <h1 className={`text-xl font-semibold text-gray-900 dark:text-gray-100 transition-opacity duration-300 ${searchActive ? 'opacity-0' : 'opacity-100'}`}>
-                                {currentViewLabel}
-                            </h1>
-                        </div>
-                        <div className="ml-4 flex items-center md:ml-6 space-x-4">
-                            {/* Search Component */}
-                            <div className="relative">
-                                <Transition
-                                    show={searchActive}
-                                    as={Fragment}
-                                    enter="transition-all ease-out duration-300"
-                                    enterFrom="w-0 opacity-0"
-                                    enterTo="w-64 opacity-100"
-                                    leave="transition-all ease-in duration-200"
-                                    leaveFrom="w-64 opacity-100"
-                                    leaveTo="w-0 opacity-0"
-                                >
-                                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                                         <input
-                                            type="search"
-                                            placeholder={t('Search...')}
-                                            className="pl-4 pr-10 py-2 w-64 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                        <button onClick={() => setSearchActive(false)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                            <X className="h-5 w-5"/>
-                                        </button>
-                                    </div>
-                                </Transition>
-                                <button onClick={() => setSearchActive(true)} className={`p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-opacity ${searchActive ? 'opacity-0' : 'opacity-100'}`}>
-                                    <Search className="h-5 w-5" />
-                                </button>
+                        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{currentViewLabel}</h1>
+                        
+                        <div className="flex-1 flex justify-center px-4 lg:px-8">
+                            <div className={`w-full max-w-lg transition-all duration-300 ${searchActive ? 'opacity-100' : 'opacity-0'}`}>
+                                <div className="relative text-gray-400 focus-within:text-gray-600">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none" />
+                                    <input
+                                        type="search"
+                                        placeholder={t('Search...')}
+                                        className="pl-10 pr-4 py-2 w-full rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
                             </div>
-                            
+                        </div>
+
+                        <div className="flex items-center space-x-4">
+                            <button onClick={() => setSearchActive(!searchActive)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors">
+                                {searchActive ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+                            </button>
                             <ThemeToggle />
                             <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors">
                                 <Bell className="h-5 w-5" />
@@ -190,20 +174,17 @@ const Layout = ({ user, userData, activeView, setActiveView, hasPermission, chil
                                             <Menu.Item>{({ active }) => (<button onClick={() => setActiveView(finalSettingsItem.view)} className={`${active ? 'bg-gray-100 dark:bg-gray-600' : ''} w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}><Settings className="h-5 w-5 mr-3" />{t('Settings')}</button>)}</Menu.Item>
                                         }
                                         {/* Language Submenu */}
-                                        <Menu as="div" className="relative w-full">
-                                          {({ open }) => (
-                                            <>
-                                              <Menu.Button className={`w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 ${open ? 'bg-gray-100 dark:bg-gray-600' : ''}`}><Globe className="h-5 w-5 mr-3" />{t('Language')}<ChevronDown className="h-4 w-4 ml-auto" /></Menu.Button>
-                                              <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="opacity-0" enterTo="opacity-100" leave="transition ease-in duration-75" leaveFrom="opacity-100" leaveTo="opacity-0">
-                                                {/* Use static to prevent the parent from closing */}
-                                                <Menu.Items static className="absolute -top-1/2 right-full mr-1 w-32 rounded-md shadow-lg py-1 bg-white dark:bg-gray-600 ring-1 ring-black ring-opacity-5">
-                                                    <Menu.Item>{({ active }) => (<button onClick={() => changeLanguage('en')} className={`${active ? 'bg-gray-100 dark:bg-gray-500' : ''} w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}>English</button>)}</Menu.Item>
-                                                    <Menu.Item>{({ active }) => (<button onClick={() => changeLanguage('es')} className={`${active ? 'bg-gray-100 dark:bg-gray-500' : ''} w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}>Español</button>)}</Menu.Item>
-                                                </Menu.Items>
-                                              </Transition>
-                                            </>
-                                          )}
-                                        </Menu>
+                                        <div onClick={(e) => e.stopPropagation()}>
+                                            <Menu as="div" className="relative w-full">
+                                                <Menu.Button className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"><Globe className="h-5 w-5 mr-3" />{t('Language')}<ChevronDown className="h-4 w-4 ml-auto" /></Menu.Button>
+                                                <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="opacity-0" enterTo="opacity-100" leave="transition ease-in duration-75" leaveFrom="opacity-100" leaveTo="opacity-0">
+                                                    <Menu.Items className="absolute -top-1/2 right-full mr-1 w-32 rounded-md shadow-lg py-1 bg-white dark:bg-gray-600 ring-1 ring-black ring-opacity-5">
+                                                        <Menu.Item>{({ active }) => (<button onClick={() => changeLanguage('en')} className={`${active ? 'bg-gray-100 dark:bg-gray-500' : ''} w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}>English</button>)}</Menu.Item>
+                                                        <Menu.Item>{({ active }) => (<button onClick={() => changeLanguage('es')} className={`${active ? 'bg-gray-100 dark:bg-gray-500' : ''} w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}>Español</button>)}</Menu.Item>
+                                                    </Menu.Items>
+                                                </Transition>
+                                            </Menu>
+                                        </div>
                                         <Menu.Item>{({ active }) => (<button onClick={handleLogout} className={`${active ? 'bg-gray-100 dark:bg-gray-600' : ''} w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}><LogOut className="h-5 w-5 mr-3" />{t('Logout')}</button>)}</Menu.Item>
                                     </Menu.Items>
                                 </Transition>
