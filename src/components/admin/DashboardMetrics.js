@@ -1,70 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase-config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { Users, Building, Briefcase } from 'lucide-react';
+// src/components/admin/DashboardMetrics.js
 
-const StatCard = ({ icon, title, value, color }) => {
-    const colors = {
-        blue: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300',
-        green: 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-300',
-        purple: 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300',
-    };
-    return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center space-x-4">
-            <div className={`p-3 rounded-full ${colors[color]}`}>{icon}</div>
-            <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-            </div>
+import React from 'react';
+import { Users, Building, DollarSign, Clock } from 'lucide-react';
+
+const StatCard = ({ title, value, icon: Icon, color }) => (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md flex items-center space-x-4">
+        <div className={`p-3 rounded-full ${color}`}>
+            <Icon className="h-6 w-6 text-white" />
         </div>
-    );
-};
+        <div>
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">{title}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+        </div>
+    </div>
+);
 
-const DashboardMetrics = () => {
-    const [stats, setStats] = useState({
-        totalCustomers: 0,
-        totalProperties: 0,
-        totalTeamMembers: 0,
-    });
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                // Get total customers (users with role 'owner')
-                const customersQuery = query(collection(db, "users"), where("role", "==", "owner"));
-                const customersSnapshot = await getDocs(customersQuery);
-                const totalCustomers = customersSnapshot.size;
-
-                // Get total properties
-                const propertiesSnapshot = await getDocs(collection(db, "properties"));
-                const totalProperties = propertiesSnapshot.size;
-                
-                // Get total team members (users with role 'staff')
-                const teamQuery = query(collection(db, "users"), where("role", "==", "staff"));
-                const teamSnapshot = await getDocs(teamQuery);
-                const totalTeamMembers = teamSnapshot.size;
-
-                setStats({ totalCustomers, totalProperties, totalTeamMembers });
-            } catch (error) {
-                console.error("Error fetching dashboard metrics:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchStats();
-    }, []);
-
-    if (loading) {
-        return <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><p>Loading metrics...</p></div>;
-    }
+const DashboardMetrics = ({ clients }) => {
+    const totalClients = clients.length;
+    // Dummy data for other metrics - replace with real data when available
+    const activeProperties = clients.reduce((acc, client) => acc + (client.propertyCount || 0), 0);
+    const monthlyRevenue = 5650; // Example
+    const pendingTasks = 12;      // Example
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard icon={<Users size={24} />} title="Total Customers" value={stats.totalCustomers} color="blue" />
-            <StatCard icon={<Building size={24} />} title="Properties Managed" value={stats.totalProperties} color="green" />
-            <StatCard icon={<Briefcase size={24} />} title="Total Team Members" value={stats.totalTeamMembers} color="purple" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard title="Total Clients" value={totalClients} icon={Users} color="bg-blue-500" />
+            <StatCard title="Active Properties" value={activeProperties} icon={Building} color="bg-green-500" />
+            <StatCard title="Monthly Revenue" value={`$${monthlyRevenue.toLocaleString()}`} icon={DollarSign} color="bg-purple-500" />
+            <StatCard title="Pending Tasks" value={pendingTasks} icon={Clock} color="bg-orange-500" />
         </div>
     );
 };
