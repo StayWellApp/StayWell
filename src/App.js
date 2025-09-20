@@ -1,20 +1,25 @@
 // src/App.js
 
 import React, { useState, useEffect } from 'react';
-// Import AuthProvider and useAuth to provide and consume authentication state
 import { AuthProvider, useAuth } from './components/Auth';
 import { db } from './firebase-config';
 import { doc, onSnapshot } from "firebase/firestore";
 import { usePermissions } from './hooks/usePermissions';
-import { Auth } from './components/Auth'; // This is your login form component
+import { Auth } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
 import StaffDashboard from './components/StaffDashboard';
 import PropertiesView from './components/PropertiesView';
 import TeamView from './components/TeamView';
-import { PropertyDetailView } from './components/PropertyViews';
-import { ChecklistsView } from './components/ChecklistViews';
-import { StorageView } from './components/StorageViews';
+
+// --- FIXED IMPORTS ---
+// Corrected the path and changed from a named import to a default import.
+import PropertyDetailView from './components/property/PropertyDetailView'; 
+// Changed from a named import to a default import.
+import ChecklistsView from './components/ChecklistViews';
+// Changed from a named import to a default import.
+import StorageView from './components/StorageViews';
+
 import MasterCalendarView from './components/MasterCalendarView';
 import SettingsView from './components/SettingsView';
 import ChatLayout from './components/ChatLayout';
@@ -35,10 +40,8 @@ import 'react-toastify/dist/ReactToastify.css';
 
 // Your application's main logic is now inside AppContent
 function AppContent() {
-    // Get the current user and authentication loading status from the context
     const { currentUser, loading: authLoading } = useAuth();
     
-    // The local user state is removed, as we now use `currentUser` from the context.
     const [userData, setUserData] = useState(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [activeView, setActiveView] = useState('dashboard');
@@ -50,7 +53,6 @@ function AppContent() {
     const handleOpenAddClientModal = () => setAddClientModalOpen(true);
     const handleCloseAddClientModal = () => setAddClientModalOpen(false);
 
-    // This useEffect now handles logic that depends on the user's auth state from the context.
     useEffect(() => {
         if (currentUser) {
             currentUser.getIdTokenResult(true).then(idTokenResult => {
@@ -64,7 +66,6 @@ function AppContent() {
                 }
             });
         } else {
-            // Reset state when user logs out
             setUserData(null);
             setIsSuperAdmin(false);
             setSelectedClient(null);
