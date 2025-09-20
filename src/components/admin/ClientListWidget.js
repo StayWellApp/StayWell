@@ -1,73 +1,200 @@
-// src/components/admin/ClientListWidget.js
+// src/components/admin/ClientListView.js
 
-import React from 'react';
-import { ChevronRight, Inbox } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { db } from '../../firebase-config';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { Plus, Settings, Search, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
-const SkeletonItem = () => (
-    <div className="py-3 flex items-center justify-between animate-pulse">
-        <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 mr-4"></div>
-            <div>
-                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-3 w-40 bg-gray-200 dark:bg-gray-700 rounded mt-2"></div>
-            </div>
-        </div>
-        <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-    </div>
-);
+const ALL_COLUMNS = [
+  { key: 'companyName', label: 'Company' },
+  { key: 'fullName', label: 'Contact Name' }, // Changed from contactName to fullName
+  { key: 'email', label: 'Email' },
+  { key: 'subscriptionTier', label: 'Plan' },
+  { key: 'status', label: 'Status' },
+  { key: 'subscriptionEndDate', label: 'Subscription Ends' },
+  { key: 'country', label: 'Country' },
+  { key: 'createdAt', label: 'Joined Date' },
+];
 
-const ClientListWidget = ({ clients, loading, onSelectClient, onViewAll }) => {
+const DEFAULT_COLUMNS = ['companyName', 'fullName', 'subscriptionTier', 'status', 'subscriptionEndDate', 'country'];
 
-    const renderContent = () => {
-        if (loading) {
-            return (
-                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {[...Array(5)].map((_, i) => <li key={i}><SkeletonItem /></li>)}
-                </ul>
-            );
-        }
+const ClientListView = ({ onSelectClient, onAddClient }) => {
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sortConfig, setSortConfig] = useState({ key: 'companyName', direction: 'ascending' });
+  const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-        if (clients.length === 0) {
-            return (
-                <div className="text-center py-10">
-                    <Inbox className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">No Clients Found</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">No clients match the current filters.</p>
-                </div>
-            );
-        }
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const storedColumns = localStorage.getItem('visibleClientColumns');
+      const parsedColumns = storedColumns ? JSON.parse(storedColumns) : DEFAULT_COLUMNS;
+      return Array.isArray(parsedColumns) ? parsedColumns : DEFAULT_COLUMNS;
+    } catch (error) {
+      return DEFAULT_COLUMNS;
+    }
+  });
 
-        return (
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                {clients.slice(0, 5).map(client => (
-                    <li key={client.id} onClick={() => onSelectClient(client)} className="py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg -mx-2 px-2 transition-colors">
-                        <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4 flex-shrink-0">
-                                {client.companyName ? client.companyName.charAt(0) : '?'}
-                            </div>
-                            <div>
-                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{client.companyName}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{client.email}</p>
-                            </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                    </li>
-                ))}
-            </ul>
-        );
-    };
+  useEffect(() => {
+    localStorage.setItem('visibleClientColumns', JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
 
-    return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-full">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Clients</h3>
-                <button onClick={onViewAll} className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
-                    View All
-                </button>
-            </div>
-            {renderContent()}
-        </div>
+  useEffect(() => {
+    setLoading(true);
+    // --- FIX: Query for "client_admin" role instead of "owner" ---
+    const q = query(collection(db, "users"), where("roles", "array-contains", "client_admin"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setClients(clientsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching clients: ", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const filteredAndSortedClients = useMemo(() => {
+    let filteredClients = [...clients];
+    if (searchTerm) {
+      filteredClients = filteredClients.filter(client =>
+        Object.values(client).some(value => 
+          String(value).toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+    if (sortConfig.key) {
+      filteredClients.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'ascending' ? 1 : -1;
+        return 0;
+      });
+    }
+    return filteredClients;
+  }, [clients, sortConfig, searchTerm]);
+
+  const requestSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'ascending' ? 'descending' : 'ascending'
+    }));
+  };
+
+  const handleColumnToggle = (columnKey) => {
+    setVisibleColumns(prev =>
+      prev.includes(columnKey) ? prev.filter(key => key !== columnKey) : [...prev, columnKey]
     );
+  };
+  
+  const resetColumns = () => {
+      setVisibleColumns(DEFAULT_COLUMNS);
+  }
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'ascending' ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />;
+  };
+
+  const renderCell = (client, columnKey) => {
+    const cellValue = client[columnKey];
+    switch (columnKey) {
+      case 'companyName':
+        return (
+          <div className="flex items-center">
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4 flex-shrink-0">
+                {client.companyName ? client.companyName.charAt(0) : '?'}
+            </div>
+            <span className="font-medium text-gray-900 dark:text-white">{cellValue}</span>
+          </div>
+        );
+      case 'status':
+        const statusColor = cellValue === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+        return <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${statusColor}`}>{cellValue || 'Inactive'}</span>;
+      case 'createdAt':
+      case 'subscriptionEndDate':
+        return cellValue?.seconds ? new Date(cellValue.seconds * 1000).toLocaleDateString() : 'N/A';
+      case 'country':
+        return client.country || 'N/A';
+      default:
+        return cellValue || 'N/A';
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden h-full flex flex-col">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Clients</h2>
+          <div className="flex items-center space-x-2">
+            <div className="relative">
+              <button onClick={() => setDropdownOpen(!isDropdownOpen)} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-700 rounded-md shadow-lg z-10">
+                  <div className="flex justify-between items-center px-3 py-2 border-b dark:border-gray-600">
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Visible Columns</div>
+                      <button onClick={resetColumns} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center">
+                          <RotateCcw className="h-3 w-3 mr-1"/> Reset
+                      </button>
+                  </div>
+                  <div className="py-1">
+                    {ALL_COLUMNS.map(col => (
+                      <label key={col.key} className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
+                        <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500" checked={visibleColumns.includes(col.key)} onChange={() => handleColumnToggle(col.key)} />
+                        <span className="ml-2">{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            {onAddClient && (
+              <button onClick={onAddClient} className="flex items-center px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
+                <Plus className="h-4 w-4 mr-1" /> Add Client
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="max-w-md">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input type="text" placeholder="Search clients..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+        </div>
+      </div>
+      <div className="overflow-x-auto flex-grow">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700">
+            <tr>
+              {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => (
+                <th key={col.key} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" onClick={() => requestSort(col.key)}>
+                  <div className="flex items-center">{col.label}{getSortIcon(col.key)}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {loading ? (
+              <tr><td colSpan={visibleColumns.length} className="text-center p-4">Loading clients...</td></tr>
+            ) : filteredAndSortedClients.length === 0 ? (
+              <tr><td colSpan={visibleColumns.length} className="text-center p-4">No clients found.</td></tr>
+            ) : (
+              filteredAndSortedClients.map((client) => (
+                <tr key={client.id} onClick={() => onSelectClient && onSelectClient(client)} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                  {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => (
+                    <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      {renderCell(client, col.key)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
-export default ClientListWidget;
+export default ClientListView;
