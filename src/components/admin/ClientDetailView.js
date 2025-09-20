@@ -2,20 +2,17 @@
 // Updated with correct import paths and fallbacks
 
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { db } from "../../firebase-config"; 
+import { useAuth } from "../../contexts/AuthContext";
 
-// ✅ Corrected Imports (assumes standard src/ structure in Next.js)
-import { db } from "src/firebase"; // 🔁 Updated: Use absolute path alias
-import { useAuth } from "src/contexts/AuthContext"; // 🔁 Updated
-import { useRouter } from "next/router"; // 🔁 Should work in Next.js
-
-// 🔁 Updated: Assume these components are in the same directory or create them
-import GoalsTab from "./tabs/GoalsTab"; // 📂 Move to ./tabs/GoalsTab.jsx
+// Assumes these components are in a 'tabs' folder inside the 'admin' folder
+import GoalsTab from "./tabs/GoalsTab";
 import AppointmentsTab from "./tabs/AppointmentsTab";
 import ActivityTab from "./tabs/ActivityTab";
 
 const ClientDetailView = () => {
-  const router = useRouter();
-  const { id } = router.query;
+  const { id } = useParams();
   const { currentUser } = useAuth();
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
