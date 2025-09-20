@@ -47,6 +47,25 @@ const defaultLayouts = {
     ],
 };
 
+// --- ADDED: Sanitization function to clean layout data ---
+const sanitizeLayouts = (layouts) => {
+    const sanitized = {};
+    for (const breakpoint in layouts) {
+        sanitized[breakpoint] = layouts[breakpoint].map(item => {
+            const { i, x, y, w, h, minW, maxW, minH, maxH, isResizable } = item;
+            const sanitizedItem = { i, x, y, w, h };
+            if (minW !== undefined) sanitizedItem.minW = minW;
+            if (maxW !== undefined) sanitizedItem.maxW = maxW;
+            if (minH !== undefined) sanitizedItem.minH = minH;
+            if (maxH !== undefined) sanitizedItem.maxH = maxH;
+            if (isResizable !== undefined) sanitizedItem.isResizable = isResizable;
+            return sanitizedItem;
+        });
+    }
+    return sanitized;
+};
+
+
 const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView }) => {
     const [layouts, setLayouts] = useState(null);
     const [clients, setClients] = useState([]);
@@ -54,7 +73,6 @@ const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView
     const [visibleWidgets, setVisibleWidgets] = useState(allWidgets.map(w => w.id));
     const [isWidgetModalOpen, setWidgetModalOpen] = useState(false);
     
-    // States from previous version
     const [selectedClient, setSelectedClient] = useState(null);
     const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
 
@@ -89,10 +107,12 @@ const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView
     const saveConfigToFirestore = useCallback(debounce(async (newLayouts, newVisibleWidgets) => {
         if (auth.currentUser) {
             const configDocRef = doc(db, 'users', auth.currentUser.uid, 'configs', 'dashboard');
+            
             const dataToSave = {
-                layouts: newLayouts,
+                layouts: sanitizeLayouts(newLayouts),
                 visibleWidgets: newVisibleWidgets
             };
+            
             await setDoc(configDocRef, dataToSave, { merge: true });
         }
     }, 1500), []);
@@ -109,7 +129,6 @@ const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView
                 ? current.filter(id => id !== widgetId)
                 : [...current, widgetId];
             
-            // Also update layout to remove the item
             setLayouts(prevLayouts => {
                 const newLg = prevLayouts.lg.filter(item => newVisible.includes(item.i));
                 return { ...prevLayouts, lg: newLg };
