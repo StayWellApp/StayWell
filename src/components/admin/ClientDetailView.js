@@ -1,5 +1,5 @@
 // src/components/admin/ClientDetailView.js
-// Redesigned as a comprehensive CRM-style client management dashboard
+// Properties tab updated for short-term rentals and functional buttons.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
@@ -9,8 +9,8 @@ import { db } from '../../firebase-config';
 import { toast } from 'react-toastify';
 import { 
     UserCircleIcon, ChartBarIcon, Cog6ToothIcon, ArrowLeftIcon, BuildingOfficeIcon, 
-    CurrencyDollarIcon, TagIcon, ClockIcon, CheckCircleIcon, BriefcaseIcon,
-    ChatBubbleLeftRightIcon, BanknotesIcon, DocumentTextIcon, PencilSquareIcon, UserGroupIcon
+    CurrencyDollarIcon, TagIcon, BriefcaseIcon, ChatBubbleLeftRightIcon, 
+    BanknotesIcon, DocumentTextIcon, PencilSquareIcon, UserGroupIcon, MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import EditClientModal from './EditClientModal';
 import ClientAnalyticsView from './ClientAnalyticsView';
@@ -19,27 +19,10 @@ import FeatureFlagManager from './FeatureFlagManager';
 
 
 // --- Placeholder Components for New Tabs ---
-const PropertiesTab = ({ properties, loading }) => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-        <h3 className="text-xl font-semibold mb-4">Managed Properties</h3>
-        {loading ? <p>Loading properties...</p> : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {properties.map(prop => (
-                    <div key={prop.id} className="border dark:border-gray-700 p-4 rounded-lg">
-                        <p className="font-bold">{prop.name}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{prop.address}</p>
-                    </div>
-                ))}
-            </div>
-        )}
-    </div>
-);
-
 const CommunicationTab = () => (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
         <h3 className="text-xl font-semibold mb-4">Communication Log</h3>
         <p className="text-gray-600 dark:text-gray-400">Log emails, calls, and notes here to track client interactions.</p>
-        {/* Add your communication logging UI here */}
     </div>
 );
 
@@ -47,7 +30,6 @@ const BillingTab = () => (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
         <h3 className="text-xl font-semibold mb-4">Billing & Invoices</h3>
         <p className="text-gray-600 dark:text-gray-400">Display payment history, generate invoices, and manage billing details.</p>
-        {/* Add your billing management UI here */}
     </div>
 );
 
@@ -55,9 +37,80 @@ const DocumentsTab = () => (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
         <h3 className="text-xl font-semibold mb-4">Client Documents</h3>
         <p className="text-gray-600 dark:text-gray-400">A central place to upload and manage contracts, agreements, and other files.</p>
-        {/* Add your document management UI here */}
     </div>
 );
+
+// --- UPDATED: PropertiesTab for Short-Term Rentals ---
+const PropertiesTab = ({ properties, loading }) => {
+    
+    const handleManageProperty = (propertyId) => {
+        // This is where you would add your navigation logic.
+        // For example: history.push(`/property/${propertyId}`);
+        console.log("Navigate to manage property:", propertyId);
+        toast.info(`Navigating to manage property: ${propertyId}`);
+    };
+
+    if (loading) {
+        return <p className="text-center text-gray-500 dark:text-gray-400">Loading properties...</p>;
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Search and Filter Bar */}
+            <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border dark:border-gray-700">
+                <div className="relative w-full max-w-xs">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search properties..."
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700"
+                    />
+                </div>
+                <div>
+                    <button className="button-secondary">Filter</button>
+                </div>
+            </div>
+
+            {/* Property Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {properties.map(prop => (
+                    <div key={prop.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-md border dark:border-gray-700 flex flex-col justify-between overflow-hidden">
+                        <div className="p-6">
+                            <div className="flex justify-between items-start">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{prop.name || 'Unnamed Property'}</h3>
+                                <span className={`px-3 py-1 text-xs font-medium rounded-full ${prop.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                    {prop.status || 'Unknown'}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{prop.address || 'No address'}</p>
+                            <div className="mt-4 pt-4 border-t dark:border-gray-700 grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <p className="text-gray-500 dark:text-gray-400">Next Booking</p>
+                                    <p className="font-medium text-gray-800 dark:text-gray-200">{prop.nextBooking || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500 dark:text-gray-400">Avg. Nightly Rate</p>
+                                    <p className="font-medium text-gray-800 dark:text-gray-200">${(prop.avgNightlyRate || 0).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-900/50 px-6 py-3">
+                            <button 
+                                onClick={() => handleManageProperty(prop.id)} 
+                                className="text-sm font-semibold text-blue-600 hover:text-blue-500"
+                            >
+                                Manage Property &rarr;
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+             {properties.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-10">No properties found for this client.</p>}
+        </div>
+    );
+};
 
 
 const ClientDetailView = ({ client, onBack }) => {
@@ -75,7 +128,15 @@ const ClientDetailView = ({ client, onBack }) => {
         try {
             const q = query(collection(db, "properties"), where("ownerId", "==", clientData.id));
             const snapshot = await getDocs(q);
-            setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            // Add mock data for short-term rental fields
+            const propsList = snapshot.docs.map(doc => ({ 
+                id: doc.id, 
+                ...doc.data(),
+                status: 'Active', // Mock data
+                nextBooking: '2025-10-05', // Mock data
+                avgNightlyRate: 275 // Mock data
+            }));
+            setProperties(propsList);
         } catch (error) {
             console.error("Error fetching properties:", error);
             toast.error("Failed to load properties.");
@@ -147,7 +208,7 @@ const ClientDetailView = ({ client, onBack }) => {
     const planId = clientData.subscription?.plan;
     const planDetails = loadingPlans ? null : subscriptionPlans[planId];
     const monthlyRevenue = planDetails?.pricePerProperty ? (planDetails.pricePerProperty * properties.length) : 0;
-    const occupancyRate = properties.length > 0 ? (properties.filter(p => p.status === 'Occupied').length / properties.length) * 100 : 0;
+    const occupancyRate = properties.length > 0 ? (properties.filter(p => p.status === 'Active').length / properties.length) * 100 : 0;
 
     const tabs = [
         { name: 'overview', label: 'Overview', icon: UserCircleIcon },
@@ -180,7 +241,6 @@ const ClientDetailView = ({ client, onBack }) => {
                         </div>
                     </div>
                 </div>
-                 {/* You can add more overview widgets here, like recent activity */}
             </div>
 
             {/* Right Column (Sidebar) */}
