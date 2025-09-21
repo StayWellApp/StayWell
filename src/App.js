@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase-config';
-// --- FIX: Added missing imports ---
+// --- FIX: Added all necessary imports ---
 import { collection, onSnapshot, query, where, doc } from "firebase/firestore"; 
 import { usePermissions } from './hooks/usePermissions';
-
 import { AuthProvider, useAuth, Auth } from './components/Auth'; 
-
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
 import StaffDashboard from './components/StaffDashboard';
@@ -38,7 +36,7 @@ function AppContent() {
     const { currentUser, loading: authLoading } = useAuth(); 
     
     const [userData, setUserData] = useState(null);
-    const [allClients, setAllClients] = useState([]); // Central state for all clients
+    const [allClients, setAllClients] = useState([]);
     const [clientsLoading, setClientsLoading] = useState(true);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [isUserDataLoading, setIsUserDataLoading] = useState(true);
