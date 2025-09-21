@@ -35,7 +35,6 @@ const ClientListView = ({ allClients, loading, onSelectClient, onAddClient }) =>
     localStorage.setItem('visibleClientColumns', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
 
-
   const filteredAndSortedClients = useMemo(() => {
     let filteredClients = [...allClients];
     if (searchTerm) {
