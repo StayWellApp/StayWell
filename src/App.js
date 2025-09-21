@@ -6,7 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { usePermissions } from './hooks/usePermissions';
 
-import { AuthProvider, useAuth, Auth } from './components/Auth'; 
+import { AuthProvider, useAuth, Auth } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
 import StaffDashboard from './components/StaffDashboard';
@@ -29,13 +29,15 @@ import EndImpersonationBanner from './components/EndImpersonationBanner';
 import AddClientModal from './components/admin/AddClientModal';
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { AdminProvider, useAdmin } from './contexts/AdminContext';
 import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function AppContent() {
     const { currentUser, loading: authLoading } = useAuth();
-    
+    const { selectedClient, clearSelectedClient } = useAdmin();
+
     const [userData, setUserData] = useState(null);
     const [allClients, setAllClients] = useState([]);
     const [clientsLoading, setClientsLoading] = useState(true);
@@ -43,7 +45,6 @@ function AppContent() {
     const [isUserDataLoading, setIsUserDataLoading] = useState(true);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
-    const [selectedClient, setSelectedClient] = useState(null);
     const { hasPermission, loadingPermissions } = usePermissions(userData);
     const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
 
@@ -71,8 +72,10 @@ function AppContent() {
             currentUser.getIdTokenResult(true).then(idTokenResult => {
                 const isSuper = idTokenResult.claims.superAdmin === true;
                 setIsSuperAdmin(isSuper);
-                
-                if (!isSuper) {
+                if (isSuper) {
+                    setActiveView('adminDashboard');
+                    setIsUserDataLoading(false);
+                } else {
                     const userDocRef = doc(db, "users", currentUser.uid);
                     const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
                         setUserData(doc.exists() ? doc.data() : null);
@@ -82,51 +85,46 @@ function AppContent() {
                         setIsUserDataLoading(false);
                     });
                     return () => unsubscribeSnapshot();
-                } else {
-                    setIsUserDataLoading(false);
                 }
             });
         } else {
             setUserData(null);
             setIsSuperAdmin(false);
-            setSelectedClient(null);
-            setActiveView('dashboard');
+            clearSelectedClient();
             setIsUserDataLoading(false);
         }
-    }, [currentUser]);
+    }, [currentUser, clearSelectedClient]);
 
-    useEffect(() => {
-        if (isSuperAdmin) {
-            setActiveView('adminDashboard');
-        }
-    }, [isSuperAdmin]);
-    
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
         setActiveView(view);
     };
-    const handleSelectClient = (client) => setSelectedClient(client);
+
     const handleBackToClientList = () => {
-        setSelectedClient(null);
+        clearSelectedClient();
         setActiveView('adminClients');
     };
+
     const handleSelectProperty = (property) => {
         setSelectedProperty(property);
         setActiveView('propertyDetail');
     };
+
     const renderActiveView = () => {
         if (isSuperAdmin) {
-            if (selectedClient) return <ClientDetailView client={selectedClient} onBack={handleBackToClientList} onSelectProperty={handleSelectProperty} />;
+            if (selectedClient) {
+                return <ClientDetailView client={selectedClient} onBack={handleBackToClientList} onSelectProperty={handleSelectProperty} />;
+            }
             if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={currentUser} />;
             
             switch (activeView) {
-                case 'adminDashboard': return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} onSelectClient={handleSelectClient} setActiveView={handleSetActiveView} />;
-                case 'adminClients': return <ClientListView allClients={allClients} loading={clientsLoading} onSelectClient={handleSelectClient} onAddClient={() => setAddClientModalOpen(true)} />;
+                case 'adminDashboard': return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} />;
+                case 'adminClients': return <ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} />;
                 case 'adminBilling': return <BillingView />;
                 case 'adminSubscriptions': return <AdminSubscriptionsView />;
                 case 'adminSettings': return <AdminSettingsView />;
                 case 'adminAuditLog': return <AuditLogView />;
-                default: return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} onSelectClient={handleSelectClient} setActiveView={handleSetActiveView} />;
+                default: return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} />;
             }
         }
         if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); setActiveView('properties'); }} user={currentUser} />;
@@ -143,6 +141,7 @@ function AppContent() {
             default: return hasPermission('properties_view_all') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />;
         }
     };
+
     const isImpersonating = !!localStorage.getItem('impersonating_admin_uid');
 
     if (authLoading) return <div className="flex items-center justify-center h-screen"><p>Loading StayWell...</p></div>;
@@ -171,7 +170,13 @@ function AppContent() {
 }
 
 function App() {
-    return (<AuthProvider><AppContent /></AuthProvider>);
+    return (
+        <AuthProvider>
+            <AdminProvider>
+                <AppContent />
+            </AdminProvider>
+        </AuthProvider>
+    );
 }
 
 export default App;

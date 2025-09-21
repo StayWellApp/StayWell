@@ -12,8 +12,10 @@ import SubscriptionsEndingSoon from './SubscriptionsEndingSoon';
 import DashboardMetrics from './DashboardMetrics';
 import AddClientModal from './AddClientModal';
 import ClientListWidget from './ClientListWidget';
+import { useAdmin } from '../../contexts/AdminContext';
 
-const SuperAdminDashboard = ({ allClients, loading, onSelectClient, setActiveView }) => {
+const SuperAdminDashboard = ({ allClients, loading, setActiveView }) => {
+    const { selectClient } = useAdmin();
     const [filteredClients, setFilteredClients] = useState([]);
     const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
     const [dateRangeStart, setDateRangeStart] = useState(null);
@@ -76,7 +78,7 @@ const SuperAdminDashboard = ({ allClients, loading, onSelectClient, setActiveVie
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                    <ClientListWidget clients={filteredClients} loading={loading} onSelectClient={onSelectClient} onViewAll={() => setActiveView('adminClients')} />
+                    <ClientListWidget clients={filteredClients} loading={loading} onSelectClient={selectClient} onViewAll={() => setActiveView('adminClients')} />
                 </div>
                 <div className="space-y-6">
                     <NewSignupsPanel clients={filteredClients} loading={loading} />
