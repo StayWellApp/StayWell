@@ -82,7 +82,7 @@ const SuperAdminDashboard = ({ allClients, loading, onSelectClient, setActiveVie
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                    <ClientListWidget clients={filteredClients} loading={loading} onSelectClient={onSelectClient} onViewAll={() => setActiveView('adminClients')} />
+                    <ClientListWidget clients={filteredClients} loading={loading} onSelectClient={setSelectedClient} onViewAll={() => setActiveView('adminClients')} />
                 </div>
                 <div className="space-y-6">
                     <NewSignupsPanel clients={filteredClients} loading={loading} />
