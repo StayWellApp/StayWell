@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase-config';
-// --- FIX: Added collection, query, and where for client fetching ---
-import { doc, onSnapshot, collection, query, where } from "firebase/firestore"; 
+// --- FIX: Added missing imports ---
+import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
 import { usePermissions } from './hooks/usePermissions';
 
 import { AuthProvider, useAuth, Auth } from './components/Auth'; 
@@ -34,12 +34,11 @@ import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-
 function AppContent() {
     const { currentUser, loading: authLoading } = useAuth(); 
     
     const [userData, setUserData] = useState(null);
-    const [allClients, setAllClients] = useState([]); // Central state for all clients
+    const [allClients, setAllClients] = useState([]);
     const [clientsLoading, setClientsLoading] = useState(true);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [isUserDataLoading, setIsUserDataLoading] = useState(true);
@@ -67,7 +66,7 @@ function AppContent() {
             setAllClients([]);
         }
     }, [isSuperAdmin]);
-
+    
     useEffect(() => {
         if (currentUser) {
             setIsUserDataLoading(true);
