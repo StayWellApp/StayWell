@@ -71,10 +71,8 @@ function AppContent() {
             currentUser.getIdTokenResult(true).then(idTokenResult => {
                 const isSuper = idTokenResult.claims.superAdmin === true;
                 setIsSuperAdmin(isSuper);
-                if (isSuper) {
-                    if (!selectedClient) setActiveView('adminDashboard');
-                    setIsUserDataLoading(false);
-                } else {
+                
+                if (!isSuper) {
                     const userDocRef = doc(db, "users", currentUser.uid);
                     const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
                         setUserData(doc.exists() ? doc.data() : null);
@@ -84,15 +82,24 @@ function AppContent() {
                         setIsUserDataLoading(false);
                     });
                     return () => unsubscribeSnapshot();
+                } else {
+                    setIsUserDataLoading(false);
                 }
             });
         } else {
             setUserData(null);
             setIsSuperAdmin(false);
             setSelectedClient(null);
+            setActiveView('dashboard');
             setIsUserDataLoading(false);
         }
-    }, [currentUser]); // <-- FIX: Removed selectedClient from dependency array
+    }, [currentUser]);
+
+    useEffect(() => {
+        if (isSuperAdmin) {
+            setActiveView('adminDashboard');
+        }
+    }, [isSuperAdmin]);
     
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
@@ -109,8 +116,8 @@ function AppContent() {
     };
     const renderActiveView = () => {
         if (isSuperAdmin) {
-            if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={currentUser} />;
             if (selectedClient) return <ClientDetailView client={selectedClient} onBack={handleBackToClientList} onSelectProperty={handleSelectProperty} />;
+            if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={currentUser} />;
             
             switch (activeView) {
                 case 'adminDashboard': return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} onSelectClient={handleSelectClient} setActiveView={handleSetActiveView} />;
