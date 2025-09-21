@@ -50,7 +50,6 @@ function AppContent() {
     useEffect(() => {
         if (isSuperAdmin) {
             setClientsLoading(true);
-            // --- THE FIX: Query for users where role is "owner" ---
             const q = query(collection(db, "users"), where("role", "==", "owner"));
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -93,7 +92,7 @@ function AppContent() {
             setSelectedClient(null);
             setIsUserDataLoading(false);
         }
-    }, [currentUser, selectedClient]);
+    }, [currentUser]); // <-- FIX: Removed selectedClient from dependency array
     
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
