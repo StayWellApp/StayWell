@@ -1,10 +1,11 @@
 // src/App.js
 
 import React, { useState, useEffect } from 'react';
-import { db } from './firebase-config';
-// --- FIX: Added all necessary imports ---
-import { collection, onSnapshot, query, where, doc } from "firebase/firestore"; 
+import { auth, db } from './firebase-config';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { usePermissions } from './hooks/usePermissions';
+
 import { AuthProvider, useAuth, Auth } from './components/Auth'; 
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
@@ -33,7 +34,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function AppContent() {
-    const { currentUser, loading: authLoading } = useAuth(); 
+    const { currentUser, loading: authLoading } = useAuth();
     
     const [userData, setUserData] = useState(null);
     const [allClients, setAllClients] = useState([]);
@@ -42,15 +43,15 @@ function AppContent() {
     const [isUserDataLoading, setIsUserDataLoading] = useState(true);
     const [activeView, setActiveView] = useState('dashboard');
     const [selectedProperty, setSelectedProperty] = useState(null);
-    const [selectedClient, setSelectedClient] = useState(null); 
+    const [selectedClient, setSelectedClient] = useState(null);
     const { hasPermission, loadingPermissions } = usePermissions(userData);
     const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
 
-    // --- FIX: Centralized and corrected client data fetching ---
     useEffect(() => {
         if (isSuperAdmin) {
             setClientsLoading(true);
-            const q = query(collection(db, "users"), where("roles", "array-contains", "client_admin"));
+            // --- THE FIX: Query for users where role is "owner" ---
+            const q = query(collection(db, "users"), where("role", "==", "owner"));
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setAllClients(clientsData);
@@ -64,7 +65,7 @@ function AppContent() {
             setAllClients([]);
         }
     }, [isSuperAdmin]);
-    
+
     useEffect(() => {
         if (currentUser) {
             setIsUserDataLoading(true);
@@ -93,12 +94,11 @@ function AppContent() {
             setIsUserDataLoading(false);
         }
     }, [currentUser, selectedClient]);
-
+    
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
         setActiveView(view);
     };
-    
     const handleSelectClient = (client) => setSelectedClient(client);
     const handleBackToClientList = () => {
         setSelectedClient(null);
@@ -106,9 +106,8 @@ function AppContent() {
     };
     const handleSelectProperty = (property) => {
         setSelectedProperty(property);
-        setActiveView('propertyDetail'); 
+        setActiveView('propertyDetail');
     };
-    
     const renderActiveView = () => {
         if (isSuperAdmin) {
             if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={currentUser} />;
@@ -124,10 +123,8 @@ function AppContent() {
                 default: return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} onSelectClient={handleSelectClient} setActiveView={handleSetActiveView} />;
             }
         }
-
         if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); setActiveView('properties'); }} user={currentUser} />;
         if (loadingPermissions) return <div className="flex items-center justify-center h-full"><p>Checking permissions...</p></div>;
-
         switch (activeView) {
             case 'dashboard': return hasPermission('properties_view_all') || hasPermission('team_manage') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />;
             case 'properties': return <PropertiesView onSelectProperty={setSelectedProperty} user={currentUser} userData={userData} hasPermission={hasPermission} />;
@@ -140,7 +137,6 @@ function AppContent() {
             default: return hasPermission('properties_view_all') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />;
         }
     };
-
     const isImpersonating = !!localStorage.getItem('impersonating_admin_uid');
 
     if (authLoading) return <div className="flex items-center justify-center h-screen"><p>Loading StayWell...</p></div>;

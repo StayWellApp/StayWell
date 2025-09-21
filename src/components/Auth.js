@@ -13,7 +13,6 @@ import {
 } from "firebase/auth";
 import { Mail, Lock, Building2, User, Phone, Globe, Sun, Moon } from 'lucide-react';
 
-// --- Auth Context (No changes needed) ---
 const AuthContext = React.createContext();
 
 export function useAuth() {
@@ -24,6 +23,7 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // --- FIX: Assigns role: "owner" instead of roles: ["client_admin"] ---
   async function signup(email, password, additionalData) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
         uid: user.uid,
         email: user.email,
         ...additionalData,
-        roles: ['client_admin'],
+        role: "owner", // Correct role assignment
         createdAt: serverTimestamp(),
         ownerId: user.uid,
       });
@@ -65,15 +65,15 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// --- SVG Icons (No changes needed) ---
+// ... (rest of the Auth.js file remains the same)
+// SVG Icons
 const GoogleIcon = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5" {...props}><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" /><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z" /><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.223 0-9.657-3.356-11.303-7.918l-6.522 5.025C9.505 39.556 16.227 44 24 44z" /><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.012 36.417 44 30.638 44 24c0-1.341-.138-2.65-.389-3.917z" /></svg>
 );
 const MicrosoftIcon = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" className="h-5 w-5" {...props}><path fill="#f25022" d="M1 1h9v9H1z"/><path fill="#00a4ef" d="M1 11h9v9H1z"/><path fill="#7fba00" d="M11 1h9v9h-9z"/><path fill="#ffb900" d="M11 11h9v9h-9z"/></svg>
 );
-
-// --- Helper Components (Moved outside main component to prevent re-renders) ---
+// Helper Components
 const ThemeToggle = () => {
     const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
     const toggleTheme = () => {
@@ -88,7 +88,6 @@ const ThemeToggle = () => {
         </button>
     );
 };
-
 const InputField = React.memo(({ id, type, placeholder, value, onChange, icon: Icon }) => (
     <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -100,8 +99,7 @@ const InputField = React.memo(({ id, type, placeholder, value, onChange, icon: I
         />
     </div>
 ));
-
-// --- Auth Component ---
+// Main Auth Component
 export const Auth = () => {
   const [view, setView] = useState('signIn');
   const [formState, setFormState] = useState({
@@ -111,12 +109,10 @@ export const Auth = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login, signup, signInWithGoogle } = useAuth();
-
   const handleInputChange = (e) => {
       const { id, value } = e.target;
       setFormState(prev => ({ ...prev, [id]: value }));
   };
-
   const handleAuthAction = async (authFn) => {
     setErrorMessage("");
     setSuccessMessage("");
@@ -129,7 +125,6 @@ export const Auth = () => {
       setIsLoading(false);
     }
   };
-  
   const handleForgotPassword = (e) => {
     e.preventDefault();
     handleAuthAction(async () => {
@@ -137,7 +132,6 @@ export const Auth = () => {
       setSuccessMessage('Check your email for a password reset link.');
     });
   };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const { email, password, companyName, fullName, phone, country } = formState;
@@ -148,22 +142,18 @@ export const Auth = () => {
       handleAuthAction(() => login(email, password));
     }
   };
-  
   const handleSignInWithGoogle = () => handleAuthAction(signInWithGoogle);
-
   const switchView = (newView) => {
       setErrorMessage('');
       setSuccessMessage('');
-      setFormState(prev => ({ // Keep email if switching to forgot password
+      setFormState(prev => ({
           ...{ email: "", password: "", companyName: "", fullName: "", phone: "", country: "" },
           email: newView === 'forgotPassword' ? prev.email : ""
       }));
       setView(newView);
   };
-
   const renderForm = () => {
     const { email, password, companyName, fullName, phone, country } = formState;
-
     switch (view) {
         case 'forgotPassword':
             return (
@@ -257,7 +247,6 @@ export const Auth = () => {
             );
     }
   };
-
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex relative">
       <div className="absolute top-6 right-6 flex items-center space-x-4 z-10">
@@ -269,7 +258,6 @@ export const Auth = () => {
           <Globe className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400" />
         </div>
       </div>
-      
       <div className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-200 via-sky-200 to-purple-200 dark:from-gray-800 dark:via-indigo-900 dark:to-purple-900 animate-gradient-xy" />
         <div className="text-center z-10">
@@ -277,7 +265,6 @@ export const Auth = () => {
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Management, simplified.</p>
         </div>
       </div>
-
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md">
           {renderForm()}
