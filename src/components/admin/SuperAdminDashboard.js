@@ -5,7 +5,6 @@ import { PlusCircle, X } from 'lucide-react';
 import moment from 'moment';
 
 import DateRangeFilter from './DateRangeFilter';
-import ClientDetailView from './ClientDetailView';
 import CustomerGrowthChart from './CustomerGrowthChart';
 import RevenueByPlanChart from './RevenueByPlanChart';
 import NewSignupsPanel from './NewSignupsPanel';
@@ -16,7 +15,6 @@ import ClientListWidget from './ClientListWidget';
 
 const SuperAdminDashboard = ({ allClients, loading, onSelectClient, setActiveView }) => {
     const [filteredClients, setFilteredClients] = useState([]);
-    const [selectedClient, setSelectedClient] = useState(null);
     const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
     const [dateRangeStart, setDateRangeStart] = useState(null);
     const [chartFilter, setChartFilter] = useState(null);
@@ -50,10 +48,6 @@ const SuperAdminDashboard = ({ allClients, loading, onSelectClient, setActiveVie
 
     const clearChartFilter = () => setChartFilter(null);
 
-    if (selectedClient) {
-        return <ClientDetailView client={selectedClient} onBack={() => setSelectedClient(null)} />;
-    }
-
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -82,7 +76,7 @@ const SuperAdminDashboard = ({ allClients, loading, onSelectClient, setActiveVie
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                    <ClientListWidget clients={filteredClients} loading={loading} onSelectClient={setSelectedClient} onViewAll={() => setActiveView('adminClients')} />
+                    <ClientListWidget clients={filteredClients} loading={loading} onSelectClient={onSelectClient} onViewAll={() => setActiveView('adminClients')} />
                 </div>
                 <div className="space-y-6">
                     <NewSignupsPanel clients={filteredClients} loading={loading} />
