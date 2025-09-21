@@ -1,13 +1,11 @@
 // src/components/admin/ClientListView.js
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { db } from '../../firebase-config';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Plus, Settings, Search, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
 const ALL_COLUMNS = [
   { key: 'companyName', label: 'Company' },
-  { key: 'contactName', label: 'Contact Name' },
+  { key: 'fullName', label: 'Contact Name' },
   { key: 'email', label: 'Email' },
   { key: 'subscriptionTier', label: 'Plan' },
   { key: 'status', label: 'Status' },
@@ -16,11 +14,9 @@ const ALL_COLUMNS = [
   { key: 'createdAt', label: 'Joined Date' },
 ];
 
-const DEFAULT_COLUMNS = ['companyName', 'contactName', 'subscriptionTier', 'status', 'subscriptionEndDate', 'country'];
+const DEFAULT_COLUMNS = ['companyName', 'fullName', 'subscriptionTier', 'status', 'subscriptionEndDate', 'country'];
 
-const ClientListView = ({ onSelectClient, onAddClient }) => {
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
+const ClientListView = ({ allClients, loading, onSelectClient, onAddClient }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'companyName', direction: 'ascending' });
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,22 +35,9 @@ const ClientListView = ({ onSelectClient, onAddClient }) => {
     localStorage.setItem('visibleClientColumns', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
 
-  useEffect(() => {
-    setLoading(true);
-    const q = query(collection(db, "users"), where("role", "==", "owner"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setClients(clientsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching clients: ", error);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const filteredAndSortedClients = useMemo(() => {
-    let filteredClients = [...clients];
+    let filteredClients = [...allClients];
     if (searchTerm) {
       filteredClients = filteredClients.filter(client =>
         Object.values(client).some(value => 
@@ -70,7 +53,7 @@ const ClientListView = ({ onSelectClient, onAddClient }) => {
       });
     }
     return filteredClients;
-  }, [clients, sortConfig, searchTerm]);
+  }, [allClients, sortConfig, searchTerm]);
 
   const requestSort = (key) => {
     setSortConfig(prev => ({
@@ -100,18 +83,20 @@ const ClientListView = ({ onSelectClient, onAddClient }) => {
       case 'companyName':
         return (
           <div className="flex items-center">
-            <img className="h-8 w-8 rounded-full mr-3 object-cover" src={client.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.companyName)}&background=random`} alt={`${client.companyName} logo`} />
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4 flex-shrink-0">
+                {client.companyName ? client.companyName.charAt(0) : '?'}
+            </div>
             <span className="font-medium text-gray-900 dark:text-white">{cellValue}</span>
           </div>
         );
       case 'status':
         const statusColor = cellValue === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-        return <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${statusColor}`}>{cellValue}</span>;
+        return <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${statusColor}`}>{cellValue || 'Inactive'}</span>;
       case 'createdAt':
       case 'subscriptionEndDate':
         return cellValue?.seconds ? new Date(cellValue.seconds * 1000).toLocaleDateString() : 'N/A';
       case 'country':
-        return client.countryCode ? <span className={`fi fi-${client.countryCode.toLowerCase()}`}></span> : 'N/A';
+        return client.country || 'N/A';
       default:
         return cellValue || 'N/A';
     }
@@ -153,7 +138,6 @@ const ClientListView = ({ onSelectClient, onAddClient }) => {
             )}
           </div>
         </div>
-        {/* --- FIX: Constrained the width of the search bar --- */}
         <div className="max-w-md">
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
