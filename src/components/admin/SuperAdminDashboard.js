@@ -1,8 +1,6 @@
 // src/components/admin/SuperAdminDashboard.js
 
 import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase-config';
-import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { PlusCircle, X } from 'lucide-react';
 import moment from 'moment';
 
@@ -16,33 +14,14 @@ import DashboardMetrics from './DashboardMetrics';
 import AddClientModal from './AddClientModal';
 import ClientListWidget from './ClientListWidget';
 
-const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView }) => {
-    const [allClients, setAllClients] = useState([]);
+const SuperAdminDashboard = ({ allClients, loading, onSelectClient, setActiveView }) => {
     const [filteredClients, setFilteredClients] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [selectedClient, setSelectedClient] = useState(null);
     const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
     const [dateRangeStart, setDateRangeStart] = useState(null);
-    const [chartFilter, setChartFilter] = useState(null); // State for the chart filter
+    const [chartFilter, setChartFilter] = useState(null);
 
     useEffect(() => {
-        let q = query(collection(db, "users"), where("roles", "array-contains", "client_admin"));
-        
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAllClients(clientsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching clients: ", error);
-            setLoading(false);
-        });
-        
-        return () => unsubscribe();
-    }, []);
-
-    // Effect to apply filters whenever the source data or filters change
-    useEffect(() => {
-        setLoading(true);
         let clientsToFilter = [...allClients];
 
         if (dateRangeStart) {
@@ -60,9 +39,7 @@ const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView
         }
         
         setFilteredClients(clientsToFilter);
-        setLoading(false);
     }, [allClients, dateRangeStart, chartFilter]);
-
 
     const handleChartBarClick = (data) => {
         if (data && data.activePayload && data.activePayload[0]) {
@@ -71,11 +48,7 @@ const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView
         }
     };
 
-    const clearChartFilter = () => {
-        setChartFilter(null);
-    };
-
-    const handleSelectClient = propOnSelectClient || setSelectedClient;
+    const clearChartFilter = () => setChartFilter(null);
 
     if (selectedClient) {
         return <ClientDetailView client={selectedClient} onBack={() => setSelectedClient(null)} />;
@@ -90,18 +63,15 @@ const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView
                 </div>
                 <div className="flex items-center space-x-3">
                     <DateRangeFilter onDateChange={setDateRangeStart} />
-                    <button onClick={() => setAddClientModalOpen(true)} className="flex items-center bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition-colors">
-                        <PlusCircle className="h-5 w-5 mr-2" />
-                        Add New Client
+                    <button onClick={() => setAddClientModalOpen(true)} className="flex items-center bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700">
+                        <PlusCircle className="h-5 w-5 mr-2" /> Add New Client
                     </button>
                 </div>
             </div>
 
             {chartFilter && (
                 <div className="bg-indigo-100 dark:bg-indigo-900 p-3 rounded-lg flex justify-between items-center">
-                    <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">
-                        Filtering by - {chartFilter.label}
-                    </p>
+                    <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">Filtering by - {chartFilter.label}</p>
                     <button onClick={clearChartFilter} className="p-1 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800">
                         <X className="h-5 w-5 text-indigo-600 dark:text-indigo-300"/>
                     </button>
@@ -112,15 +82,8 @@ const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                    {/* Pass the filtered list to the widget now */}
-                    <ClientListWidget 
-                        clients={filteredClients}
-                        loading={loading}
-                        onSelectClient={handleSelectClient}
-                        onViewAll={() => setActiveView('adminClients')}
-                    />
+                    <ClientListWidget clients={filteredClients} loading={loading} onSelectClient={onSelectClient} onViewAll={() => setActiveView('adminClients')} />
                 </div>
-                
                 <div className="space-y-6">
                     <NewSignupsPanel clients={filteredClients} loading={loading} />
                     <SubscriptionsEndingSoon clients={filteredClients} loading={loading} />
@@ -132,10 +95,7 @@ const SuperAdminDashboard = ({ onSelectClient: propOnSelectClient, setActiveView
                 <RevenueByPlanChart clients={allClients} loading={loading} />
             </div>
 
-            <AddClientModal 
-                isOpen={isAddClientModalOpen} 
-                onClose={() => setAddClientModalOpen(false)} 
-            />
+            <AddClientModal isOpen={isAddClientModalOpen} onClose={() => setAddClientModalOpen(false)} />
         </div>
     );
 };
