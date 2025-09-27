@@ -45,7 +45,6 @@ function AppContent() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // --- FIX: Only run this query if we know the user is a super admin ---
     if (isSuperAdmin) {
       setClientsLoading(true);
       const q = query(collection(db, "users"), where("role", "==", "owner"));
@@ -94,7 +93,6 @@ function AppContent() {
     if (!userData) {
       return <div className="flex items-center justify-center h-screen"><p>Loading Admin Profile...</p></div>;
     }
-    // Since super admins have all permissions, we can create a function that always returns true.
     const adminHasPermission = () => true;
 
     return (

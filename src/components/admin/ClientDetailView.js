@@ -26,9 +26,12 @@ const ClientDetailView = ({ onSelectProperty }) => {
   const [loadingPlans, setLoadingPlans] = useState(true);
 
   useEffect(() => {
-    // --- THIS IS THE FIX ---
+    // --- THIS IS THE CRITICAL FIX ---
     // Do not proceed if we don't have a clientId from the URL yet.
-    if (!clientId) return;
+    // This prevents the 'where' queries below from running with an undefined value.
+    if (!clientId) {
+      return;
+    }
 
     setLoadingClient(true);
     const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
