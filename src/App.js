@@ -36,7 +36,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 function AppContent() {
     const { currentUser, loading: authLoading } = useAuth();
-    const { selectedClient, clearSelectedClient } = useAdmin();
+    const { selectedClient, selectClient, clearSelectedClient } = useAdmin(); // FIX: import selectClient
 
     const [userData, setUserData] = useState(null);
     const [allClients, setAllClients] = useState([]);
@@ -110,6 +110,11 @@ function AppContent() {
         setActiveView('propertyDetail');
     };
 
+    // FIX: Add a handler to select a client
+    const handleSelectClient = (client) => {
+        selectClient(client);
+    };
+
     const renderActiveView = () => {
         if (isSuperAdmin) {
             if (selectedClient) {
@@ -118,13 +123,16 @@ function AppContent() {
             if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={currentUser} />;
             
             switch (activeView) {
-                case 'adminDashboard': return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} />;
-                case 'adminClients': return <ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} />;
+                case 'adminDashboard': 
+                    return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />; // FIX: Pass onSelectClient
+                case 'adminClients': 
+                    return <ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} onSelectClient={handleSelectClient} />; // FIX: Pass onSelectClient
                 case 'adminBilling': return <BillingView />;
                 case 'adminSubscriptions': return <AdminSubscriptionsView />;
                 case 'adminSettings': return <AdminSettingsView />;
                 case 'adminAuditLog': return <AuditLogView />;
-                default: return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} />;
+                default: 
+                    return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />; // FIX: Pass onSelectClient
             }
         }
         if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); setActiveView('properties'); }} user={currentUser} />;
