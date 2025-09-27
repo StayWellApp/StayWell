@@ -1,111 +1,91 @@
-// src/components/admin/EditClientModal.js
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { X } from 'lucide-react';
-import { ToastContainer, toast } from 'react-toastify';
+import { doc, updateDoc } from 'firebase/firestore';
+import { toast } from 'react-toastify';
+import { X, Save } from 'lucide-react';
 
-// A simple list of countries for the dropdown
-const countries = [
-  { code: 'US', name: 'United States' },
-  { code: 'CA', name: 'Canada' },
-  { code: 'GB', name: 'United Kingdom' },
-  { code: 'AU', name: 'Australia' },
-  // Add more countries as needed
-];
+const EditClientModal = ({ isOpen, onClose, client }) => {
+    const [formData, setFormData] = useState({});
 
-const EditClientModal = ({ isOpen, onClose, client, onSave }) => {
-  const [formData, setFormData] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+    useEffect(() => {
+        if (client) {
+            setFormData({
+                companyName: client.companyName || '',
+                fullName: client.fullName || '',
+                email: client.email || '',
+                phone: client.phone || '',
+                country: client.country || '',
+                // Initialize new billing fields
+                billingAddress: client.billingAddress || '',
+                vatNumber: client.vatNumber || ''
+            });
+        }
+    }, [client]);
 
-  useEffect(() => {
-    // Pre-fill form when a client is provided
-    if (client) {
-      setFormData({
-        companyName: client.companyName || '',
-        contactName: client.contactName || '',
-        email: client.email || '',
-        phone: client.phone || '',
-        subscriptionTier: client.subscriptionTier || 'basic',
-        status: client.status || 'active',
-        countryCode: client.countryCode || '',
-      });
-    }
-  }, [client]);
+    if (!isOpen || !client) return null;
 
-  if (!isOpen) return null;
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const clientRef = doc(db, 'users', client.id);
+        try {
+            await updateDoc(clientRef, formData);
+            toast.success("Client details updated successfully!");
+            onClose();
+        } catch (error) {
+            console.error("Error updating client: ", error);
+            toast.error("Failed to update client details.");
+        }
+    };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!client || !client.id) {
-        toast.error("No client selected for editing.");
-        return;
-    }
+    const InputField = ({ label, name, value, onChange, placeholder, type = "text" }) => (
+        <div>
+            <label htmlFor={name} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+            <input
+                type={type}
+                name={name}
+                id={name}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+        </div>
+    );
 
-    setIsLoading(true);
-    try {
-      const clientDocRef = doc(db, 'users', client.id);
-      await updateDoc(clientDocRef, {
-        ...formData,
-        updatedAt: serverTimestamp(),
-      });
-      toast.success("Client updated successfully!");
-      onSave({ ...client, ...formData }); // Update parent state
-      onClose();
-    } catch (error) {
-      console.error("Error updating client: ", error);
-      toast.error("Failed to update client.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg p-6 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-          <X size={24} />
-        </button>
-        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Edit Client</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Name</label>
-            <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" required />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Contact Name</label>
-            <input type="text" name="contactName" value={formData.contactName} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-            <input type="email" name="email" value={formData.email} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" required />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
-            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Country</label>
-            <select name="countryCode" value={formData.countryCode} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm">
-              <option value="">Select a country</option>
-              {countries.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-            </select>
-          </div>
-          <div className="flex justify-end space-x-3 pt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md">Cancel</button>
-            <button type="submit" disabled={isLoading} className="px-4 py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50">{isLoading ? 'Saving...' : 'Save Changes'}</button>
-          </div>
-        </form>
-      </div>
-      <ToastContainer />
-    </div>
-  );
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Client Details</h2>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <X className="h-5 w-5 text-gray-500" />
+                    </button>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="p-6 space-y-4">
+                        <InputField label="Company Name" name="companyName" value={formData.companyName} onChange={handleChange} placeholder="e.g. StayWell Inc." />
+                        <InputField label="Contact Name" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="e.g. John Doe" />
+                        <InputField label="Email Address" name="email" value={formData.email} onChange={handleChange} placeholder="e.g. john.doe@example.com" type="email"/>
+                        <InputField label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} placeholder="e.g. +1 234 567 890" />
+                        <InputField label="Country" name="country" value={formData.country} onChange={handleChange} placeholder="e.g. United States" />
+                        <InputField label="Billing Address" name="billingAddress" value={formData.billingAddress} onChange={handleChange} placeholder="e.g. 123 Main St, Anytown, USA" />
+                        <InputField label="VAT Number" name="vatNumber" value={formData.vatNumber} onChange={handleChange} placeholder="e.g. GB123456789" />
+                    </div>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                        <button type="submit" className="flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
+                            <Save className="h-4 w-4 mr-2" /> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
 };
 
 export default EditClientModal;
