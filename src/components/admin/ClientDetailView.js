@@ -61,7 +61,6 @@ const ClientDetailView = ({ onSelectProperty }) => {
 
         const clientRef = doc(db, 'users', clientId);
         
-        // Prepare the note object for Firestore
         const noteToAddForFirestore = { 
             ...newNote, 
             id: Date.now().toString(), 
@@ -74,10 +73,10 @@ const ClientDetailView = ({ onSelectProperty }) => {
             toast.success("Note added successfully!");
             
             // --- FIX: Manually update local state for instant UI feedback ---
-            // Create a version of the note with a client-side date for immediate display
             const noteToAddForState = {
                 ...noteToAddForFirestore,
-                createdAt: { toDate: () => new Date() } // Simulate a Firestore timestamp object
+                // Simulate a Firestore timestamp object for immediate display
+                createdAt: { toDate: () => new Date() } 
             };
 
             setClientData(prevData => ({
@@ -98,7 +97,6 @@ const ClientDetailView = ({ onSelectProperty }) => {
         try {
             await updateDoc(clientRef, { adminNotes: arrayRemove(noteToDelete) });
             toast.success("Note deleted successfully!");
-            // The onSnapshot listener will handle the UI update for deletions automatically
         } catch (error) {
             console.error("Error deleting note: ", error);
             toast.error("Failed to delete note.");
