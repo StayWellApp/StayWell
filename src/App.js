@@ -51,7 +51,7 @@ function AppContent() {
       const unsubscribe = onSnapshot(q, (snapshot) => {
         setAllClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setClientsLoading(false);
-      });
+      }, () => setClientsLoading(false));
       return () => unsubscribe();
     } else {
       setAllClients([]);
@@ -91,38 +91,52 @@ function AppContent() {
     setSelectedProperty(property);
     navigate('/property-detail');
   };
-  
-  const AdminLayout = () => (
-    <Layout user={currentUser} userData={{ ...(userData || {}), isSuperAdmin }}>
-      <Routes>
-        <Route path="dashboard" element={<SuperAdminDashboard allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} />} />
-        <Route path="clients" element={<ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} />} />
-        <Route path="clients/:clientId" element={<ClientDetailView onSelectProperty={handleSelectProperty} />} />
-        <Route path="subscriptions" element={<AdminSubscriptionsView />} />
-        <Route path="billing" element={<BillingView />} />
-        <Route path="audit-log" element={<AuditLogView />} />
-        <Route path="settings" element={<AdminSettingsView />} />
-        <Route index element={<Navigate to="dashboard" />} />
-      </Routes>
-    </Layout>
-  );
+
+  const AdminLayout = () => {
+    // --- FIX: Add a guard clause for AdminLayout to prevent crashes ---
+    if (!userData) {
+      return <div className="flex items-center justify-center h-screen"><p>Loading Admin Profile...</p></div>;
+    }
+    // --- FIX: Create a dummy hasPermission function for admins who have all permissions ---
+    const adminHasPermission = () => true;
+
+    return (
+      <Layout user={currentUser} userData={userData} hasPermission={adminHasPermission}>
+        <Routes>
+          <Route path="dashboard" element={<SuperAdminDashboard allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} />} />
+          <Route path="clients" element={<ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} />} />
+          <Route path="clients/:clientId" element={<ClientDetailView onSelectProperty={handleSelectProperty} />} />
+          <Route path="subscriptions" element={<AdminSubscriptionsView />} />
+          <Route path="billing" element={<BillingView />} />
+          <Route path="audit-log" element={<AuditLogView />} />
+          <Route path="settings" element={<AdminSettingsView />} />
+          <Route index element={<Navigate to="dashboard" />} />
+        </Routes>
+      </Layout>
+    );
+  };
 
   const UserLayout = () => {
-      if(loadingPermissions || !userData) {
-          return <div className="flex items-center justify-center h-screen"><p>Loading User Profile...</p></div>;
-      }
-      return (
-        <Layout user={currentUser} userData={userData} hasPermission={hasPermission}>
-             <Routes>
-                <Route path="dashboard" element={hasPermission('properties_view_all') ? <ClientDashboard user={currentUser} /> : <StaffDashboard user={currentUser} userData={userData} />} />
-                <Route path="properties" element={<PropertiesView onSelectProperty={handleSelectProperty} user={currentUser} userData={userData} hasPermission={hasPermission} />} />
-                {/* Add other non-admin routes here */}
-                <Route index element={<Navigate to="dashboard" />} />
-             </Routes>
-        </Layout>
+    if (loadingPermissions || !userData) {
+      return <div className="flex items-center justify-center h-screen"><p>Loading User Profile...</p></div>;
+    }
+    return (
+      <Layout user={currentUser} userData={userData} hasPermission={hasPermission}>
+        <Routes>
+          <Route path="dashboard" element={hasPermission('properties_view_all') ? <ClientDashboard user={currentUser} /> : <StaffDashboard user={currentUser} userData={userData} />} />
+          <Route path="properties" element={<PropertiesView onSelectProperty={handleSelectProperty} user={currentUser} userData={userData} hasPermission={hasPermission} />} />
+          <Route path="team" element={<TeamView user={currentUser} />} />
+          <Route path="templates" element={<ChecklistsView user={currentUser} />} />
+          <Route path="storage" element={<StorageView user={currentUser} ownerId={userData?.ownerId || currentUser.uid} hasPermission={hasPermission} />} />
+          <Route path="calendar" element={<MasterCalendarView user={currentUser} userData={userData} />} />
+          <Route path="settings" element={<SettingsView user={currentUser} userData={userData} />} />
+          <Route path="chat" element={<ChatLayout userData={userData} />} />
+          <Route index element={<Navigate to="dashboard" />} />
+        </Routes>
+      </Layout>
     );
   }
-  
+
   if (authLoading || isUserDataLoading) {
     return <div className="flex items-center justify-center h-screen"><p>Loading StayWell...</p></div>;
   }
@@ -141,7 +155,7 @@ function AppContent() {
             ) : (
               <Route path="/*" element={<UserLayout />} />
             )}
-             <Route path="*" element={<Navigate to={isSuperAdmin ? "/admin" : "/dashboard"} />} />
+            <Route path="*" element={<Navigate to={isSuperAdmin ? "/admin/dashboard" : "/dashboard"} />} />
           </Routes>
         )}
       </div>
@@ -153,11 +167,11 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-        <AuthProvider>
-            <AdminProvider>
-                <AppContent />
-            </AdminProvider> 
-        </AuthProvider>
+      <AuthProvider>
+        <AdminProvider>
+          <AppContent />
+        </AdminProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
