@@ -45,6 +45,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
     });
 
     setLoadingProperties(true);
+    // This query is now protected by the `if (!clientId)` check above
     const q = query(collection(db, "properties"), where("ownerId", "==", clientId));
     const unsubProps = onSnapshot(q, (snapshot) => {
       setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));

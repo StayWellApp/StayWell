@@ -45,6 +45,7 @@ function AppContent() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Only run this query if we know the user is a super admin
     if (isSuperAdmin) {
       setClientsLoading(true);
       const q = query(collection(db, "users"), where("role", "==", "owner"));
