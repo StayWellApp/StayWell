@@ -2,21 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { doc, onSnapshot, collection, query, where, updateDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare } from 'lucide-react';
+// --- FIX: Import new icons for the restored tabs ---
+import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare, FolderOpen, BarChart2 } from 'lucide-react';
+
+// Import all tab components
 import OverviewTab from './tabs/OverviewTab';
 import PropertiesTab from './tabs/PropertiesTab';
 import ManagementTab from './tabs/ManagementTab';
 import CommunicationTab from './tabs/CommunicationTab';
 import BillingTab from './tabs/BillingTab';
+import DocumentsTab from './tabs/DocumentsTab'; // Restored
+import ClientAnalyticsView from './tabs/ClientAnalyticsView'; // Restored
 
 const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
   const [activeTab, setActiveTab] = useState('overview');
-  // State for the data needed by the tabs
   const [clientData, setClientData] = useState(client);
   const [properties, setProperties] = useState([]);
   const [loadingProperties, setLoadingProperties] = useState(true);
   
-  // --- FIX: Listen for real-time updates on the client document ---
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "users", client.id), (doc) => {
       if (doc.exists()) {
@@ -26,7 +29,6 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
     return () => unsub();
   }, [client.id]);
 
-  // --- FIX: Fetch properties associated with this client ---
   useEffect(() => {
     setLoadingProperties(true);
     const q = query(collection(db, "properties"), where("ownerId", "==", client.id));
@@ -41,7 +43,6 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
     return () => unsubscribe();
   }, [client.id]);
   
-  // --- FIX: Implement the function to update admin notes ---
   const handleUpdateNotes = async (updatedNotes) => {
     const clientRef = doc(db, 'users', client.id);
     try {
@@ -53,23 +54,24 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
     }
   };
 
+  // --- FIX: Restored Documents and Analytics tabs ---
   const tabs = [
     { id: 'overview', label: 'Overview', icon: User },
     { id: 'properties', label: 'Properties', icon: Building },
     { id: 'management', label: 'Management', icon: Settings },
-    { id: 'billing', label: 'Billing & Subscriptions', icon: DollarSign },
+    { id: 'billing', label: 'Billing', icon: DollarSign },
     { id: 'communication', label: 'Communication', icon: MessageSquare },
+    { id: 'documents', label: 'Documents', icon: FolderOpen },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
   ];
 
   const renderTabContent = () => {
-    // Dummy data for props that are not yet implemented
     const planDetails = { planName: clientData.subscriptionTier || 'N/A' };
-    const monthlyRevenue = 0; // Replace with actual calculation
-    const occupancyRate = 0;  // Replace with actual calculation
+    const monthlyRevenue = 0;
+    const occupancyRate = 0;
 
     switch (activeTab) {
       case 'overview':
-        // --- FIX: Pass all required props to OverviewTab ---
         return <OverviewTab 
                   clientData={clientData} 
                   properties={properties}
@@ -80,20 +82,26 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
                   onUpdateNotes={handleUpdateNotes} 
                 />;
       case 'properties':
-        return <PropertiesTab client={clientData} onSelectProperty={onSelectProperty} />;
+        // --- FIX: Pass properties and loading state to the tab ---
+        return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
       case 'management':
         return <ManagementTab client={clientData} />;
-      case 'billing':
+       case 'billing':
         return <BillingTab client={clientData} />;
-      case 'communication':
-        return <CommunicationTab client={clientData} />;
+       case 'communication':
+         return <CommunicationTab client={clientData} />;
+      // --- FIX: Add render cases for the restored tabs ---
+      case 'documents':
+        return <DocumentsTab client={clientData} />;
+      case 'analytics':
+        return <ClientAnalyticsView client={clientData} />;
       default:
         return null;
     }
   };
 
   if (!clientData) {
-    return <div>Loading...</div>;
+    return <div>Loading client...</div>;
   }
 
   return (
@@ -120,7 +128,7 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
         
         {/* Tabs */}
         <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="-mb-px flex space-x-6 px-6" aria-label="Tabs">
+            <nav className="-mb-px flex space-x-6 px-6 overflow-x-auto" aria-label="Tabs">
             {tabs.map((tab) => (
                 <button
                     key={tab.id}
