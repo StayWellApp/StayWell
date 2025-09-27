@@ -35,7 +35,6 @@ const ClientDetailView = ({ onSelectProperty }) => {
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
             if (doc.exists()) {
                 const data = doc.data();
-                // FIX: Ensure adminNotes is always an array to prevent errors
                 if (!Array.isArray(data.adminNotes)) {
                     data.adminNotes = [];
                 }
@@ -59,11 +58,33 @@ const ClientDetailView = ({ onSelectProperty }) => {
             toast.error("Note content and importance are required.");
             return;
         }
+
         const clientRef = doc(db, 'users', clientId);
-        const noteToAdd = { ...newNote, id: Date.now().toString(), createdAt: serverTimestamp(), createdBy: auth.currentUser.displayName || auth.currentUser.email };
+        
+        // Prepare the note object for Firestore
+        const noteToAddForFirestore = { 
+            ...newNote, 
+            id: Date.now().toString(), 
+            createdAt: serverTimestamp(), 
+            createdBy: auth.currentUser.displayName || auth.currentUser.email 
+        };
+
         try {
-            await updateDoc(clientRef, { adminNotes: arrayUnion(noteToAdd) });
+            await updateDoc(clientRef, { adminNotes: arrayUnion(noteToAddForFirestore) });
             toast.success("Note added successfully!");
+            
+            // --- FIX: Manually update local state for instant UI feedback ---
+            // Create a version of the note with a client-side date for immediate display
+            const noteToAddForState = {
+                ...noteToAddForFirestore,
+                createdAt: { toDate: () => new Date() } // Simulate a Firestore timestamp object
+            };
+
+            setClientData(prevData => ({
+                ...prevData,
+                adminNotes: [...(prevData.adminNotes || []), noteToAddForState]
+            }));
+
         } catch (error) {
             console.error("Error adding note: ", error);
             toast.error("Failed to add note. Ensure the notes field in Firestore is an array.");
@@ -77,6 +98,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         try {
             await updateDoc(clientRef, { adminNotes: arrayRemove(noteToDelete) });
             toast.success("Note deleted successfully!");
+            // The onSnapshot listener will handle the UI update for deletions automatically
         } catch (error) {
             console.error("Error deleting note: ", error);
             toast.error("Failed to delete note.");
