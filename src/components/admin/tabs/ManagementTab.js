@@ -1,24 +1,29 @@
-// src/components/admin/tabs/ManagementTab.js
 import React from 'react';
-import ClientSubscriptionManager from '../ClientSubscriptionManager';
-import FeatureFlagManager from '../FeatureFlagManager';
+import FeatureFlagManager from '../FeatureFlagManager'; // Assuming this component exists
 
-const ManagementTab = ({ clientData, refreshClientData, allPlans, loadingPlans, onImpersonate }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-            <ClientSubscriptionManager client={clientData} onSubscriptionUpdate={refreshClientData} allPlans={allPlans} loadingPlans={loadingPlans} />
-        </div>
-        <div className="space-y-8">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-                <h3 className="text-lg font-semibold mb-4">Admin Actions</h3>
-                <button onClick={onImpersonate} className="button-secondary w-full">Impersonate User</button>
-                <p className="text-xs text-center mt-2 text-gray-500">Log in as this user to troubleshoot.</p>
+const ManagementTab = ({ client }) => {
+    
+    // --- FIX: Guard clause to ensure client data is present ---
+    if (!client) {
+        return <div>Loading management details...</div>;
+    }
+
+    return (
+        <div>
+            <h2 className="text-xl font-bold mb-4">Client Management</h2>
+            
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <h3 className="text-lg font-semibold mb-3">Feature Flags</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Enable or disable specific features for this client.
+                </p>
+                {/* This will now only render when client data is available */}
+                <FeatureFlagManager client={client} />
             </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-                <FeatureFlagManager client={clientData} />
-            </div>
+
+            {/* You can add other management components here */}
         </div>
-    </div>
-);
+    );
+};
 
 export default ManagementTab;
