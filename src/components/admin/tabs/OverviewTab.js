@@ -80,6 +80,14 @@ const getImportanceIcon = (level) => {
     }
 };
 
+// --- THIS IS THE FIX ---
+const formatTimestamp = (timestamp) => {
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return formatDistanceToNow(timestamp.toDate(), { addSuffix: true });
+    }
+    return 'a few moments ago';
+};
+
 const AdminNotesCard = ({ initialNotes = [], onAddNote, onDeleteNote }) => {
     const [isAdding, setIsAdding] = useState(false);
     
@@ -105,7 +113,9 @@ const AdminNotesCard = ({ initialNotes = [], onAddNote, onDeleteNote }) => {
                                 <div>{getImportanceIcon(note.importance)}</div>
                                 <div className="flex-grow">
                                     <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{note.text}</p>
-                                    <p className="text-xs text-gray-400 mt-1">by {note.createdBy} • {note.createdAt ? formatDistanceToNow(note.createdAt.toDate(), { addSuffix: true }) : '...'}</p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        by {note.createdBy} • {formatTimestamp(note.createdAt)}
+                                    </p>
                                 </div>
                                 <button onClick={() => onDeleteNote(note)} className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 transition-opacity"><Trash2 className="h-4 w-4 text-red-500" /></button>
                             </li>
@@ -152,7 +162,9 @@ const RecentActivityCard = ({ logs, loading }) => (
                             <div className="bg-gray-100 dark:bg-gray-700 rounded-full h-8 w-8 flex items-center justify-center mr-3 flex-shrink-0">{getActivityIcon(log.type)}</div>
                             <div className="flex-grow">
                                 <p className="text-gray-800 dark:text-gray-200">{log.description}</p>
-                                <p className="text-xs text-gray-400">{log.timestamp ? formatDistanceToNow(log.timestamp.toDate(), { addSuffix: true }) : 'Just now'}</p>
+                                <p className="text-xs text-gray-400">
+                                    {formatTimestamp(log.timestamp)}
+                                </p>
                             </div>
                         </li>
                     ))}
