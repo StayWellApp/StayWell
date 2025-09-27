@@ -120,15 +120,12 @@ body {
 @import '~react-grid-layout/css/styles.css';
 @import '~react-resizable/css/styles.css';
 
-/* Custom styles for the grid */
+/* Custom styles for the grid placeholder */
 .react-grid-item.react-grid-placeholder {
-    background: #a2a6df;
-    opacity: 0.2;
-    transition-duration: 100ms;
-    z-index: 2;
+    background: #a2a6df !important;
+    opacity: 0.2 !important;
+    transition-duration: 100ms !important;
+    z-index: 2 !important;
     -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -o-user-select: none;
     user-select: none;
 }
