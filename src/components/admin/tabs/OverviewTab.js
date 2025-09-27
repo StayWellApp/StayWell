@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw, User as UserIcon, Briefcase as BriefcaseIcon, CheckCircle, Clock } from 'lucide-react';
+import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw, User as UserIcon, Briefcase as BriefcaseIcon, CheckCircle, Clock, Edit2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 // A generic card component for consistent styling
@@ -222,6 +222,8 @@ const getActivityIcon = (logType) => {
             return <Building className="h-4 w-4 text-indigo-500" />;
         case 'STATUS_CHANGED':
              return <CheckCircle className="h-4 w-4 text-yellow-500" />;
+        case 'PROPERTY_UPDATED':
+             return <Edit2 className="h-4 w-4 text-purple-500" />;
         default:
             return <Clock className="h-4 w-4 text-gray-500" />;
     }
