@@ -1,27 +1,48 @@
 import React from 'react';
-import FeatureFlagManager from '../FeatureFlagManager'; // Assuming this component exists
+import ClientSubscriptionManager from '../ClientSubscriptionManager';
+import FeatureFlagManager from '../FeatureFlagManager';
+import { UserSearch } from 'lucide-react'; // Using a relevant icon
 
-const ManagementTab = ({ client }) => {
+// --- FIX: The component now expects `client` directly and other necessary props ---
+const ManagementTab = ({ client, refreshClientData, allPlans, loadingPlans, onImpersonate }) => {
     
-    // --- FIX: Guard clause to ensure client data is present ---
+    // --- FIX: Guard clause to prevent rendering without client data ---
     if (!client) {
         return <div>Loading management details...</div>;
     }
 
     return (
-        <div>
-            <h2 className="text-xl font-bold mb-4">Client Management</h2>
-            
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-                <h3 className="text-lg font-semibold mb-3">Feature Flags</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Enable or disable specific features for this client.
-                </p>
-                {/* This will now only render when client data is available */}
-                <FeatureFlagManager client={client} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
+                {/* This component will now also be protected by the guard clause above */}
+                <ClientSubscriptionManager 
+                    client={client} 
+                    onSubscriptionUpdate={refreshClientData} 
+                    allPlans={allPlans} 
+                    loadingPlans={loadingPlans} 
+                />
             </div>
-
-            {/* You can add other management components here */}
+            <div className="space-y-8">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                        <UserSearch className="w-5 h-5 mr-2 text-gray-500" />
+                        Admin Actions
+                    </h3>
+                    <button 
+                        onClick={() => onImpersonate(client)} 
+                        className="w-full px-4 py-2 bg-yellow-500 text-white font-semibold rounded-md hover:bg-yellow-600"
+                    >
+                        Impersonate User
+                    </button>
+                    <p className="text-xs text-center mt-2 text-gray-500 dark:text-gray-400">
+                        Log in as this user to troubleshoot issues.
+                    </p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
+                    {/* This component is now protected by the guard clause */}
+                    <FeatureFlagManager client={client} />
+                </div>
+            </div>
         </div>
     );
 };

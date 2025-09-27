@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { doc, onSnapshot, collection, query, where, updateDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-// --- FIX: Import new icons for the restored tabs ---
 import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare, FolderOpen, BarChart2 } from 'lucide-react';
 
 // Import all tab components
@@ -11,8 +10,8 @@ import PropertiesTab from './tabs/PropertiesTab';
 import ManagementTab from './tabs/ManagementTab';
 import CommunicationTab from './tabs/CommunicationTab';
 import BillingTab from './tabs/BillingTab';
-import DocumentsTab from './tabs/DocumentsTab'; // Restored
-import ClientAnalyticsView from './tabs/ClientAnalyticsView'; // Restored
+import DocumentsTab from './tabs/DocumentsTab';
+import ClientAnalyticsView from './tabs/ClientAnalyticsView';
 
 const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -20,27 +19,38 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
   const [properties, setProperties] = useState([]);
   const [loadingProperties, setLoadingProperties] = useState(true);
   
+  // --- FIX: Add state for subscription plans ---
+  const [allPlans, setAllPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "users", client.id), (doc) => {
+    const unsubClient = onSnapshot(doc(db, "users", client.id), (doc) => {
       if (doc.exists()) {
         setClientData({ id: doc.id, ...doc.data() });
       }
     });
-    return () => unsub();
-  }, [client.id]);
 
-  useEffect(() => {
     setLoadingProperties(true);
     const q = query(collection(db, "properties"), where("ownerId", "==", client.id));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubProps = onSnapshot(q, (snapshot) => {
       const propsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setProperties(propsData);
       setLoadingProperties(false);
-    }, (error) => {
-      console.error("Error fetching properties: ", error);
-      setLoadingProperties(false);
     });
-    return () => unsubscribe();
+
+    // --- FIX: Fetch subscription plans ---
+    setLoadingPlans(true);
+    const unsubPlans = onSnapshot(collection(db, "plans"), (snapshot) => {
+        const plansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAllPlans(plansData);
+        setLoadingPlans(false);
+    });
+
+    return () => {
+        unsubClient();
+        unsubProps();
+        unsubPlans();
+    };
   }, [client.id]);
   
   const handleUpdateNotes = async (updatedNotes) => {
@@ -49,12 +59,28 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
       await updateDoc(clientRef, { adminNotes: updatedNotes });
       toast.success("Notes updated successfully!");
     } catch (error) {
-      console.error("Error updating notes:", error);
       toast.error("Failed to update notes.");
     }
   };
 
-  // --- FIX: Restored Documents and Analytics tabs ---
+  // --- FIX: Add the impersonation handler function ---
+  const handleImpersonate = (clientToImpersonate) => {
+      // This is a placeholder for the actual impersonation logic.
+      // You would typically call a Firebase Function here to get a custom token.
+      console.log(`Impersonating ${clientToImpersonate.fullName} (UID: ${clientToImpersonate.id})`);
+      toast.info(`Starting impersonation session for ${clientToImpersonate.companyName}.`);
+      // Example: localStorage.setItem('impersonating_uid', clientToImpersonate.id);
+      // window.location.reload();
+  };
+
+  // --- FIX: Add a function to refresh data after updates ---
+  const refreshClientData = () => {
+      const clientRef = doc(db, "users", client.id);
+      onSnapshot(clientRef, (doc) => {
+          if(doc.exists()) setClientData({ id: doc.id, ...doc.data() });
+      });
+  };
+
   const tabs = [
     { id: 'overview', label: 'Overview', icon: User },
     { id: 'properties', label: 'Properties', icon: Building },
@@ -82,15 +108,20 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
                   onUpdateNotes={handleUpdateNotes} 
                 />;
       case 'properties':
-        // --- FIX: Pass properties and loading state to the tab ---
         return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
       case 'management':
-        return <ManagementTab client={clientData} />;
+        // --- FIX: Pass all required props to ManagementTab ---
+        return <ManagementTab 
+                    client={clientData} 
+                    refreshClientData={refreshClientData}
+                    allPlans={allPlans}
+                    loadingPlans={loadingPlans}
+                    onImpersonate={handleImpersonate}
+                />;
        case 'billing':
         return <BillingTab client={clientData} />;
        case 'communication':
          return <CommunicationTab client={clientData} />;
-      // --- FIX: Add render cases for the restored tabs ---
       case 'documents':
         return <DocumentsTab client={clientData} />;
       case 'analytics':
