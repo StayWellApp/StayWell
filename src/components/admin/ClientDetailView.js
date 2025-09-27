@@ -5,9 +5,7 @@ import { doc, onSnapshot, collection, query, where, updateDoc } from 'firebase/f
 import { toast } from 'react-toastify';
 import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare, FolderOpen, BarChart2, Edit, Send } from 'lucide-react';
 
-// Import the new modal
 import EditClientModal from './EditClientModal';
-
 import OverviewTab from './tabs/OverviewTab';
 import PropertiesTab from './tabs/PropertiesTab';
 import ManagementTab from './tabs/ManagementTab';
@@ -27,8 +25,6 @@ const ClientDetailView = ({ onSelectProperty }) => {
     const [loadingProperties, setLoadingProperties] = useState(true);
     const [allPlans, setAllPlans] = useState([]);
     const [loadingPlans, setLoadingPlans] = useState(true);
-
-    // State for the edit modal
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     useEffect(() => {
@@ -74,18 +70,13 @@ const ClientDetailView = ({ onSelectProperty }) => {
             toast.error("Failed to update notes.");
         }
     };
-    
+
     const handleImpersonate = (clientToImpersonate) => {
         console.log(`Impersonating ${clientToImpersonate.fullName} (UID: ${clientToImpersonate.id})`);
         toast.info(`Starting impersonation session for ${clientToImpersonate.companyName}.`);
     };
-
-    const refreshClientData = () => {
-        const clientRef = doc(db, "users", clientId);
-        onSnapshot(clientRef, (doc) => {
-            if (doc.exists()) setClientData({ id: doc.id, ...doc.data() });
-        });
-    };
+    
+    const refreshClientData = () => { /* Placeholder for future use */ };
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: User },
@@ -98,17 +89,13 @@ const ClientDetailView = ({ onSelectProperty }) => {
     ];
 
     const renderTabContent = () => {
-        if (loadingClient || !clientData) {
-            return <div className="flex items-center justify-center h-full"><p>Loading client details...</p></div>;
-        }
-
-        // We can use a placeholder for now, or calculate it if the data is available
-        const monthlyRevenue = clientData?.monthlyRevenue || 199; // Example
-        const occupancyRate = 85; // Example
+        if (loadingClient || !clientData) return null;
+        const monthlyRevenue = clientData?.monthlyRevenue || 199;
+        const occupancyRate = 85;
 
         switch (activeTab) {
             case 'overview':
-                return <OverviewTab clientData={clientData} properties={properties} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} onUpdateNotes={handleUpdateNotes} />;
+                return <OverviewTab clientData={clientData} properties={properties} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} onUpdateNotes={handleUpdateNotes} setActiveTab={setActiveTab} />;
             case 'properties':
                 return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
             case 'management':
@@ -127,9 +114,10 @@ const ClientDetailView = ({ onSelectProperty }) => {
     };
     
     if (loadingClient || !clientData) {
-        return <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900"><p className="text-gray-500">Loading client...</p></div>;
+        return <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900"><p>Loading client...</p></div>;
     }
 
+    // --- FIX: Status chip function ---
     const getStatusChip = (status) => {
         switch (status) {
             case 'active': return <div className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Active</div>;
@@ -141,67 +129,60 @@ const ClientDetailView = ({ onSelectProperty }) => {
 
     return (
         <>
-            <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
-                {/* Header */}
-                <div className="bg-white dark:bg-gray-800 shadow-sm">
-                    <div className="px-4 sm:px-6 lg:px-8 py-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <button onClick={() => navigate('/admin/clients')} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                                </button>
-                                <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 text-xl">
-                                    {clientData.companyName ? clientData.companyName.charAt(0) : '?'}
-                                </div>
-                                <div>
-                                    <div className="flex items-center space-x-2">
-                                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{clientData.companyName}</h1>
-                                        {getStatusChip(clientData.status)}
+            {/* --- FIX: Background is now on the root element --- */}
+            <div className="min-h-full bg-gray-50 dark:bg-gray-900">
+                {/* Header Section */}
+                <div className="bg-white dark:bg-gray-800 shadow-sm pb-4">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="py-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                    <button onClick={() => navigate('/admin/clients')} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <ArrowLeft className="h-5 w-5 text-gray-500" />
+                                    </button>
+                                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 text-xl">
+                                        {clientData.companyName.charAt(0)}
                                     </div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        Joined on {clientData.createdAt?.seconds ? new Date(clientData.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
-                                    </p>
+                                    <div>
+                                        <div className="flex items-center space-x-2">
+                                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{clientData.companyName}</h1>
+                                            {/* --- FIX: Status chip is now rendered --- */}
+                                            {getStatusChip(clientData.status)}
+                                        </div>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            Joined on {clientData.createdAt?.seconds ? new Date(clientData.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                {/* UPDATED: Edit and Message buttons */}
-                                <button onClick={() => setIsEditModalOpen(true)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <Edit className="h-5 w-5 text-gray-500" />
-                                </button>
-                                <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <Send className="h-5 w-5 text-gray-500" />
-                                </button>
-                                <button onClick={() => handleImpersonate(clientData)} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700">
-                                    Impersonate
-                                </button>
+                                <div className="flex items-center space-x-2">
+                                    <button onClick={() => setIsEditModalOpen(true)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><Edit className="h-5 w-5 text-gray-500" /></button>
+                                    <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><Send className="h-5 w-5 text-gray-500" /></button>
+                                    <button onClick={() => handleImpersonate(clientData)} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700">Impersonate</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    {/* Tabs */}
-                    <div className="border-b border-gray-200 dark:border-gray-700">
-                        <nav className="-mb-px flex space-x-8 px-4 sm:px-6 lg:px-8" aria-label="Tabs">
+                </div>
+
+                {/* Tabs and Content Section */}
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                         <nav className="-mb-px flex space-x-8 px-4" aria-label="Tabs">
                             {tabs.map((tab) => (
-                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`${activeTab === tab.id ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}>
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`${activeTab === tab.id ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}>
                                     <tab.icon className="mr-2 h-5 w-5" />
                                     {tab.label}
                                 </button>
                             ))}
                         </nav>
                     </div>
-                </div>
-
-                {/* Tab Content */}
-                <div className="flex-grow p-4 sm:p-6 lg:p-8 overflow-y-auto">
-                    {renderTabContent()}
+                    <div className="py-8">
+                        {renderTabContent()}
+                    </div>
                 </div>
             </div>
 
-            {/* Modal Render */}
-            <EditClientModal 
-                isOpen={isEditModalOpen} 
-                onClose={() => setIsEditModalOpen(false)} 
-                client={clientData}
-            />
+            <EditClientModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} client={clientData}/>
         </>
     );
 };
