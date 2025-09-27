@@ -32,7 +32,6 @@ const ClientDetailView = ({ onSelectProperty }) => {
     useEffect(() => {
         if (!clientId) return;
 
-        setLoadingClient(true);
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
             if (doc.exists()) {
                 setClientData({ id: doc.id, ...doc.data() });
@@ -43,29 +42,27 @@ const ClientDetailView = ({ onSelectProperty }) => {
             setLoadingClient(false);
         });
 
-        setLoadingProperties(true);
-        const q = query(collection(db, "properties"), where("ownerId", "==", clientId));
-        const unsubProps = onSnapshot(q, (snapshot) => {
+        const unsubProps = onSnapshot(query(collection(db, "properties"), where("ownerId", "==", clientId)), (snapshot) => {
             setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setLoadingProperties(false);
         });
 
-        setLoadingPlans(true);
         const unsubPlans = onSnapshot(collection(db, "plans"), (snapshot) => {
             setAllPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setLoadingPlans(false);
         });
         
-        setLoadingLogs(true);
-        const logsQuery = query(
-            collection(db, "users", clientId, "activity_logs"),
-            orderBy("timestamp", "desc")
+        const unsubLogs = onSnapshot(query(collection(db, "users", clientId, "activity_logs"), orderBy("timestamp", "desc")), 
+            (snapshot) => {
+                setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                setLoadingLogs(false);
+            },
+            (error) => {
+                console.error("Error fetching activity logs: ", error);
+                toast.error("Could not load activity logs. Check permissions.");
+                setLoadingLogs(false); // Stop loading even if there's an error
+            }
         );
-        const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
-            setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setLoadingLogs(false);
-        });
-
 
         return () => {
             unsubClient();
@@ -86,11 +83,8 @@ const ClientDetailView = ({ onSelectProperty }) => {
     };
 
     const handleImpersonate = (clientToImpersonate) => {
-        console.log(`Impersonating ${clientToImpersonate.fullName} (UID: ${clientToImpersonate.id})`);
         toast.info(`Starting impersonation session for ${clientToImpersonate.companyName}.`);
     };
-
-    const refreshClientData = () => { /* Placeholder for future use */ };
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: User },
@@ -122,7 +116,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
             case 'properties':
                 return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
             case 'management':
-                return <ManagementTab client={clientData} refreshClientData={refreshClientData} allPlans={allPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate} />;
+                return <ManagementTab client={clientData} refreshClientData={()=>{}} allPlans={allPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate} />;
             case 'billing':
                 return <BillingTab client={clientData} />;
             case 'communication':
