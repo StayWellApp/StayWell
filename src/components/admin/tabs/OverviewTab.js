@@ -24,78 +24,69 @@ const CardContent = ({ children, className = '' }) => (
     </div>
 );
 
-// --- START: Key Metrics Component (Option 3) ---
+// Key Metrics Component
 const ProgressCircle = ({ percentage }) => {
-    const radius = 30;
-    const stroke = 5;
-    const normalizedRadius = radius - stroke * 2;
+    const radius = 35;
+    const stroke = 6;
+    const normalizedRadius = radius - stroke;
     const circumference = normalizedRadius * 2 * Math.PI;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
     return (
-        <svg height={radius * 2} width={radius * 2} className="-rotate-90">
-            <circle
-                strokeWidth={stroke}
-                strokeDasharray={`${circumference} ${circumference}`}
-                style={{ strokeDashoffset }}
-                r={normalizedRadius}
-                cx={radius}
-                cy={radius}
-                className="stroke-current text-gray-200 dark:text-gray-700"
-                fill="transparent"
-            />
-            <circle
-                strokeWidth={stroke}
-                strokeDasharray={`${circumference} ${circumference}`}
-                style={{ strokeDashoffset }}
-                r={normalizedRadius}
-                cx={radius}
-                cy={radius}
-                className="stroke-current text-indigo-500"
-                fill="transparent"
-            />
-        </svg>
+        <div className="relative h-20 w-20">
+            <svg height="100%" width="100%" viewBox="0 0 80 80" className="transform -rotate-90">
+                <circle
+                    strokeWidth={stroke}
+                    r={normalizedRadius}
+                    cx={radius + 5}
+                    cy={radius + 5}
+                    className="stroke-current text-gray-200 dark:text-gray-700"
+                    fill="transparent"
+                />
+                <circle
+                    strokeWidth={stroke}
+                    strokeDasharray={`${circumference} ${circumference}`}
+                    style={{ strokeDashoffset }}
+                    r={normalizedRadius}
+                    cx={radius + 5}
+                    cy={radius + 5}
+                    className="stroke-current text-indigo-500 transition-all duration-500 ease-in-out"
+                    fill="transparent"
+                    strokeLinecap="round"
+                />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{percentage}<span className="text-sm">%</span></p>
+            </div>
+        </div>
     );
 };
 
 const KeyMetrics = ({ properties, clientData, monthlyRevenue, occupancyRate }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="text-center">
-            <CardContent>
-                <Building className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                <p className="text-4xl font-bold text-gray-900 dark:text-white">{properties.length}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Properties</p>
-            </CardContent>
+        <Card className="text-center p-4">
+            <Building className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+            <p className="text-4xl font-bold text-gray-900 dark:text-white">{properties.length}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Properties</p>
         </Card>
-        <Card className="text-center">
-            <CardContent>
-                <BriefcaseIcon className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                <p className="text-2xl font-bold text-gray-900 dark:text-white pt-2">{clientData.subscription?.planName || 'N/A'}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Current Plan</p>
-            </CardContent>
+        <Card className="text-center p-4">
+            <BriefcaseIcon className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+            <p className="text-2xl font-bold text-gray-900 dark:text-white pt-2">{clientData.subscription?.planName || 'N/A'}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Current Plan</p>
         </Card>
-        <Card className="text-center">
-            <CardContent>
-                <DollarSign className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                <p className="text-4xl font-bold text-gray-900 dark:text-white">${monthlyRevenue}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Revenue</p>
-            </CardContent>
+        <Card className="text-center p-4">
+            <DollarSign className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+            <p className="text-4xl font-bold text-gray-900 dark:text-white">${monthlyRevenue}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Revenue</p>
         </Card>
-        <Card className="relative text-center">
-            <CardContent>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <ProgressCircle percentage={occupancyRate} />
-                </div>
-                <p className="text-4xl font-bold text-gray-900 dark:text-white">{occupancyRate}<span className="text-2xl">%</span></p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Occupancy</p>
-            </CardContent>
+        <Card className="flex flex-col items-center justify-center p-4">
+            <ProgressCircle percentage={occupancyRate} />
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Occupancy</p>
         </Card>
     </div>
 );
 
-// --- END: Key Metrics Component ---
-
-
+// Other Card Components
 const ContactInfoCard = ({ clientData }) => (
     <Card>
         <CardHeader title="Contact Information" icon={Users} />
@@ -184,9 +175,17 @@ const AdminNotesCard = ({ initialNotes = '', onUpdateNotes }) => {
     );
 };
 
-const SubscriptionCard = ({ clientData, monthlyRevenue }) => (
+const SubscriptionCard = ({ clientData, monthlyRevenue, setActiveTab }) => (
     <Card>
-        <CardHeader title="Subscription" icon={DollarSign} action={<a href="#" className="text-sm text-indigo-600 hover:underline">Manage</a>} />
+        <CardHeader 
+            title="Subscription" 
+            icon={DollarSign} 
+            action={
+                <button onClick={() => setActiveTab('management')} className="text-sm font-medium text-indigo-600 hover:underline">
+                    Manage
+                </button>
+            } 
+        />
         <CardContent className="space-y-3">
             <div className="flex justify-between items-center text-sm">
                 <p className="font-medium text-gray-700 dark:text-gray-300">Plan</p>
@@ -213,7 +212,6 @@ const SubscriptionCard = ({ clientData, monthlyRevenue }) => (
 );
 
 const RecentActivityCard = () => {
-    // This is placeholder data. In the future, this would come from your database.
     const activity = [
         { id: 1, type: 'property_add', description: 'Added "Sunset Villa"', timestamp: '2 hours ago' },
         { id: 2, type: 'subscription', description: 'Upgraded to Pro Plan', timestamp: '1 day ago' },
@@ -240,16 +238,15 @@ const RecentActivityCard = () => {
                 </ul>
             </CardContent>
         </Card>
-    )
+    );
 };
 
 
-const OverviewTab = ({ clientData, properties, monthlyRevenue, occupancyRate, onUpdateNotes }) => {
+// Main OverviewTab Component
+const OverviewTab = ({ clientData, properties, monthlyRevenue, occupancyRate, onUpdateNotes, setActiveTab }) => {
     return (
         <div className="space-y-6">
-            
             <KeyMetrics properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} />
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     <RecentActivityCard />
@@ -257,7 +254,7 @@ const OverviewTab = ({ clientData, properties, monthlyRevenue, occupancyRate, on
                 </div>
                 <div className="space-y-6">
                     <ContactInfoCard clientData={clientData} />
-                    <SubscriptionCard clientData={clientData} monthlyRevenue={monthlyRevenue} />
+                    <SubscriptionCard clientData={clientData} monthlyRevenue={monthlyRevenue} setActiveTab={setActiveTab} />
                 </div>
             </div>
         </div>
