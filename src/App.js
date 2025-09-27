@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
@@ -45,14 +45,17 @@ function AppContent() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Only run this query if we know the user is a super admin
+    // --- FIX: This effect now ONLY runs when isSuperAdmin is definitively true ---
     if (isSuperAdmin) {
       setClientsLoading(true);
       const q = query(collection(db, "users"), where("role", "==", "owner"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         setAllClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setClientsLoading(false);
-      }, () => setClientsLoading(false));
+      }, (error) => {
+        console.error("Error fetching clients:", error);
+        setClientsLoading(false);
+      });
       return () => unsubscribe();
     }
   }, [isSuperAdmin]);
@@ -63,8 +66,9 @@ function AppContent() {
         setIsUserDataLoading(true);
         user.getIdTokenResult(true).then(idTokenResult => {
           const isSuper = idTokenResult.claims.superAdmin === true;
-          setIsSuperAdmin(isSuper);
+          setIsSuperAdmin(isSuper); // Set this state first
           if (isSuper) {
+            // For admins, userData can be simple, but crucially, it's not null
             setUserData({ uid: user.uid, email: user.email, isSuperAdmin: true });
             setIsUserDataLoading(false);
           } else {
@@ -91,11 +95,10 @@ function AppContent() {
   };
 
   const AdminLayout = () => {
-    if (!userData) {
-      return <div className="flex items-center justify-center h-screen"><p>Loading Admin Profile...</p></div>;
+    if (clientsLoading) {
+      return <div className="flex items-center justify-center h-screen"><p>Loading Clients...</p></div>;
     }
     const adminHasPermission = () => true;
-
     return (
       <Layout user={currentUser} userData={userData} hasPermission={adminHasPermission}>
         <Routes>
@@ -133,8 +136,9 @@ function AppContent() {
     );
   }
 
+  // --- FIX: This is the main gatekeeper. Nothing renders until we know who the user is. ---
   if (authLoading || isUserDataLoading) {
-    return <div className="flex items-center justify-center h-screen"><p>Loading StayWell...</p></div>;
+    return <div className="flex items-center justify-center h-screen"><p>Authenticating...</p></div>;
   }
 
   return (
@@ -142,18 +146,16 @@ function AppContent() {
       <ToastContainer position="bottom-center" autoClose={4000} hideProgressBar={false} />
       <EndImpersonationBanner />
       <div className={!!localStorage.getItem('impersonating_admin_uid') ? 'pt-10' : ''}>
-        {!currentUser ? (
-          <Auth />
-        ) : (
-          <Routes>
-            {isSuperAdmin ? (
-              <Route path="/admin/*" element={<AdminLayout />} />
-            ) : (
-              <Route path="/*" element={<UserLayout />} />
-            )}
-            <Route path="*" element={<Navigate to={isSuperAdmin ? "/admin/dashboard" : "/dashboard"} />} />
-          </Routes>
-        )}
+        <Routes>
+          {!currentUser ? (
+            <Route path="*" element={<Auth />} />
+          ) : isSuperAdmin ? (
+            <Route path="/admin/*" element={<AdminLayout />} />
+          ) : (
+            <Route path="/*" element={<UserLayout />} />
+          )}
+          <Route path="*" element={<Navigate to={isSuperAdmin ? "/admin/dashboard" : "/dashboard"} />} />
+        </Routes>
       </div>
       <AddClientModal isOpen={isAddClientModalOpen} onClose={() => setAddClientModalOpen(false)} />
     </>
