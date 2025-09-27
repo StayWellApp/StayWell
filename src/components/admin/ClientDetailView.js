@@ -65,7 +65,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         try {
             await updateDoc(clientRef, { adminNotes: arrayUnion(noteToAdd) });
             toast.success("Note added successfully!");
-            // The onSnapshot listener will now handle the UI update automatically.
+            // The onSnapshot listener is now the single source of truth and will handle all UI updates.
         } catch (error) {
             console.error("Error adding note: ", error);
             toast.error("Failed to add note. Ensure the notes field in Firestore is an array.");
