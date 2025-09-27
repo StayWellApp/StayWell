@@ -1,12 +1,10 @@
-import React, { useState, useContext, useCallback } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 
-const AdminContext = React.createContext();
+const AdminContext = createContext(null);
 
-export function useAdmin() {
-    return useContext(AdminContext);
-}
+export const useAdmin = () => useContext(AdminContext);
 
-export function AdminProvider({ children }) {
+export const AdminProvider = ({ children }) => {
     const [selectedClient, setSelectedClient] = useState(null);
 
     const selectClient = useCallback((client) => {
@@ -20,7 +18,7 @@ export function AdminProvider({ children }) {
     const value = {
         selectedClient,
         selectClient,
-        clearSelectedClient,
+        clearSelectedClient
     };
 
     return (
@@ -28,4 +26,4 @@ export function AdminProvider({ children }) {
             {children}
         </AdminContext.Provider>
     );
-}
+};

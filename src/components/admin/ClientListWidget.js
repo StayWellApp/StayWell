@@ -3,6 +3,7 @@
 import React from 'react';
 import { ChevronRight, Inbox } from 'lucide-react';
 
+// ... (SkeletonItem component code remains the same) ...
 const SkeletonItem = () => (
     <div className="py-3 flex items-center justify-between animate-pulse">
         <div className="flex items-center">
@@ -15,6 +16,7 @@ const SkeletonItem = () => (
         <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
     </div>
 );
+
 
 const ClientListWidget = ({ clients, loading, onSelectClient, onViewAll }) => {
 
@@ -42,7 +44,8 @@ const ClientListWidget = ({ clients, loading, onSelectClient, onViewAll }) => {
                 {clients.slice(0, 5).map(client => (
                     <li 
                         key={client.id} 
-                        // --- THE FIX: Stop event propagation and call onSelectClient ---
+                        // --- THIS IS THE FIX ---
+                        // Stop the event from bubbling up to the widget wrapper
                         onClick={(e) => {
                             e.stopPropagation();
                             onSelectClient(client);

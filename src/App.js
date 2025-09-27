@@ -29,13 +29,14 @@ import EndImpersonationBanner from './components/EndImpersonationBanner';
 import AddClientModal from './components/admin/AddClientModal';
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AdminProvider, useAdmin } from './contexts/AdminContext';
+import { AdminProvider, useAdmin } from './contexts/AdminContext'; // FIX: Make sure this path is correct
 import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function AppContent() {
     const { currentUser, loading: authLoading } = useAuth();
+    // FIX: Get state and functions from the useAdmin hook
     const { selectedClient, selectClient, clearSelectedClient } = useAdmin();
 
     const [userData, setUserData] = useState(null);
@@ -51,6 +52,7 @@ function AppContent() {
     useEffect(() => {
         if (isSuperAdmin) {
             setClientsLoading(true);
+            // FIX: Ensure this query matches your data structure (role vs roles)
             const q = query(collection(db, "users"), where("role", "==", "owner"));
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -97,11 +99,18 @@ function AppContent() {
 
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
-        // Do not clear the selected client when just changing views
-        // clearSelectedClient(); 
         setActiveView(view);
     };
 
+    // --- THIS IS THE CRITICAL FIX ---
+    // This function now robustly handles selecting a client from ANYWHERE
+    const handleSelectClient = (client) => {
+        if (client && client.id) {
+            selectClient(client);
+        }
+    };
+
+    // This function handles the "Back" button from the detail view
     const handleBackToClientList = () => {
         clearSelectedClient();
         setActiveView('adminClients');
@@ -112,35 +121,29 @@ function AppContent() {
         setActiveView('propertyDetail');
     };
 
-    // --- THIS IS THE FIX ---
-    // This handler now ensures the client is selected AND triggers a state update
-    // that allows the `renderActiveView` logic to correctly show the detail view.
-    const handleSelectClient = (client) => {
-        selectClient(client);
-        // We set the activeView to 'adminClients'. The `if (selectedClient)` check in
-        // `renderActiveView` will run BEFORE the switch statement, showing the detail
-        // view as intended. This also ensures that if the user clicks "Back",
-        // they land on the main client list.
-        setActiveView('adminClients');
-    };
-
     const renderActiveView = () => {
         if (isSuperAdmin) {
+            // FIX: The most important check: If a client is selected, ALWAYS show the detail view.
             if (selectedClient) {
                 return <ClientDetailView client={selectedClient} onBack={handleBackToClientList} onSelectProperty={handleSelectProperty} />;
             }
             if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={currentUser} />;
             
+            // If no client is selected, render views based on the activeView state
             switch (activeView) {
-                case 'adminDashboard': return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient}/>;
-                case 'adminClients': return <ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} onSelectClient={handleSelectClient} />;
+                case 'adminDashboard': 
+                    return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />;
+                case 'adminClients': 
+                    return <ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} onSelectClient={handleSelectClient} />;
                 case 'adminBilling': return <BillingView />;
                 case 'adminSubscriptions': return <AdminSubscriptionsView />;
                 case 'adminSettings': return <AdminSettingsView />;
                 case 'adminAuditLog': return <AuditLogView />;
-                default: return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />;
+                default: 
+                    return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />;
             }
         }
+        // ... (rest of the renderActiveView function remains the same)
         if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); setActiveView('properties'); }} user={currentUser} />;
         if (loadingPermissions) return <div className="flex items-center justify-center h-full"><p>Checking permissions...</p></div>;
         switch (activeView) {
@@ -183,6 +186,7 @@ function AppContent() {
     );
 }
 
+// FIX: Make sure App is wrapped in AdminProvider
 function App() {
     return (
         <AuthProvider>
