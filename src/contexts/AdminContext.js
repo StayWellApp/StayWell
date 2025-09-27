@@ -1,23 +1,21 @@
-// src/contexts/AdminContext.js
+import React, { useState, useContext, useCallback } from 'react';
 
-import React, { createContext, useState, useContext } from 'react';
+const AdminContext = React.createContext();
 
-const AdminContext = createContext();
-
-export const useAdmin = () => {
+export function useAdmin() {
     return useContext(AdminContext);
-};
+}
 
-export const AdminProvider = ({ children }) => {
+export function AdminProvider({ children }) {
     const [selectedClient, setSelectedClient] = useState(null);
 
-    const selectClient = (client) => {
+    const selectClient = useCallback((client) => {
         setSelectedClient(client);
-    };
+    }, []);
 
-    const clearSelectedClient = () => {
+    const clearSelectedClient = useCallback(() => {
         setSelectedClient(null);
-    };
+    }, []);
 
     const value = {
         selectedClient,
@@ -25,5 +23,9 @@ export const AdminProvider = ({ children }) => {
         clearSelectedClient,
     };
 
-    return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
-};
+    return (
+        <AdminContext.Provider value={value}>
+            {children}
+        </AdminContext.Provider>
+    );
+}

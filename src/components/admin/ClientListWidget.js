@@ -40,7 +40,15 @@ const ClientListWidget = ({ clients, loading, onSelectClient, onViewAll }) => {
         return (
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                 {clients.slice(0, 5).map(client => (
-                    <li key={client.id} onClick={() => onSelectClient(client)} className="py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg -mx-2 px-2 transition-colors">
+                    <li 
+                        key={client.id} 
+                        // --- THE FIX: Stop event propagation and call onSelectClient ---
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectClient(client);
+                        }} 
+                        className="py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg -mx-2 px-2 transition-colors"
+                    >
                         <div className="flex items-center">
                             <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4 flex-shrink-0">
                                 {client.companyName ? client.companyName.charAt(0) : '?'}
