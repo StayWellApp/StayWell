@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase-config';
-import { doc, onSnapshot, collection, query, where, updateDoc, orderBy, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, updateDoc, orderBy, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare, FolderOpen, BarChart2, Edit, Send } from 'lucide-react';
 
@@ -33,21 +33,22 @@ const ClientDetailView = ({ onSelectProperty }) => {
         if (!clientId) return;
 
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
-            if (doc.exists()) setClientData({ id: doc.id, ...doc.data() });
-            else { toast.error("Client not found."); navigate('/admin/clients'); }
+            if (doc.exists()) {
+                const data = doc.data();
+                // FIX: Ensure adminNotes is always an array to prevent errors
+                if (!Array.isArray(data.adminNotes)) {
+                    data.adminNotes = [];
+                }
+                setClientData({ id: doc.id, ...data });
+            } else {
+                toast.error("Client not found.");
+                navigate('/admin/clients');
+            }
             setLoadingClient(false);
         });
-
-        const unsubProps = onSnapshot(query(collection(db, "properties"), where("ownerId", "==", clientId)), (snapshot) => {
-            setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setLoadingProperties(false);
-        });
-
-        const unsubPlans = onSnapshot(collection(db, "plans"), (snapshot) => {
-            setAllPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setLoadingPlans(false);
-        });
         
+        const unsubProps = onSnapshot(query(collection(db, "properties"), where("ownerId", "==", clientId)), (snapshot) => { setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoadingProperties(false); });
+        const unsubPlans = onSnapshot(collection(db, "plans"), (snapshot) => { setAllPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoadingPlans(false); });
         const unsubLogs = onSnapshot(query(collection(db, "users", clientId, "activity_logs"), orderBy("timestamp", "desc")), 
             (snapshot) => {
                 setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -65,34 +66,34 @@ const ClientDetailView = ({ onSelectProperty }) => {
 
     const handleAddNote = async (newNote) => {
         if (!newNote || !newNote.text || !newNote.importance) {
-            toast.error("Note content and importance level are required.");
+            toast.error("Note content and importance are required.");
             return;
         }
-
         const clientRef = doc(db, 'users', clientId);
-        
-        const noteToAdd = {
-            ...newNote,
-            id: Date.now().toString(),
-            createdAt: serverTimestamp(),
-            createdBy: auth.currentUser.displayName || auth.currentUser.email,
-        };
-
+        const noteToAdd = { ...newNote, id: Date.now().toString(), createdAt: serverTimestamp(), createdBy: auth.currentUser.displayName || auth.currentUser.email };
         try {
-            // Use arrayUnion to add the new note object to the adminNotes array
-            await updateDoc(clientRef, {
-                adminNotes: arrayUnion(noteToAdd)
-            });
+            await updateDoc(clientRef, { adminNotes: arrayUnion(noteToAdd) });
             toast.success("Note added successfully!");
         } catch (error) {
             console.error("Error adding note: ", error);
-            toast.error("Failed to add note.");
+            toast.error("Failed to add note. Ensure the notes field in Firestore is an array.");
         }
     };
 
-    const handleImpersonate = async (clientToImpersonate) => {
-        // Impersonation logic here
+    const handleDeleteNote = async (noteToDelete) => {
+        if (!window.confirm("Are you sure you want to delete this note?")) return;
+        
+        const clientRef = doc(db, 'users', clientId);
+        try {
+            await updateDoc(clientRef, { adminNotes: arrayRemove(noteToDelete) });
+            toast.success("Note deleted successfully!");
+        } catch (error) {
+            console.error("Error deleting note: ", error);
+            toast.error("Failed to delete note.");
+        }
     };
+    
+    const handleImpersonate = async (clientToImpersonate) => { /* Impersonation logic */ };
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: User }, { id: 'properties', label: 'Properties', icon: Building },
@@ -113,7 +114,8 @@ const ClientDetailView = ({ onSelectProperty }) => {
                             properties={properties} 
                             monthlyRevenue={monthlyRevenue} 
                             occupancyRate={occupancyRate} 
-                            onAddNote={handleAddNote} 
+                            onAddNote={handleAddNote}
+                            onDeleteNote={handleDeleteNote}
                             setActiveTab={setActiveTab}
                             activityLogs={activityLogs}
                             loadingLogs={loadingLogs}
@@ -128,9 +130,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         }
     };
     
-    if (loadingClient || !clientData) {
-        return <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900"><p>Loading client...</p></div>;
-    }
+    if (loadingClient || !clientData) { return <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900"><p>Loading client...</p></div>; }
 
     const getStatusChip = (status) => {
         const colors = { active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300", trial: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300", inactive: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" };

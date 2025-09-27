@@ -47,16 +47,8 @@ const ContactInfoCard = ({ clientData }) => (
 const AddNoteForm = ({ onAddNote, onCancel }) => {
     const [text, setText] = useState('');
     const [importance, setImportance] = useState('medium');
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onAddNote({ text, importance });
-        setText('');
-        setImportance('medium');
-    };
-
+    const handleSubmit = (e) => { e.preventDefault(); onAddNote({ text, importance }); };
     const importanceLevels = [ { id: 'high', label: 'High', color: 'text-red-500' }, { id: 'medium', label: 'Medium', color: 'text-yellow-500' }, { id: 'low', label: 'Low', color: 'text-blue-500' }];
-
     return (
         <form onSubmit={handleSubmit} className="p-4 bg-gray-50 dark:bg-gray-900/50">
             <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a new note..." className="w-full h-24 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-indigo-500 focus:border-indigo-500" required />
@@ -88,24 +80,25 @@ const getImportanceIcon = (level) => {
     }
 };
 
-const AdminNotesCard = ({ initialNotes = [], onAddNote }) => {
+const AdminNotesCard = ({ initialNotes = [], onAddNote, onDeleteNote }) => {
     const [isAdding, setIsAdding] = useState(false);
-    const sortedNotes = [...initialNotes].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
+    const sortedNotes = Array.isArray(initialNotes) ? [...initialNotes].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)) : [];
+    const handleAdd = (note) => { onAddNote(note); setIsAdding(false); };
     return (
         <Card>
             <CardHeader title="Admin Notes" icon={FileText} action={!isAdding && (<button onClick={() => setIsAdding(true)} className="flex items-center px-2 py-1 text-sm text-indigo-600 bg-indigo-100 dark:bg-indigo-900/50 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-900"><PlusCircle className="h-4 w-4 mr-1" />Add Note</button>)} />
-            {isAdding && <AddNoteForm onAddNote={onAddNote} onCancel={() => setIsAdding(false)} />}
+            {isAdding && <AddNoteForm onAddNote={handleAdd} onCancel={() => setIsAdding(false)} />}
             <CardContent>
                 {sortedNotes.length > 0 ? (
                     <ul className="space-y-4 max-h-96 overflow-y-auto">
                         {sortedNotes.map(note => (
-                            <li key={note.id} className="flex items-start space-x-3">
+                            <li key={note.id} className="flex items-start space-x-3 group">
                                 <div>{getImportanceIcon(note.importance)}</div>
                                 <div className="flex-grow">
                                     <p className="text-sm text-gray-700 dark:text-gray-300">{note.text}</p>
                                     <p className="text-xs text-gray-400 mt-1">by {note.createdBy} • {note.createdAt ? formatDistanceToNow(note.createdAt.toDate(), { addSuffix: true }) : '...'}</p>
                                 </div>
+                                <button onClick={() => onDeleteNote(note)} className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 transition-opacity"><Trash2 className="h-4 w-4 text-red-500" /></button>
                             </li>
                         ))}
                     </ul>
@@ -160,13 +153,13 @@ const RecentActivityCard = ({ logs, loading }) => (
     </Card>
 );
 
-const OverviewTab = ({ clientData, properties, monthlyRevenue, occupancyRate, onAddNote, setActiveTab, activityLogs, loadingLogs }) => (
+const OverviewTab = ({ clientData, properties, monthlyRevenue, occupancyRate, onAddNote, onDeleteNote, setActiveTab, activityLogs, loadingLogs }) => (
     <div className="space-y-6">
         <KeyMetrics properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
                 <RecentActivityCard logs={activityLogs} loading={loadingLogs} />
-                <AdminNotesCard initialNotes={clientData.adminNotes} onAddNote={onAddNote} />
+                <AdminNotesCard initialNotes={clientData.adminNotes} onAddNote={onAddNote} onDeleteNote={onDeleteNote} />
             </div>
             <div className="space-y-6">
                 <ContactInfoCard clientData={clientData} />
