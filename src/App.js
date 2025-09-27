@@ -36,7 +36,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 function AppContent() {
     const { currentUser, loading: authLoading } = useAuth();
-    const { selectedClient, selectClient, clearSelectedClient } = useAdmin(); // FIX: import selectClient
+    const { selectedClient, selectClient, clearSelectedClient } = useAdmin();
 
     const [userData, setUserData] = useState(null);
     const [allClients, setAllClients] = useState([]);
@@ -97,6 +97,8 @@ function AppContent() {
 
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
+        // Do not clear the selected client when just changing views
+        // clearSelectedClient(); 
         setActiveView(view);
     };
 
@@ -110,9 +112,16 @@ function AppContent() {
         setActiveView('propertyDetail');
     };
 
-    // FIX: Add a handler to select a client
+    // --- THIS IS THE FIX ---
+    // This handler now ensures the client is selected AND triggers a state update
+    // that allows the `renderActiveView` logic to correctly show the detail view.
     const handleSelectClient = (client) => {
         selectClient(client);
+        // We set the activeView to 'adminClients'. The `if (selectedClient)` check in
+        // `renderActiveView` will run BEFORE the switch statement, showing the detail
+        // view as intended. This also ensures that if the user clicks "Back",
+        // they land on the main client list.
+        setActiveView('adminClients');
     };
 
     const renderActiveView = () => {
@@ -123,16 +132,13 @@ function AppContent() {
             if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={currentUser} />;
             
             switch (activeView) {
-                case 'adminDashboard': 
-                    return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />; // FIX: Pass onSelectClient
-                case 'adminClients': 
-                    return <ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} onSelectClient={handleSelectClient} />; // FIX: Pass onSelectClient
+                case 'adminDashboard': return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient}/>;
+                case 'adminClients': return <ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} onSelectClient={handleSelectClient} />;
                 case 'adminBilling': return <BillingView />;
                 case 'adminSubscriptions': return <AdminSubscriptionsView />;
                 case 'adminSettings': return <AdminSettingsView />;
                 case 'adminAuditLog': return <AuditLogView />;
-                default: 
-                    return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />; // FIX: Pass onSelectClient
+                default: return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />;
             }
         }
         if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); setActiveView('properties'); }} user={currentUser} />;
