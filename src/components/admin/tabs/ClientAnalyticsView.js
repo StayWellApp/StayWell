@@ -1,16 +1,14 @@
-// src/components/admin/tabs/ClientAnalyticsView.js
 import React from 'react';
+import { BarChart2 } from 'lucide-react';
 
-const ClientAnalyticsView = ({ client, properties }) => {
-    // This is a placeholder for your analytics content.
-    // You can build out charts and data visualizations here.
+const ClientAnalyticsView = ({ client }) => {
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700">
-            <h3 className="text-xl font-semibold mb-4">Analytics for {client.name}</h3>
-            <p>This client has {properties.length} properties.</p>
-            <div className="mt-4 p-8 border-2 border-dashed rounded-lg text-center">
-                <p className="text-gray-500">Your charts and analytics dashboards will go here.</p>
-            </div>
+        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <BarChart2 className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">Client Analytics</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                This feature is coming soon.
+            </p>
         </div>
     );
 };
