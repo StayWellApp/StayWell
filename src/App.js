@@ -59,31 +59,37 @@ function AppContent() {
   }, [isSuperAdmin]);
 
   useEffect(() => {
-    if (currentUser) {
-      setIsUserDataLoading(true);
-      currentUser.getIdTokenResult(true).then(idTokenResult => {
-        const isSuper = idTokenResult.claims.superAdmin === true;
-        setIsSuperAdmin(isSuper);
-        if (isSuper) {
-          setIsUserDataLoading(false);
-        } else {
-          const unsub = onSnapshot(doc(db, "users", currentUser.uid), (doc) => {
-            setUserData(doc.exists() ? doc.data() : null);
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsUserDataLoading(true);
+        user.getIdTokenResult(true).then(idTokenResult => {
+          const isSuper = idTokenResult.claims.superAdmin === true;
+          setIsSuperAdmin(isSuper);
+          if (isSuper) {
+            setUserData({ uid: user.uid, email: user.email, isSuperAdmin: true });
             setIsUserDataLoading(false);
-          });
-          return () => unsub();
-        }
-      });
-    } else {
-      setUserData(null);
-      setIsSuperAdmin(false);
-      setIsUserDataLoading(false);
-    }
-  }, [currentUser]);
+          } else {
+            const userDocRef = doc(db, "users", user.uid);
+            const unsubSnapshot = onSnapshot(userDocRef, (doc) => {
+              setUserData(doc.exists() ? { id: doc.id, ...doc.data() } : null);
+              setIsUserDataLoading(false);
+            });
+            return () => unsubSnapshot();
+          }
+        });
+      } else {
+        setIsSuperAdmin(false);
+        setUserData(null);
+        setIsUserDataLoading(false);
+      }
+    });
+    return () => authUnsubscribe();
+  }, []);
+
 
   const handleSelectProperty = (property) => {
     setSelectedProperty(property);
-    navigate('/property-detail'); // Example of navigating on selection
+    navigate('/property-detail');
   };
   
   const AdminLayout = () => (
@@ -102,11 +108,11 @@ function AppContent() {
   );
 
   const UserLayout = () => {
-    // You can define a different layout for non-admin users if needed
-    // Or just render the view directly
-    return (
+      if(loadingPermissions || !userData) {
+          return <div className="flex items-center justify-center h-screen"><p>Loading User Profile...</p></div>;
+      }
+      return (
         <Layout user={currentUser} userData={userData} hasPermission={hasPermission}>
-             {/* This is a simplified version of your non-admin routing */}
              <Routes>
                 <Route path="dashboard" element={hasPermission('properties_view_all') ? <ClientDashboard user={currentUser} /> : <StaffDashboard user={currentUser} userData={userData} />} />
                 <Route path="properties" element={<PropertiesView onSelectProperty={handleSelectProperty} user={currentUser} userData={userData} hasPermission={hasPermission} />} />
@@ -116,11 +122,11 @@ function AppContent() {
         </Layout>
     );
   }
-
+  
   if (authLoading || isUserDataLoading) {
     return <div className="flex items-center justify-center h-screen"><p>Loading StayWell...</p></div>;
   }
-  
+
   return (
     <>
       <ToastContainer position="bottom-center" autoClose={4000} hideProgressBar={false} />
@@ -146,11 +152,13 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AdminProvider>
-        <AppContent />
-      </AdminProvider>
-    </AuthProvider>
+    <ThemeProvider>
+        <AuthProvider>
+            <AdminProvider>
+                <AppContent />
+            </AdminProvider> 
+        </AuthProvider>
+    </ThemeProvider>
   );
 }
 
