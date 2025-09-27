@@ -333,13 +333,13 @@ const OverviewTab = ({ clientData, properties, monthlyRevenue, occupancyRate, on
             {/* Keep the one you want and comment out the others */}
             
             {/* Option 1: Modern Stat Cards (Default) */}
-            <KeyMetricsCards properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} />
+            {/* <KeyMetricsCards properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} />*/}
             
             {/* Option 2: Compact List */}
             {/* <KeyMetricsList properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} /> */}
             
             {/* Option 3: Bold & Visual */}
-            {/* <KeyMetricsVisual properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} /> */}
+            <KeyMetricsVisual properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} /> 
 
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
