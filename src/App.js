@@ -1,6 +1,8 @@
 // src/App.js
 
 import React, { useState, useEffect } from 'react';
+// FIX: The Router is in index.js, so we only need routing components here.
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
@@ -29,15 +31,15 @@ import EndImpersonationBanner from './components/EndImpersonationBanner';
 import AddClientModal from './components/admin/AddClientModal';
 import { MessageSquare } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AdminProvider, useAdmin } from './contexts/AdminContext'; // FIX: Make sure this path is correct
+import { AdminProvider, useAdmin } from './contexts/AdminContext';
 import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function AppContent() {
     const { currentUser, loading: authLoading } = useAuth();
-    // FIX: Get state and functions from the useAdmin hook
-    const { selectedClient, selectClient, clearSelectedClient } = useAdmin();
+    const navigate = useNavigate();
+    const { clearSelectedClient } = useAdmin();
 
     const [userData, setUserData] = useState(null);
     const [allClients, setAllClients] = useState([]);
@@ -52,7 +54,6 @@ function AppContent() {
     useEffect(() => {
         if (isSuperAdmin) {
             setClientsLoading(true);
-            // FIX: Ensure this query matches your data structure (role vs roles)
             const q = query(collection(db, "users"), where("role", "==", "owner"));
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -74,10 +75,7 @@ function AppContent() {
             currentUser.getIdTokenResult(true).then(idTokenResult => {
                 const isSuper = idTokenResult.claims.superAdmin === true;
                 setIsSuperAdmin(isSuper);
-                if (isSuper) {
-                    setActiveView('adminDashboard');
-                    setIsUserDataLoading(false);
-                } else {
+                if (!isSuper) {
                     const userDocRef = doc(db, "users", currentUser.uid);
                     const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
                         setUserData(doc.exists() ? doc.data() : null);
@@ -87,6 +85,8 @@ function AppContent() {
                         setIsUserDataLoading(false);
                     });
                     return () => unsubscribeSnapshot();
+                } else {
+                    setIsUserDataLoading(false);
                 }
             });
         } else {
@@ -100,63 +100,47 @@ function AppContent() {
     const handleSetActiveView = (view) => {
         setSelectedProperty(null);
         setActiveView(view);
-    };
-
-    // --- THIS IS THE CRITICAL FIX ---
-    // This function now robustly handles selecting a client from ANYWHERE
-    const handleSelectClient = (client) => {
-        if (client && client.id) {
-            selectClient(client);
-        }
-    };
-
-    // This function handles the "Back" button from the detail view
-    const handleBackToClientList = () => {
-        clearSelectedClient();
-        setActiveView('adminClients');
+        const path = view.replace('admin', '').toLowerCase();
+        navigate(isSuperAdmin ? `/admin/${path}` : `/${path}`);
     };
 
     const handleSelectProperty = (property) => {
         setSelectedProperty(property);
-        setActiveView('propertyDetail');
+        navigate(`/property/${property.id}`);
     };
 
-    const renderActiveView = () => {
-        if (isSuperAdmin) {
-            // FIX: The most important check: If a client is selected, ALWAYS show the detail view.
-            if (selectedClient) {
-                return <ClientDetailView client={selectedClient} onBack={handleBackToClientList} onSelectProperty={handleSelectProperty} />;
-            }
-            if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => setSelectedProperty(null)} user={currentUser} />;
-            
-            // If no client is selected, render views based on the activeView state
-            switch (activeView) {
-                case 'adminDashboard': 
-                    return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />;
-                case 'adminClients': 
-                    return <ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} onSelectClient={handleSelectClient} />;
-                case 'adminBilling': return <BillingView />;
-                case 'adminSubscriptions': return <AdminSubscriptionsView />;
-                case 'adminSettings': return <AdminSettingsView />;
-                case 'adminAuditLog': return <AuditLogView />;
-                default: 
-                    return <SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} onSelectClient={handleSelectClient} />;
-            }
-        }
-        // ... (rest of the renderActiveView function remains the same)
-        if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); setActiveView('properties'); }} user={currentUser} />;
+    const AdminRoutes = () => (
+        <Routes>
+            <Route path="/admin/dashboard" element={<SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} />} />
+            <Route path="/admin/clients" element={<ClientListView allClients={allClients} loading={clientsLoading} onAddClient={() => setAddClientModalOpen(true)} />} />
+            <Route path="/admin/clients/:clientId" element={<ClientDetailView onSelectProperty={handleSelectProperty} />} />
+            <Route path="/admin/billing" element={<BillingView />} />
+            <Route path="/admin/subscriptions" element={<AdminSubscriptionsView />} />
+            <Route path="/admin/settings" element={<AdminSettingsView />} />
+            <Route path="/admin/auditlog" element={<AuditLogView />} />
+            {/* A default or fallback route for admin */}
+            <Route path="*" element={<SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} />} />
+        </Routes>
+    );
+
+    const UserRoutes = () => {
+        if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); navigate('/properties'); }} user={currentUser} />;
         if (loadingPermissions) return <div className="flex items-center justify-center h-full"><p>Checking permissions...</p></div>;
-        switch (activeView) {
-            case 'dashboard': return hasPermission('properties_view_all') || hasPermission('team_manage') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />;
-            case 'properties': return <PropertiesView onSelectProperty={setSelectedProperty} user={currentUser} userData={userData} hasPermission={hasPermission} />;
-            case 'chat': return <ChatLayout userData={userData} />;
-            case 'team': return hasPermission('team_manage') ? <TeamView user={currentUser} /> : null;
-            case 'templates': return hasPermission('templates_manage') ? <ChecklistsView user={currentUser} /> : null;
-            case 'storage': return hasPermission('storage_view') ? <StorageView user={currentUser} ownerId={userData?.ownerId || currentUser.uid} hasPermission={hasPermission} /> : null;
-            case 'calendar': return hasPermission('tasks_view_all') ? <MasterCalendarView user={currentUser} userData={userData} /> : <StaffDashboard user={currentUser} userData={userData} />;
-            case 'settings': return hasPermission('team_manage') ? <SettingsView user={currentUser} userData={userData} /> : null;
-            default: return hasPermission('properties_view_all') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />;
-        }
+
+        return (
+            <Routes>
+                <Route path="/dashboard" element={hasPermission('properties_view_all') || hasPermission('team_manage') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />} />
+                <Route path="/properties" element={<PropertiesView onSelectProperty={handleSelectProperty} user={currentUser} userData={userData} hasPermission={hasPermission} />} />
+                <Route path="/chat" element={<ChatLayout userData={userData} />} />
+                <Route path="/team" element={hasPermission('team_manage') ? <TeamView user={currentUser} /> : null} />
+                <Route path="/templates" element={hasPermission('templates_manage') ? <ChecklistsView user={currentUser} /> : null} />
+                <Route path="/storage" element={hasPermission('storage_view') ? <StorageView user={currentUser} ownerId={userData?.ownerId || currentUser.uid} hasPermission={hasPermission} /> : null} />
+                <Route path="/calendar" element={hasPermission('tasks_view_all') ? <MasterCalendarView user={currentUser} userData={userData} /> : <StaffDashboard user={currentUser} userData={userData} />} />
+                <Route path="/settings" element={hasPermission('team_manage') ? <SettingsView user={currentUser} userData={userData} /> : null} />
+                 {/* A default or fallback route for users */}
+                <Route path="*" element={hasPermission('properties_view_all') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />} />
+            </Routes>
+        );
     };
 
     const isImpersonating = !!localStorage.getItem('impersonating_admin_uid');
@@ -171,11 +155,11 @@ function AppContent() {
             <EndImpersonationBanner />
             <div className={isImpersonating ? 'pt-10' : ''}>
                 <Layout user={currentUser} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
-                    {renderActiveView()}
+                    {isSuperAdmin ? <AdminRoutes /> : <UserRoutes />}
                 </Layout>
                 {!isSuperAdmin && (
                     <div className="fixed bottom-4 right-4 z-50">
-                        <button onClick={() => setActiveView('chat')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700">
+                        <button onClick={() => navigate('/chat')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700">
                             <MessageSquare size={24} />
                         </button>
                     </div>
@@ -186,7 +170,7 @@ function AppContent() {
     );
 }
 
-// FIX: Make sure App is wrapped in AdminProvider
+// FIX: Removed the <Router> wrapper from here.
 function App() {
     return (
         <AuthProvider>
