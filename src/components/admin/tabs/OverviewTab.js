@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'; // <-- FIX: Added useEffect here
-import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw, User as UserIcon } from 'lucide-react';
 
 // A generic card component for consistent styling
 const Card = ({ children, className = '' }) => (
@@ -34,7 +34,8 @@ const KeyMetricsCard = ({ properties, clientData, monthlyRevenue, occupancyRate 
             </div>
             <div className="text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Current Plan</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{clientData.subscriptionTier || 'N/A'}</p>
+                {/* --- FIX: Use correct plan name source --- */}
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{clientData.subscription?.planName || 'N/A'}</p>
             </div>
             <div className="text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Revenue</p>
@@ -52,6 +53,11 @@ const ContactInfoCard = ({ clientData }) => (
     <Card>
         <CardHeader title="Contact Information" icon={Users} />
         <CardContent className="space-y-3">
+            {/* --- FIX: Added Full Name --- */}
+            <div className="flex items-center text-sm">
+                <UserIcon className="h-4 w-4 text-gray-400 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300 font-semibold">{clientData.fullName || 'N/A'}</span>
+            </div>
             <div className="flex items-start text-sm">
                 <Mail className="h-4 w-4 text-gray-400 mr-3 mt-1 flex-shrink-0" />
                 <a href={`mailto:${clientData.email}`} className="text-indigo-600 dark:text-indigo-400 hover:underline break-all">{clientData.email}</a>
@@ -138,7 +144,8 @@ const SubscriptionCard = ({ clientData, monthlyRevenue }) => (
         <CardContent className="space-y-3">
             <div className="flex justify-between items-center text-sm">
                 <p className="font-medium text-gray-700 dark:text-gray-300">Plan</p>
-                <p className="font-semibold text-gray-900 dark:text-white">{clientData.subscriptionTier || 'N/A'}</p>
+                {/* --- FIX: Use correct plan name source --- */}
+                <p className="font-semibold text-gray-900 dark:text-white">{clientData.subscription?.planName || 'N/A'}</p>
             </div>
             <div className="flex justify-between items-center text-sm">
                 <p className="font-medium text-gray-700 dark:text-gray-300">Monthly Rate</p>
@@ -147,13 +154,15 @@ const SubscriptionCard = ({ clientData, monthlyRevenue }) => (
             <div className="flex justify-between items-center text-sm">
                 <p className="font-medium text-gray-700 dark:text-gray-300">Start Date</p>
                 <p className="text-gray-900 dark:text-white">
-                    {clientData.subscriptionStartDate?.seconds ? new Date(clientData.subscriptionStartDate.seconds * 1000).toLocaleDateString() : 'N/A'}
+                    {/* --- FIX: Use correct start date --- */}
+                    {clientData.subscription?.assignedAt?.seconds ? new Date(clientData.subscription.assignedAt.seconds * 1000).toLocaleDateString() : 'N/A'}
                 </p>
             </div>
             <div className="flex justify-between items-center text-sm">
                 <p className="font-medium text-gray-700 dark:text-gray-300">Next Billing</p>
                 <p className="text-gray-900 dark:text-white">
-                    {clientData.subscriptionEndDate?.seconds ? new Date(clientData.subscriptionEndDate.seconds * 1000).toLocaleDateString() : 'N/A'}
+                    {/* --- FIX: Use correct renewal date --- */}
+                    {clientData.subscription?.renewalDate?.seconds ? new Date(clientData.subscription.renewalDate.seconds * 1000).toLocaleDateString() : 'N/A'}
                 </p>
             </div>
         </CardContent>

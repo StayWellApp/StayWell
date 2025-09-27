@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import the useNavigate hook
+import { useNavigate } from 'react-router-dom';
 import { Plus, Settings, Search, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
+import { getCode } from 'country-list'; // We'll need to add this package
 
 const ALL_COLUMNS = [
   { key: 'companyName', label: 'Company' },
@@ -15,9 +16,8 @@ const ALL_COLUMNS = [
 
 const DEFAULT_COLUMNS = ['companyName', 'fullName', 'subscriptionTier', 'status', 'subscriptionEndDate', 'country'];
 
-// --- FIX: The component no longer needs the onSelectClient prop ---
 const ClientListView = ({ allClients, loading, onAddClient }) => {
-  const navigate = useNavigate(); // Initialize the navigate function
+  const navigate = useNavigate();
   const [sortConfig, setSortConfig] = useState({ key: 'companyName', direction: 'ascending' });
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,24 +35,29 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
     localStorage.setItem('visibleClientColumns', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
 
-  const filteredAndSortedClients = useMemo(() => {
-    let filteredClients = [...allClients];
-    if (searchTerm) {
-      filteredClients = filteredClients.filter(client =>
-        Object.values(client).some(value => 
-          String(value).toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-    }
-    if (sortConfig.key) {
-      filteredClients.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'ascending' ? -1 : 1;
-        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'ascending' ? 1 : -1;
-        return 0;
-      });
-    }
-    return filteredClients;
-  }, [allClients, sortConfig, searchTerm]);
+    const filteredAndSortedClients = useMemo(() => {
+        let filteredClients = [...allClients];
+        if (searchTerm) {
+            filteredClients = filteredClients.filter(client =>
+                Object.values(client).some(value =>
+                    String(value).toLowerCase().includes(searchTerm.toLowerCase())
+                )
+            );
+        }
+        if (sortConfig.key) {
+            filteredClients.sort((a, b) => {
+                // Handle nested subscription object for sorting
+                const valA = sortConfig.key === 'subscriptionTier' ? a.subscription?.planName : a[sortConfig.key];
+                const valB = sortConfig.key === 'subscriptionTier' ? b.subscription?.planName : b[sortConfig.key];
+                
+                if (valA < valB) return sortConfig.direction === 'ascending' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'ascending' ? 1 : -1;
+                return 0;
+            });
+        }
+        return filteredClients;
+    }, [allClients, sortConfig, searchTerm]);
+
 
   const requestSort = (key) => {
     setSortConfig(prev => ({
@@ -79,25 +84,39 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
   const renderCell = (client, columnKey) => {
     const cellValue = client[columnKey];
     switch (columnKey) {
-      case 'companyName':
-        return (
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4 flex-shrink-0">
-                {client.companyName ? client.companyName.charAt(0) : '?'}
-            </div>
-            <span className="font-medium text-gray-900 dark:text-white">{cellValue}</span>
-          </div>
-        );
-      case 'status':
-        const statusColor = cellValue === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-        return <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${statusColor}`}>{cellValue || 'Inactive'}</span>;
-      case 'createdAt':
-      case 'subscriptionEndDate':
-        return cellValue?.seconds ? new Date(cellValue.seconds * 1000).toLocaleDateString() : 'N/A';
-      case 'country':
-        return client.country || 'N/A';
-      default:
-        return cellValue || 'N/A';
+        case 'companyName':
+            return (
+                <div className="flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4 flex-shrink-0">
+                        {client.companyName ? client.companyName.charAt(0) : '?'}
+                    </div>
+                    <span className="font-medium text-gray-900 dark:text-white">{cellValue}</span>
+                </div>
+            );
+        case 'status':
+            const statusColor = cellValue === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+            return <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${statusColor}`}>{cellValue || 'Inactive'}</span>;
+        
+        // --- FIX: Use correct subscription data source ---
+        case 'subscriptionTier':
+            return client.subscription?.planName || 'N/A';
+        case 'subscriptionEndDate':
+            const subDate = client.subscription?.renewalDate;
+            return subDate?.seconds ? new Date(subDate.seconds * 1000).toLocaleDateString() : 'N/A';
+        case 'createdAt':
+            return cellValue?.seconds ? new Date(cellValue.seconds * 1000).toLocaleDateString() : 'N/A';
+
+        // --- FIX: Add country flag ---
+        case 'country':
+            const countryCode = client.country ? getCode(client.country) : null;
+            return (
+                <div className="flex items-center">
+                    {countryCode && <span className={`fi fi-${countryCode.toLowerCase()} mr-2`}></span>}
+                    {client.country || 'N/A'}
+                </div>
+            );
+        default:
+            return cellValue || 'N/A';
     }
   };
 
@@ -164,7 +183,6 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
               filteredAndSortedClients.map((client) => (
                 <tr 
                     key={client.id} 
-                    // --- FIX: Use navigate to change the URL on click ---
                     onClick={() => navigate(`/admin/clients/${client.id}`)} 
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                 >
