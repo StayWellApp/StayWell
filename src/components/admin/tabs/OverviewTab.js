@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw, User as UserIcon, Briefcase as BriefcaseIcon } from 'lucide-react';
+import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw, User as UserIcon, Briefcase as BriefcaseIcon, CheckCircle, Clock } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 // A generic card component for consistent styling
 const Card = ({ children, className = '' }) => (
@@ -211,45 +212,60 @@ const SubscriptionCard = ({ clientData, monthlyRevenue, setActiveTab }) => (
     </Card>
 );
 
-const RecentActivityCard = () => {
-    const activity = [
-        { id: 1, type: 'property_add', description: 'Added "Sunset Villa"', timestamp: '2 hours ago' },
-        { id: 2, type: 'subscription', description: 'Upgraded to Pro Plan', timestamp: '1 day ago' },
-        { id: 3, type: 'user_invite', description: 'Invited a new team member', timestamp: '3 days ago' },
-        { id: 4, type: 'property_update', description: 'Updated photos for "Beach House"', timestamp: '5 days ago' },
-    ];
+const getActivityIcon = (logType) => {
+    switch(logType) {
+        case 'USER_CREATED':
+            return <UserIcon className="h-4 w-4 text-green-500" />;
+        case 'SUBSCRIPTION_UPDATED':
+            return <RefreshCw className="h-4 w-4 text-blue-500" />;
+        case 'PROPERTY_ADDED':
+            return <Building className="h-4 w-4 text-indigo-500" />;
+        case 'STATUS_CHANGED':
+             return <CheckCircle className="h-4 w-4 text-yellow-500" />;
+        default:
+            return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+};
 
+const RecentActivityCard = ({ logs, loading }) => {
     return (
         <Card>
             <CardHeader title="Recent Activity" icon={RefreshCw} />
             <CardContent>
-                <ul className="space-y-3">
-                    {activity.map(item => (
-                        <li key={item.id} className="flex items-center text-sm">
-                            <div className="bg-gray-100 dark:bg-gray-700 rounded-full h-8 w-8 flex items-center justify-center mr-3">
-                                <Building className="h-4 w-4 text-gray-500" />
-                            </div>
-                            <div className="flex-grow">
-                                <p className="text-gray-800 dark:text-gray-200">{item.description}</p>
-                                <p className="text-xs text-gray-400">{item.timestamp}</p>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
+                {loading ? (
+                    <div className="text-center text-gray-500">Loading activity...</div>
+                ) : logs.length === 0 ? (
+                    <div className="text-center text-gray-500">No recent activity found.</div>
+                ) : (
+                    <ul className="space-y-4">
+                        {logs.map(log => (
+                            <li key={log.id} className="flex items-start text-sm">
+                                <div className="bg-gray-100 dark:bg-gray-700 rounded-full h-8 w-8 flex items-center justify-center mr-3 flex-shrink-0">
+                                    {getActivityIcon(log.type)}
+                                </div>
+                                <div className="flex-grow">
+                                    <p className="text-gray-800 dark:text-gray-200">{log.description}</p>
+                                    <p className="text-xs text-gray-400">
+                                        {log.timestamp ? formatDistanceToNow(log.timestamp.toDate(), { addSuffix: true }) : 'Just now'}
+                                    </p>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </CardContent>
         </Card>
     );
 };
 
-
 // Main OverviewTab Component
-const OverviewTab = ({ clientData, properties, monthlyRevenue, occupancyRate, onUpdateNotes, setActiveTab }) => {
+const OverviewTab = ({ clientData, properties, monthlyRevenue, occupancyRate, onUpdateNotes, setActiveTab, activityLogs, loadingLogs }) => {
     return (
         <div className="space-y-6">
             <KeyMetrics properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                    <RecentActivityCard />
+                    <RecentActivityCard logs={activityLogs} loading={loadingLogs} />
                     <AdminNotesCard initialNotes={clientData.adminNotes} onUpdateNotes={onUpdateNotes} />
                 </div>
                 <div className="space-y-6">

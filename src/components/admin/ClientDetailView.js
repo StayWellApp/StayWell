@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../../firebase-config';
-import { doc, onSnapshot, collection, query, where, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, updateDoc, orderBy } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare, FolderOpen, BarChart2, Edit, Send } from 'lucide-react';
 
@@ -26,10 +26,13 @@ const ClientDetailView = ({ onSelectProperty }) => {
     const [allPlans, setAllPlans] = useState([]);
     const [loadingPlans, setLoadingPlans] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [activityLogs, setActivityLogs] = useState([]);
+    const [loadingLogs, setLoadingLogs] = useState(true);
 
     useEffect(() => {
         if (!clientId) return;
 
+        setLoadingClient(true);
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
             if (doc.exists()) {
                 setClientData({ id: doc.id, ...doc.data() });
@@ -39,28 +42,55 @@ const ClientDetailView = ({ onSelectProperty }) => {
             }
             setLoadingClient(false);
         });
+
+        setLoadingProperties(true);
         const q = query(collection(db, "properties"), where("ownerId", "==", clientId));
         const unsubProps = onSnapshot(q, (snapshot) => {
             setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setLoadingProperties(false);
         });
+
+        setLoadingPlans(true);
         const unsubPlans = onSnapshot(collection(db, "plans"), (snapshot) => {
             setAllPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setLoadingPlans(false);
         });
+        
+        setLoadingLogs(true);
+        const logsQuery = query(
+            collection(db, "users", clientId, "activity_logs"),
+            orderBy("timestamp", "desc")
+        );
+        const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
+            setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoadingLogs(false);
+        });
+
 
         return () => {
             unsubClient();
             unsubProps();
             unsubPlans();
+            unsubLogs();
         };
     }, [clientId, navigate]);
-    
-    // Helper functions (handleUpdateNotes, handleImpersonate, etc.)
-    const handleUpdateNotes = async (updatedNotes) => { /* ... */ };
-    const handleImpersonate = (clientToImpersonate) => { /* ... */ };
-    const refreshClientData = () => { /* ... */ };
 
+    const handleUpdateNotes = async (updatedNotes) => {
+        const clientRef = doc(db, 'users', clientId);
+        try {
+            await updateDoc(clientRef, { adminNotes: updatedNotes });
+            toast.success("Notes updated successfully!");
+        } catch (error) {
+            toast.error("Failed to update notes.");
+        }
+    };
+
+    const handleImpersonate = (clientToImpersonate) => {
+        console.log(`Impersonating ${clientToImpersonate.fullName} (UID: ${clientToImpersonate.id})`);
+        toast.info(`Starting impersonation session for ${clientToImpersonate.companyName}.`);
+    };
+
+    const refreshClientData = () => { /* Placeholder for future use */ };
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: User },
@@ -79,7 +109,16 @@ const ClientDetailView = ({ onSelectProperty }) => {
 
         switch (activeTab) {
             case 'overview':
-                return <OverviewTab clientData={clientData} properties={properties} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} onUpdateNotes={handleUpdateNotes} setActiveTab={setActiveTab} />;
+                return <OverviewTab 
+                            clientData={clientData} 
+                            properties={properties} 
+                            monthlyRevenue={monthlyRevenue} 
+                            occupancyRate={occupancyRate} 
+                            onUpdateNotes={handleUpdateNotes} 
+                            setActiveTab={setActiveTab}
+                            activityLogs={activityLogs}
+                            loadingLogs={loadingLogs}
+                        />;
             case 'properties':
                 return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
             case 'management':
@@ -112,12 +151,9 @@ const ClientDetailView = ({ onSelectProperty }) => {
 
     return (
         <>
-            {/* --- FIX: Root element now controls the full-width background --- */}
             <div className="min-h-full bg-gray-50 dark:bg-gray-900">
                 <div className="py-8">
-                    {/* --- FIX: A single container now wraps all content for consistent width --- */}
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        {/* Header and Tabs are combined into a single "card" */}
                         <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg">
                             <div className="px-4 sm:px-6 py-4">
                                 <div className="flex items-center justify-between">
@@ -156,8 +192,6 @@ const ClientDetailView = ({ onSelectProperty }) => {
                                 </nav>
                             </div>
                         </div>
-
-                        {/* Content area now sits on the gray background */}
                         <div className="mt-8">
                             {renderTabContent()}
                         </div>
