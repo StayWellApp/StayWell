@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, Calendar, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react'; // <-- FIX: Added useEffect here
+import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw } from 'lucide-react';
 
 // A generic card component for consistent styling
 const Card = ({ children, className = '' }) => (

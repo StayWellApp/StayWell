@@ -2,7 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { doc, updateDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { X, Save } from 'lucide-react';
+import { X, Save, Building, User, Mail, Phone, MapPin, Hash } from 'lucide-react';
+
+// --- FIX: InputField moved outside of the main component ---
+// This component is now defined only once and won't be re-created on every render.
+const InputField = ({ label, name, value, onChange, placeholder, type = "text", icon: Icon }) => (
+    <div>
+        <label htmlFor={name} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+        <div className="mt-1 relative rounded-md shadow-sm">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Icon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+            </div>
+            <input
+                type={type}
+                name={name}
+                id={name}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+        </div>
+    </div>
+);
+
 
 const EditClientModal = ({ isOpen, onClose, client }) => {
     const [formData, setFormData] = useState({});
@@ -15,7 +38,6 @@ const EditClientModal = ({ isOpen, onClose, client }) => {
                 email: client.email || '',
                 phone: client.phone || '',
                 country: client.country || '',
-                // Initialize new billing fields
                 billingAddress: client.billingAddress || '',
                 vatNumber: client.vatNumber || ''
             });
@@ -42,43 +64,34 @@ const EditClientModal = ({ isOpen, onClose, client }) => {
         }
     };
 
-    const InputField = ({ label, name, value, onChange, placeholder, type = "text" }) => (
-        <div>
-            <label htmlFor={name} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-            <input
-                type={type}
-                name={name}
-                id={name}
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder}
-                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            />
-        </div>
-    );
-
-
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Client Details</h2>
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 z-50 flex justify-center items-center p-4 transition-opacity">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl transform transition-all">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Client Details</h2>
                     <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
                         <X className="h-5 w-5 text-gray-500" />
                     </button>
                 </div>
                 <form onSubmit={handleSubmit}>
-                    <div className="p-6 space-y-4">
-                        <InputField label="Company Name" name="companyName" value={formData.companyName} onChange={handleChange} placeholder="e.g. StayWell Inc." />
-                        <InputField label="Contact Name" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="e.g. John Doe" />
-                        <InputField label="Email Address" name="email" value={formData.email} onChange={handleChange} placeholder="e.g. john.doe@example.com" type="email"/>
-                        <InputField label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} placeholder="e.g. +1 234 567 890" />
-                        <InputField label="Country" name="country" value={formData.country} onChange={handleChange} placeholder="e.g. United States" />
-                        <InputField label="Billing Address" name="billingAddress" value={formData.billingAddress} onChange={handleChange} placeholder="e.g. 123 Main St, Anytown, USA" />
-                        <InputField label="VAT Number" name="vatNumber" value={formData.vatNumber} onChange={handleChange} placeholder="e.g. GB123456789" />
+                    <div className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <InputField label="Company Name" name="companyName" value={formData.companyName} onChange={handleChange} placeholder="e.g. StayWell Inc." icon={Building} />
+                            <InputField label="Contact Name" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="e.g. John Doe" icon={User} />
+                            <InputField label="Email Address" name="email" value={formData.email} onChange={handleChange} placeholder="e.g. john.doe@example.com" type="email" icon={Mail} />
+                            <InputField label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} placeholder="e.g. +1 234 567 890" icon={Phone} />
+                            <div className="md:col-span-2">
+                                <InputField label="Billing Address" name="billingAddress" value={formData.billingAddress} onChange={handleChange} placeholder="e.g. 123 Main St, Anytown, USA" icon={MapPin} />
+                            </div>
+                            <InputField label="VAT Number" name="vatNumber" value={formData.vatNumber} onChange={handleChange} placeholder="e.g. GB123456789" icon={Hash} />
+                            <InputField label="Country" name="country" value={formData.country} onChange={handleChange} placeholder="e.g. United States" icon={MapPin} />
+                        </div>
                     </div>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-                        <button type="submit" className="flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
+                    <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+                         <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
+                            Cancel
+                        </button>
+                        <button type="submit" className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
                             <Save className="h-4 w-4 mr-2" /> Save Changes
                         </button>
                     </div>
