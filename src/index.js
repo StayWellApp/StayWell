@@ -1,20 +1,20 @@
-// --- src/index.js ---
-// Replace the entire contents of your index.js file with this code.
-import './i18n'; // Import the i18n configuration
+import './i18n';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-import { ThemeProvider } from './contexts/ThemeContext'; // ✨ NEW: Import ThemeProvider
+import { ThemeProvider } from './contexts/ThemeContext';
+import { BrowserRouter } from 'react-router-dom'; // Import BrowserRouter
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    {/* ✨ NEW: Wrap the entire App in the ThemeProvider */}
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );
 

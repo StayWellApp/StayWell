@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../../firebase-config';
 import { doc, onSnapshot, collection, query, where, updateDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
@@ -13,48 +14,54 @@ import BillingTab from './tabs/BillingTab';
 import DocumentsTab from './tabs/DocumentsTab';
 import ClientAnalyticsView from './tabs/ClientAnalyticsView';
 
-const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
+const ClientDetailView = ({ onSelectProperty }) => {
+  const { clientId } = useParams();
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState('overview');
-  const [clientData, setClientData] = useState(client);
+  const [clientData, setClientData] = useState(null);
+  const [loadingClient, setLoadingClient] = useState(true);
   const [properties, setProperties] = useState([]);
   const [loadingProperties, setLoadingProperties] = useState(true);
-  
-  // --- FIX: Add state for subscription plans ---
   const [allPlans, setAllPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
 
   useEffect(() => {
-    const unsubClient = onSnapshot(doc(db, "users", client.id), (doc) => {
+    if (!clientId) return;
+
+    setLoadingClient(true);
+    const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
       if (doc.exists()) {
         setClientData({ id: doc.id, ...doc.data() });
+      } else {
+        toast.error("Client not found.");
+        navigate('/admin/clients');
       }
+      setLoadingClient(false);
     });
 
     setLoadingProperties(true);
-    const q = query(collection(db, "properties"), where("ownerId", "==", client.id));
+    const q = query(collection(db, "properties"), where("ownerId", "==", clientId));
     const unsubProps = onSnapshot(q, (snapshot) => {
-      const propsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setProperties(propsData);
+      setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoadingProperties(false);
     });
 
-    // --- FIX: Fetch subscription plans ---
     setLoadingPlans(true);
     const unsubPlans = onSnapshot(collection(db, "plans"), (snapshot) => {
-        const plansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setAllPlans(plansData);
-        setLoadingPlans(false);
+      setAllPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoadingPlans(false);
     });
 
     return () => {
-        unsubClient();
-        unsubProps();
-        unsubPlans();
+      unsubClient();
+      unsubProps();
+      unsubPlans();
     };
-  }, [client.id]);
-  
+  }, [clientId, navigate]);
+
   const handleUpdateNotes = async (updatedNotes) => {
-    const clientRef = doc(db, 'users', client.id);
+    const clientRef = doc(db, 'users', clientId);
     try {
       await updateDoc(clientRef, { adminNotes: updatedNotes });
       toast.success("Notes updated successfully!");
@@ -63,22 +70,16 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
     }
   };
 
-  // --- FIX: Add the impersonation handler function ---
   const handleImpersonate = (clientToImpersonate) => {
-      // This is a placeholder for the actual impersonation logic.
-      // You would typically call a Firebase Function here to get a custom token.
-      console.log(`Impersonating ${clientToImpersonate.fullName} (UID: ${clientToImpersonate.id})`);
-      toast.info(`Starting impersonation session for ${clientToImpersonate.companyName}.`);
-      // Example: localStorage.setItem('impersonating_uid', clientToImpersonate.id);
-      // window.location.reload();
+    console.log(`Impersonating ${clientToImpersonate.fullName} (UID: ${clientToImpersonate.id})`);
+    toast.info(`Starting impersonation session for ${clientToImpersonate.companyName}.`);
   };
 
-  // --- FIX: Add a function to refresh data after updates ---
   const refreshClientData = () => {
-      const clientRef = doc(db, "users", client.id);
-      onSnapshot(clientRef, (doc) => {
-          if(doc.exists()) setClientData({ id: doc.id, ...doc.data() });
-      });
+    const clientRef = doc(db, "users", clientId);
+    onSnapshot(clientRef, (doc) => {
+      if (doc.exists()) setClientData({ id: doc.id, ...doc.data() });
+    });
   };
 
   const tabs = [
@@ -98,30 +99,15 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
 
     switch (activeTab) {
       case 'overview':
-        return <OverviewTab 
-                  clientData={clientData} 
-                  properties={properties}
-                  loadingProperties={loadingProperties}
-                  planDetails={planDetails}
-                  monthlyRevenue={monthlyRevenue}
-                  occupancyRate={occupancyRate}
-                  onUpdateNotes={handleUpdateNotes} 
-                />;
+        return <OverviewTab clientData={clientData} properties={properties} loadingProperties={loadingProperties} planDetails={planDetails} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} onUpdateNotes={handleUpdateNotes} />;
       case 'properties':
         return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
       case 'management':
-        // --- FIX: Pass all required props to ManagementTab ---
-        return <ManagementTab 
-                    client={clientData} 
-                    refreshClientData={refreshClientData}
-                    allPlans={allPlans}
-                    loadingPlans={loadingPlans}
-                    onImpersonate={handleImpersonate}
-                />;
-       case 'billing':
+        return <ManagementTab client={clientData} refreshClientData={refreshClientData} allPlans={allPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate} />;
+      case 'billing':
         return <BillingTab client={clientData} />;
-       case 'communication':
-         return <CommunicationTab client={clientData} />;
+      case 'communication':
+        return <CommunicationTab client={clientData} />;
       case 'documents':
         return <DocumentsTab client={clientData} />;
       case 'analytics':
@@ -131,56 +117,43 @@ const ClientDetailView = ({ client, onBack, onSelectProperty }) => {
     }
   };
 
-  if (!clientData) {
-    return <div>Loading client...</div>;
+  if (loadingClient || !clientData) {
+    return <div className="flex items-center justify-center h-full"><p>Loading client details...</p></div>;
   }
 
   return (
     <div className="h-full flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-                <div className='flex items-center space-x-4'>
-                    <button onClick={onBack} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                    </button>
-                    <div className="flex items-center">
-                        <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4">
-                            {clientData.companyName ? clientData.companyName.charAt(0) : '?'}
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{clientData.companyName}</h1>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{clientData.email}</p>
-                        </div>
-                    </div>
-                </div>
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <div className='flex items-center space-x-4'>
+            <button onClick={() => navigate('/admin/clients')} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+              <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            </button>
+            <div className="flex items-center">
+              <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-300 mr-4">
+                {clientData.companyName ? clientData.companyName.charAt(0) : '?'}
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">{clientData.companyName}</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{clientData.email}</p>
+              </div>
             </div>
+          </div>
         </div>
-        
-        {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="-mb-px flex space-x-6 px-6 overflow-x-auto" aria-label="Tabs">
-            {tabs.map((tab) => (
-                <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`${
-                        activeTab === tab.id
-                        ? 'border-indigo-500 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500'
-                    } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
-                    >
-                    <tab.icon className="mr-2 h-5 w-5" />
-                    {tab.label}
-                </button>
-            ))}
-            </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="flex-grow p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900">
-            {renderTabContent()}
-        </div>
+      </div>
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="-mb-px flex space-x-6 px-6 overflow-x-auto" aria-label="Tabs">
+          {tabs.map((tab) => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`${activeTab === tab.id ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}>
+              <tab.icon className="mr-2 h-5 w-5" />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+      <div className="flex-grow p-6 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+        {renderTabContent()}
+      </div>
     </div>
   );
 };
