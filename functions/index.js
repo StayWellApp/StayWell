@@ -10,11 +10,11 @@ const adminTasks = require('./src/admin');
 const tasks = require('./src/tasks');
 
 // Export each function individually at the top level
-// This makes them discoverable by Firebase
 exports.logUserCreation = activityLogs.logUserCreation;
 exports.logUserUpdates = activityLogs.logUserUpdates;
 exports.logPropertyCreation = activityLogs.logPropertyCreation;
 exports.logPropertyUpdates = activityLogs.logPropertyUpdates;
+exports.logPropertyDeletion = activityLogs.logPropertyDeletion; // <-- ADD THIS LINE
 
 exports.uploadProof = automation.uploadProof;
 exports.onBookingReceived = automation.onBookingReceived;

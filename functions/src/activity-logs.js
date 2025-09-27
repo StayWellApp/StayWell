@@ -62,3 +62,18 @@ exports.logPropertyUpdates = functions.firestore
         }
         return null;
     });
+
+// --- NEW FUNCTION TO LOG PROPERTY DELETIONS ---
+exports.logPropertyDeletion = functions.firestore
+    .document("properties/{propertyId}")
+    .onDelete((snap, context) => {
+        const deletedProperty = snap.data();
+        const ownerId = deletedProperty.ownerId;
+
+        if (ownerId) {
+            const description = `Property deleted: "${deletedProperty.propertyName || 'Unnamed Property'}".`;
+            // For deletions, we'll log who performed it as the owner, since the actor might not be available.
+            return createActivityLog(ownerId, "PROPERTY_DELETED", description, ownerId);
+        }
+        return null;
+    });
