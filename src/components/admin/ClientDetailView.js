@@ -35,7 +35,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
             if (doc.exists()) {
                 const data = doc.data();
-                // Ensure adminNotes is always an array for frontend consistency
+                // FIX: Ensure adminNotes is always an array to prevent errors
                 if (!Array.isArray(data.adminNotes)) {
                     data.adminNotes = [];
                 }
