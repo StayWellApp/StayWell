@@ -60,28 +60,12 @@ const ClientDetailView = ({ onSelectProperty }) => {
         }
 
         const clientRef = doc(db, 'users', clientId);
-        
-        const noteToAddForFirestore = { 
-            ...newNote, 
-            id: Date.now().toString(), 
-            createdAt: serverTimestamp(), 
-            createdBy: auth.currentUser.displayName || auth.currentUser.email 
-        };
+        const noteToAdd = { ...newNote, id: Date.now().toString(), createdAt: serverTimestamp(), createdBy: auth.currentUser.displayName || auth.currentUser.email };
 
         try {
-            await updateDoc(clientRef, { adminNotes: arrayUnion(noteToAddForFirestore) });
+            await updateDoc(clientRef, { adminNotes: arrayUnion(noteToAdd) });
             toast.success("Note added successfully!");
-            
-            const noteToAddForState = {
-                ...noteToAddForFirestore,
-                createdAt: { toDate: () => new Date() } 
-            };
-
-            setClientData(prevData => ({
-                ...prevData,
-                adminNotes: [...(prevData.adminNotes || []), noteToAddForState]
-            }));
-
+            // The onSnapshot listener will now handle the UI update automatically.
         } catch (error) {
             console.error("Error adding note: ", error);
             toast.error("Failed to add note. Ensure the notes field in Firestore is an array.");
