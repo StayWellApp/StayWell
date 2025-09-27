@@ -124,7 +124,7 @@ const SubscriptionCard = ({ clientData, monthlyRevenue, setActiveTab }) => (
             <div className="flex justify-between items-center text-sm"><p className="font-medium text-gray-700 dark:text-gray-300">Plan</p><p className="font-semibold text-gray-900 dark:text-white">{clientData.subscription?.planName || 'N/A'}</p></div>
             <div className="flex justify-between items-center text-sm"><p className="font-medium text-gray-700 dark:text-gray-300">Monthly Rate</p><p className="font-semibold text-gray-900 dark:text-white">${monthlyRevenue}</p></div>
             <div className="flex justify-between items-center text-sm"><p className="font-medium text-gray-700 dark:text-gray-300">Start Date</p><p className="text-gray-900 dark:text-white">{clientData.subscription?.assignedAt?.seconds ? new Date(clientData.subscription.assignedAt.seconds * 1000).toLocaleDateString() : 'N/A'}</p></div>
-            <div className="flex justify-between items-center text-sm"><p className="font-medium text-gray-700 dark:text-gray-300">Next Billing</p><p className="font-semibold text-gray-900 dark:text-white">{clientData.subscription?.renewalDate?.seconds ? new Date(clientData.subscription.renewalDate.seconds * 1000).toLocaleDateString() : 'N/A'}</p></div>
+            <div className="flex justify-between items-center text-sm"><p className="font-medium text-gray-700 dark:text-gray-300">Next Billing</p><p className="text-semibold text-gray-900 dark:text-white">{clientData.subscription?.renewalDate?.seconds ? new Date(clientData.subscription.renewalDate.seconds * 1000).toLocaleDateString() : 'N/A'}</p></div>
         </CardContent>
     </Card>
 );
