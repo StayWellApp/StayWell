@@ -22,8 +22,16 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if request.auth.uid == userId || isSuperAdmin();
       allow list: if isSuperAdmin();
-      // THIS IS THE CORRECTED RULE
       allow write, create: if request.auth.uid == userId || isSuperAdmin();
+
+      // --- FIX: ADDED RULE FOR ACTIVITY LOG SUBCOLLECTION ---
+      // This rule explicitly allows super admins to read logs.
+      match /activity_logs/{logId} {
+        allow read: if isSuperAdmin();
+        // Writes are blocked from the client to ensure logs are only created by the backend.
+        allow write: if false;
+      }
+      // --- END OF FIX ---
     }
     match /users/{userId}/configs/{configId} {
       allow read, write: if request.auth.uid == userId || isSuperAdmin();
@@ -68,7 +76,7 @@ service cloud.firestore {
     }
     match /tasks/{taskId}/comments/{commentId} {
         allow read, create: if get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid ||
-                           get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
+                                get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
     }
   }
 }
