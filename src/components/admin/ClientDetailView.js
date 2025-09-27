@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase-config';
-import { doc, onSnapshot, collection, query, where, updateDoc, orderBy, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, updateDoc, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare, FolderOpen, BarChart2, Edit, Send } from 'lucide-react';
 
@@ -33,7 +33,6 @@ const ClientDetailView = ({ onSelectProperty }) => {
         if (!clientId) return;
 
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
-            console.log("Firestore listener fired with new clientData."); // For debugging
             if (doc.exists()) {
                 const data = doc.data();
                 if (!Array.isArray(data.adminNotes)) {
@@ -61,14 +60,22 @@ const ClientDetailView = ({ onSelectProperty }) => {
         }
 
         const clientRef = doc(db, 'users', clientId);
-        const noteToAdd = { ...newNote, id: Date.now().toString(), createdAt: serverTimestamp(), createdBy: auth.currentUser.displayName || auth.currentUser.email };
+        // --- THIS IS THE FIX ---
+        // Replace serverTimestamp() with a standard JavaScript Date object.
+        // Firestore will convert this to a Timestamp on its own.
+        const noteToAdd = { 
+            ...newNote, 
+            id: Date.now().toString(), 
+            createdAt: new Date(), 
+            createdBy: auth.currentUser.displayName || auth.currentUser.email 
+        };
 
         try {
             await updateDoc(clientRef, { adminNotes: arrayUnion(noteToAdd) });
             toast.success("Note added successfully!");
         } catch (error) {
             console.error("Error adding note: ", error);
-            toast.error("Failed to add note. Ensure the notes field in Firestore is an array.");
+            toast.error("Failed to add note.");
         }
     };
 
