@@ -14,7 +14,7 @@ exports.logUserCreation = activityLogs.logUserCreation;
 exports.logUserUpdates = activityLogs.logUserUpdates;
 exports.logPropertyCreation = activityLogs.logPropertyCreation;
 exports.logPropertyUpdates = activityLogs.logPropertyUpdates;
-exports.logPropertyDeletion = activityLogs.logPropertyDeletion; // <-- ADD THIS LINE
+exports.logPropertyDeletion = activityLogs.logPropertyDeletion;
 
 exports.uploadProof = automation.uploadProof;
 exports.onBookingReceived = automation.onBookingReceived;
