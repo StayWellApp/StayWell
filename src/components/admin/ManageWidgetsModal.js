@@ -1,39 +1,42 @@
-// src/components/admin/ManageWidgetsModal.js
-
 import React from 'react';
+import { X } from 'lucide-react';
 
-const ManageWidgetsModal = ({ isOpen, onClose, allWidgets, visibleWidgets, onVisibilityChange }) => {
+const ManageWidgetsModal = ({ isOpen, onClose, widgets, visibleWidgets, onWidgetToggle }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
-                <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Manage Widgets</h2>
-                <div className="space-y-3">
-                    {allWidgets.map(widget => (
-                        <div key={widget.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                            <span className="font-medium text-gray-800 dark:text-gray-200">{widget.name}</span>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    className="sr-only peer"
-                                    checked={visibleWidgets.includes(widget.id)}
-                                    onChange={() => onVisibilityChange(widget.id)}
-                                />
-                                <div className="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-indigo-600"></div>
-                            </label>
-                        </div>
-                    ))}
-                </div>
-                <div className="mt-6 text-right">
-                    <button
-                        onClick={onClose}
-                        className="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition-colors"
-                    >
-                        Done
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 transition-opacity duration-300">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 transform transition-all duration-300 scale-95 opacity-0 animate-scale-in">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Manage Widgets</h2>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                     </button>
                 </div>
+                <div className="space-y-3">
+                    {Object.keys(widgets).map(widgetKey => (
+                        <label key={widgetKey} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                            <span className="text-gray-800 dark:text-gray-200 font-medium">{widgets[widgetKey].name}</span>
+                            <input
+                                type="checkbox"
+                                className="form-checkbox h-5 w-5 text-indigo-600 rounded-md bg-gray-200 dark:bg-gray-600 border-transparent focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500"
+                                checked={visibleWidgets.includes(widgetKey)}
+                                onChange={() => onWidgetToggle(widgetKey)}
+                            />
+                        </label>
+                    ))}
+                </div>
             </div>
+            {/* Add this to your tailwind.config.js if you don't have it */}
+            <style jsx global>{`
+                @keyframes scale-in {
+                    from { transform: scale(0.95); opacity: 0; }
+                    to { transform: scale(1); opacity: 1; }
+                }
+                .animate-scale-in {
+                    animation: scale-in 0.2s ease-out forwards;
+                }
+            `}</style>
         </div>
     );
 };
