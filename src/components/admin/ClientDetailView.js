@@ -35,9 +35,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
             if (doc.exists()) {
                 const data = doc.data();
-                // FIX: This is the critical change.
-                // If adminNotes is not an array (i.e., it's an old string),
-                // treat it as an empty array to prevent save/delete errors.
+                // Ensure adminNotes is always an array for frontend consistency
                 if (!Array.isArray(data.adminNotes)) {
                     data.adminNotes = [];
                 }
@@ -68,7 +66,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
             toast.success("Note added successfully!");
         } catch (error) {
             console.error("Error adding note: ", error);
-            toast.error("Failed to add note. Please ensure the client's notes field in Firestore is an array.");
+            toast.error("Failed to add note. Ensure the notes field in Firestore is an array.");
         }
     };
 
@@ -85,7 +83,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         }
     };
     
-    const handleImpersonate = async (clientToImpersonate) => { /* Impersonation logic */ };
+    const handleImpersonate = (clientToImpersonate) => { /* Impersonation logic */ };
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: User }, { id: 'properties', label: 'Properties', icon: Building },
