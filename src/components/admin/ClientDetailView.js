@@ -5,7 +5,6 @@ import { doc, onSnapshot, collection, query, where, updateDoc } from 'firebase/f
 import { toast } from 'react-toastify';
 import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare, FolderOpen, BarChart2 } from 'lucide-react';
 
-// Import all tab components
 import OverviewTab from './tabs/OverviewTab';
 import PropertiesTab from './tabs/PropertiesTab';
 import ManagementTab from './tabs/ManagementTab';
@@ -27,6 +26,8 @@ const ClientDetailView = ({ onSelectProperty }) => {
   const [loadingPlans, setLoadingPlans] = useState(true);
 
   useEffect(() => {
+    // --- THIS IS THE FIX ---
+    // Do not proceed if we don't have a clientId from the URL yet.
     if (!clientId) return;
 
     setLoadingClient(true);
@@ -93,7 +94,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
   ];
 
   const renderTabContent = () => {
-    const planDetails = { planName: clientData.subscriptionTier || 'N/A' };
+    const planDetails = { planName: clientData?.subscriptionTier || 'N/A' };
     const monthlyRevenue = 0;
     const occupancyRate = 0;
 

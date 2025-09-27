@@ -45,6 +45,7 @@ function AppContent() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // --- FIX: Only run this query if we know the user is a super admin ---
     if (isSuperAdmin) {
       setClientsLoading(true);
       const q = query(collection(db, "users"), where("role", "==", "owner"));
@@ -53,8 +54,6 @@ function AppContent() {
         setClientsLoading(false);
       }, () => setClientsLoading(false));
       return () => unsubscribe();
-    } else {
-      setAllClients([]);
     }
   }, [isSuperAdmin]);
 
@@ -86,18 +85,16 @@ function AppContent() {
     return () => authUnsubscribe();
   }, []);
 
-
   const handleSelectProperty = (property) => {
     setSelectedProperty(property);
     navigate('/property-detail');
   };
 
   const AdminLayout = () => {
-    // --- FIX: Add a guard clause for AdminLayout to prevent crashes ---
     if (!userData) {
       return <div className="flex items-center justify-center h-screen"><p>Loading Admin Profile...</p></div>;
     }
-    // --- FIX: Create a dummy hasPermission function for admins who have all permissions ---
+    // Since super admins have all permissions, we can create a function that always returns true.
     const adminHasPermission = () => true;
 
     return (
