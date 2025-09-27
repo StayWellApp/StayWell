@@ -35,7 +35,9 @@ const ClientDetailView = ({ onSelectProperty }) => {
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
             if (doc.exists()) {
                 const data = doc.data();
-                // FIX: Ensure adminNotes is always an array to prevent errors
+                // FIX: This is the critical change.
+                // If adminNotes is not an array (i.e., it's an old string),
+                // treat it as an empty array to prevent save/delete errors.
                 if (!Array.isArray(data.adminNotes)) {
                     data.adminNotes = [];
                 }
@@ -49,17 +51,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         
         const unsubProps = onSnapshot(query(collection(db, "properties"), where("ownerId", "==", clientId)), (snapshot) => { setProperties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoadingProperties(false); });
         const unsubPlans = onSnapshot(collection(db, "plans"), (snapshot) => { setAllPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoadingPlans(false); });
-        const unsubLogs = onSnapshot(query(collection(db, "users", clientId, "activity_logs"), orderBy("timestamp", "desc")), 
-            (snapshot) => {
-                setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                setLoadingLogs(false);
-            },
-            (error) => {
-                console.error("Error fetching activity logs: ", error);
-                toast.error("Could not load activity logs.");
-                setLoadingLogs(false);
-            }
-        );
+        const unsubLogs = onSnapshot(query(collection(db, "users", clientId, "activity_logs"), orderBy("timestamp", "desc")), (snapshot) => { setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoadingLogs(false); });
 
         return () => { unsubClient(); unsubProps(); unsubPlans(); unsubLogs(); };
     }, [clientId, navigate]);
@@ -76,7 +68,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
             toast.success("Note added successfully!");
         } catch (error) {
             console.error("Error adding note: ", error);
-            toast.error("Failed to add note. Ensure the notes field in Firestore is an array.");
+            toast.error("Failed to add note. Please ensure the client's notes field in Firestore is an array.");
         }
     };
 
