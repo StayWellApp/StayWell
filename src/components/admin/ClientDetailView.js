@@ -33,6 +33,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         if (!clientId) return;
 
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
+            console.log("Firestore listener fired with new clientData."); // For debugging
             if (doc.exists()) {
                 const data = doc.data();
                 if (!Array.isArray(data.adminNotes)) {
@@ -65,7 +66,6 @@ const ClientDetailView = ({ onSelectProperty }) => {
         try {
             await updateDoc(clientRef, { adminNotes: arrayUnion(noteToAdd) });
             toast.success("Note added successfully!");
-            // The onSnapshot listener is now the single source of truth and will handle all UI updates.
         } catch (error) {
             console.error("Error adding note: ", error);
             toast.error("Failed to add note. Ensure the notes field in Firestore is an array.");
