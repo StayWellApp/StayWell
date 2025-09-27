@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw, User as UserIcon, TrendingUp, Target, Briefcase as BriefcaseIcon } from 'lucide-react';
+import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw, User as UserIcon, Briefcase as BriefcaseIcon } from 'lucide-react';
 
 // A generic card component for consistent styling
 const Card = ({ children, className = '' }) => (
@@ -24,88 +24,7 @@ const CardContent = ({ children, className = '' }) => (
     </div>
 );
 
-
-// --- START: NEW KEY METRICS OPTIONS ---
-
-// --- OPTION 1: Modern Stat Cards (Default) ---
-const KeyMetricsCards = ({ properties, clientData, monthlyRevenue, occupancyRate }) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-            <CardContent className="flex items-center">
-                <div className="p-3 rounded-full bg-indigo-100 dark:bg-indigo-900/50 mr-4">
-                    <Building className="h-6 w-6 text-indigo-500 dark:text-indigo-400" />
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Properties</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{properties.length}</p>
-                </div>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardContent className="flex items-center">
-                <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/50 mr-4">
-                    <BriefcaseIcon className="h-6 w-6 text-green-500 dark:text-green-400" />
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Current Plan</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{clientData.subscription?.planName || 'N/A'}</p>
-                </div>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardContent className="flex items-center">
-                <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/50 mr-4">
-                    <DollarSign className="h-6 w-6 text-yellow-500 dark:text-yellow-400" />
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Revenue</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">${monthlyRevenue}</p>
-                </div>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardContent className="flex items-center">
-                <div className="p-3 rounded-full bg-sky-100 dark:bg-sky-900/50 mr-4">
-                    <TrendingUp className="h-6 w-6 text-sky-500 dark:text-sky-400" />
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Occupancy</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{occupancyRate}%</p>
-                </div>
-            </CardContent>
-        </Card>
-    </div>
-);
-
-
-// --- OPTION 2: Compact List ---
-const KeyMetricsList = ({ properties, clientData, monthlyRevenue, occupancyRate }) => {
-    const metrics = [
-        { icon: Building, label: "Properties", value: properties.length },
-        { icon: BriefcaseIcon, label: "Current Plan", value: clientData.subscription?.planName || 'N/A' },
-        { icon: DollarSign, label: "Monthly Revenue", value: `$${monthlyRevenue}` },
-        { icon: TrendingUp, label: "Occupancy", value: `${occupancyRate}%` },
-    ];
-
-    return (
-        <Card>
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {metrics.map((metric, index) => (
-                    <div key={index} className="p-4 flex justify-between items-center">
-                        <div className="flex items-center">
-                            <metric.icon className="h-5 w-5 text-gray-400 mr-4" />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metric.label}</span>
-                        </div>
-                        <span className="text-lg font-semibold text-gray-900 dark:text-white">{metric.value}</span>
-                    </div>
-                ))}
-            </div>
-        </Card>
-    );
-};
-
-
-// --- OPTION 3: Bold & Visual ---
+// --- START: Key Metrics Component (Option 3) ---
 const ProgressCircle = ({ percentage }) => {
     const radius = 30;
     const stroke = 5;
@@ -139,7 +58,7 @@ const ProgressCircle = ({ percentage }) => {
     );
 };
 
-const KeyMetricsVisual = ({ properties, clientData, monthlyRevenue, occupancyRate }) => (
+const KeyMetrics = ({ properties, clientData, monthlyRevenue, occupancyRate }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="text-center">
             <CardContent>
@@ -151,7 +70,7 @@ const KeyMetricsVisual = ({ properties, clientData, monthlyRevenue, occupancyRat
         <Card className="text-center">
             <CardContent>
                 <BriefcaseIcon className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{clientData.subscription?.planName || 'N/A'}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white pt-2">{clientData.subscription?.planName || 'N/A'}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Current Plan</p>
             </CardContent>
         </Card>
@@ -174,7 +93,7 @@ const KeyMetricsVisual = ({ properties, clientData, monthlyRevenue, occupancyRat
     </div>
 );
 
-// --- END: NEW KEY METRICS OPTIONS ---
+// --- END: Key Metrics Component ---
 
 
 const ContactInfoCard = ({ clientData }) => (
@@ -329,18 +248,7 @@ const OverviewTab = ({ clientData, properties, monthlyRevenue, occupancyRate, on
     return (
         <div className="space-y-6">
             
-            {/* --- HOW TO SWITCH DESIGNS --- */}
-            {/* Keep the one you want and comment out the others */}
-            
-            {/* Option 1: Modern Stat Cards (Default) */}
-            {/* <KeyMetricsCards properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} />*/}
-            
-            {/* Option 2: Compact List */}
-            {/* <KeyMetricsList properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} /> */}
-            
-            {/* Option 3: Bold & Visual */}
-            <KeyMetricsVisual properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} /> 
-
+            <KeyMetrics properties={properties} clientData={clientData} monthlyRevenue={monthlyRevenue} occupancyRate={occupancyRate} />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
