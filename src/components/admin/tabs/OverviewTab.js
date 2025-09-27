@@ -2,86 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { Building, DollarSign, Users, FileText, Mail, Phone, Edit, Save, X, Briefcase, Hash, RefreshCw, User as UserIcon, Briefcase as BriefcaseIcon, CheckCircle, Clock, Edit2, Trash2, PlusCircle, AlertCircle, Info, Flag } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-const Card = ({ children, className = '' }) => (
-    <div className={`bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden ${className}`}>
-        {children}
-    </div>
-);
-
-const CardHeader = ({ title, icon: Icon, action }) => (
-    <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <div className="flex items-center">
-            <Icon className="h-5 w-5 text-gray-400 mr-3" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-        </div>
-        {action}
-    </div>
-);
-
-const CardContent = ({ children, className = '' }) => (
-    <div className={`p-4 ${className}`}>
-        {children}
-    </div>
-);
+const Card = ({ children, className = '' }) => (<div className={`bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden ${className}`}>{children}</div>);
+const CardHeader = ({ title, icon: Icon, action }) => (<div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"><div className="flex items-center"><Icon className="h-5 w-5 text-gray-400 mr-3" /><h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3></div>{action}</div>);
+const CardContent = ({ children, className = '' }) => (<div className={`p-4 ${className}`}>{children}</div>);
 
 const ProgressCircle = ({ percentage }) => {
-    const radius = 35;
-    const stroke = 6;
-    const normalizedRadius = radius - stroke;
+    const radius = 35, stroke = 6, normalizedRadius = radius - stroke;
     const circumference = normalizedRadius * 2 * Math.PI;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
     return (
         <div className="relative h-20 w-20">
             <svg height="100%" width="100%" viewBox="0 0 80 80" className="transform -rotate-90">
-                <circle
-                    strokeWidth={stroke}
-                    r={normalizedRadius}
-                    cx={radius + 5}
-                    cy={radius + 5}
-                    className="stroke-current text-gray-200 dark:text-gray-700"
-                    fill="transparent"
-                />
-                <circle
-                    strokeWidth={stroke}
-                    strokeDasharray={`${circumference} ${circumference}`}
-                    style={{ strokeDashoffset }}
-                    r={normalizedRadius}
-                    cx={radius + 5}
-                    cy={radius + 5}
-                    className="stroke-current text-indigo-500 transition-all duration-500 ease-in-out"
-                    fill="transparent"
-                    strokeLinecap="round"
-                />
+                <circle strokeWidth={stroke} r={normalizedRadius} cx={radius + 5} cy={radius + 5} className="stroke-current text-gray-200 dark:text-gray-700" fill="transparent" />
+                <circle strokeWidth={stroke} strokeDasharray={`${circumference} ${circumference}`} style={{ strokeDashoffset }} r={normalizedRadius} cx={radius + 5} cy={radius + 5} className="stroke-current text-indigo-500 transition-all duration-500 ease-in-out" fill="transparent" strokeLinecap="round" />
             </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-xl font-bold text-gray-900 dark:text-white">{percentage}<span className="text-sm">%</span></p>
-            </div>
+            <div className="absolute inset-0 flex items-center justify-center"><p className="text-xl font-bold text-gray-900 dark:text-white">{percentage}<span className="text-sm">%</span></p></div>
         </div>
     );
 };
 
 const KeyMetrics = ({ properties, clientData, monthlyRevenue, occupancyRate }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="text-center p-4">
-            <Building className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-            <p className="text-4xl font-bold text-gray-900 dark:text-white">{properties.length}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Properties</p>
-        </Card>
-        <Card className="text-center p-4">
-            <BriefcaseIcon className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-            <p className="text-2xl font-bold text-gray-900 dark:text-white pt-2">{clientData.subscription?.planName || 'N/A'}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Current Plan</p>
-        </Card>
-        <Card className="text-center p-4">
-            <DollarSign className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-            <p className="text-4xl font-bold text-gray-900 dark:text-white">${monthlyRevenue}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Revenue</p>
-        </Card>
-        <Card className="flex flex-col items-center justify-center p-4">
-            <ProgressCircle percentage={occupancyRate} />
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Occupancy</p>
-        </Card>
+        <Card className="text-center p-4"><Building className="h-8 w-8 mx-auto text-gray-400 mb-2" /><p className="text-4xl font-bold text-gray-900 dark:text-white">{properties.length}</p><p className="text-sm text-gray-500 dark:text-gray-400">Properties</p></Card>
+        <Card className="text-center p-4"><BriefcaseIcon className="h-8 w-8 mx-auto text-gray-400 mb-2" /><p className="text-2xl font-bold text-gray-900 dark:text-white pt-2">{clientData.subscription?.planName || 'N/A'}</p><p className="text-sm text-gray-500 dark:text-gray-400">Current Plan</p></Card>
+        <Card className="text-center p-4"><DollarSign className="h-8 w-8 mx-auto text-gray-400 mb-2" /><p className="text-4xl font-bold text-gray-900 dark:text-white">${monthlyRevenue}</p><p className="text-sm text-gray-500 dark:text-gray-400">Monthly Revenue</p></Card>
+        <Card className="flex flex-col items-center justify-center p-4"><ProgressCircle percentage={occupancyRate} /><p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Occupancy</p></Card>
     </div>
 );
 
@@ -137,8 +82,18 @@ const getImportanceIcon = (level) => {
 
 const AdminNotesCard = ({ initialNotes = [], onAddNote, onDeleteNote }) => {
     const [isAdding, setIsAdding] = useState(false);
-    const sortedNotes = Array.isArray(initialNotes) ? [...initialNotes].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)) : [];
+    
+    // --- FIX: This sorting logic now works for both Firestore Timestamps and JS Date objects ---
+    const sortedNotes = Array.isArray(initialNotes)
+        ? [...initialNotes].sort((a, b) => {
+            const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+            const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+            return dateB - dateA;
+          })
+        : [];
+
     const handleAdd = (note) => { onAddNote(note); setIsAdding(false); };
+
     return (
         <Card>
             <CardHeader title="Admin Notes" icon={FileText} action={!isAdding && (<button onClick={() => setIsAdding(true)} className="flex items-center px-2 py-1 text-sm text-indigo-600 bg-indigo-100 dark:bg-indigo-900/50 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-900"><PlusCircle className="h-4 w-4 mr-1" />Add Note</button>)} />

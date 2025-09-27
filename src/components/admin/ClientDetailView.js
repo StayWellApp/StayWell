@@ -72,10 +72,8 @@ const ClientDetailView = ({ onSelectProperty }) => {
             await updateDoc(clientRef, { adminNotes: arrayUnion(noteToAddForFirestore) });
             toast.success("Note added successfully!");
             
-            // --- FIX: Manually update local state for instant UI feedback ---
             const noteToAddForState = {
                 ...noteToAddForFirestore,
-                // Simulate a Firestore timestamp object for immediate display
                 createdAt: { toDate: () => new Date() } 
             };
 
