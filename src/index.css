@@ -1,3 +1,4 @@
+/* staywellapp/staywell/StayWell-6e0b065d1897040a210dff5b77aa1b9a56a8c92f/src/index.css */
 /* --- src/index.css --- */
 /* This is the complete, updated file. */
 
@@ -128,4 +129,37 @@ body {
     z-index: 2 !important;
     -webkit-user-select: none;
     user-select: none;
+}
+
+/* Custom styles for the widget resize handle (modern & clean) */
+.react-resizable-handle {
+  position: absolute;
+  width: 10px; /* Smaller overall size */
+  height: 10px; /* Smaller overall size */
+  bottom: 0.5rem;  /* Match the p-2 padding on the widget container */
+  right: 0.5rem;   /* Match the p-2 padding on the widget container */
+  background: transparent; /* Make background transparent */
+  background-image: none !important; /* This removes the default handle */
+  cursor: se-resize;
+  /* Use a pseudo-element for the diagonal line */
+}
+
+.react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 2px; /* Thickness of the line */
+  height: 10px; /* Length of the line */
+  background: theme('colors.gray.400'); /* Subtle grey color */
+  transform: rotate(45deg) translate(2px, -2px); /* Diagonal line */
+  transform-origin: bottom right;
+  opacity: 0.6; /* Slightly transparent */
+  transition: opacity 0.2s ease;
+}
+
+/* Optional: Make it slightly more visible on hover */
+.react-resizable-handle:hover::after {
+  opacity: 1;
+  background: theme('colors.blue.500'); /* Blue on hover for better interaction */
 }

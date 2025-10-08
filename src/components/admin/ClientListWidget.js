@@ -1,6 +1,8 @@
+// staywellapp/staywell/StayWell-6e0b065d1897040a210dff5b77aa1b9a56a8c92f/src/components/admin/ClientListWidget.js
 import React from 'react';
-import { useNavigate } from 'react-router-dom'; // Import the useNavigate hook
+import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Inbox } from 'lucide-react';
+import DashboardWidget from './DashboardWidget'; // Import the shared wrapper
 
 const SkeletonItem = () => (
     <div className="py-3 flex items-center justify-between animate-pulse">
@@ -15,9 +17,8 @@ const SkeletonItem = () => (
     </div>
 );
 
-// --- FIX: The component no longer needs the onSelectClient prop ---
 const ClientListWidget = ({ clients, loading, onViewAll }) => {
-    const navigate = useNavigate(); // Initialize the navigate function
+    const navigate = useNavigate();
 
     const renderContent = () => {
         if (loading) {
@@ -30,7 +31,7 @@ const ClientListWidget = ({ clients, loading, onViewAll }) => {
 
         if (!clients || clients.length === 0) {
             return (
-                <div className="text-center py-10">
+                <div className="text-center py-10 h-full flex flex-col justify-center items-center">
                     <Inbox className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">No Clients Found</h3>
                 </div>
@@ -42,7 +43,6 @@ const ClientListWidget = ({ clients, loading, onViewAll }) => {
                 {clients.slice(0, 5).map(client => (
                     <li 
                         key={client.id} 
-                        // --- FIX: Use navigate to change the URL on click ---
                         onClick={() => navigate(`/admin/clients/${client.id}`)} 
                         className="py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg -mx-2 px-2 transition-colors"
                     >
@@ -63,17 +63,9 @@ const ClientListWidget = ({ clients, loading, onViewAll }) => {
     };
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-full flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Clients</h3>
-                <button onClick={onViewAll} className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
-                    View All
-                </button>
-            </div>
-            <div className="flex-grow overflow-y-auto">
-                {renderContent()}
-            </div>
-        </div>
+        <DashboardWidget title="Clients" onViewAll={onViewAll}>
+            {renderContent()}
+        </DashboardWidget>
     );
 };
 
