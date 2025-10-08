@@ -1,3 +1,4 @@
+// staywellapp/staywell/StayWell-6e0b065d1897040a210dff5b77aa1b9a56a8c92f/src/components/admin/SubscriptionManager.js
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -29,7 +30,7 @@ const SubscriptionManager = () => {
         }
 
         const planData = {
-            name: planName,
+            planName: planName, // FIX: Standardized to 'planName'
             price: Number(price),
             propertyLimit: Number(propertyLimit),
         };
@@ -54,7 +55,7 @@ const SubscriptionManager = () => {
 
     const handleEdit = (plan) => {
         setIsEditing(plan);
-        setPlanName(plan.name);
+        setPlanName(plan.planName); // FIX: Read from 'planName'
         setPrice(plan.price);
         setPropertyLimit(plan.propertyLimit);
     };
@@ -98,7 +99,7 @@ const SubscriptionManager = () => {
                 {loading ? <p>Loading plans...</p> : plans.map(plan => (
                     <li key={plan.id} className="py-3 flex justify-between items-center">
                         <div>
-                            <p className="font-semibold text-gray-800 dark:text-gray-100">{plan.name}</p>
+                            <p className="font-semibold text-gray-800 dark:text-gray-100">{plan.planName}</p> {/* FIX: Read from 'planName' */}
                             <p className="text-sm text-gray-500 dark:text-gray-400">${plan.price}/month - Up to {plan.propertyLimit} properties</p>
                         </div>
                         <div className="flex items-center space-x-2">

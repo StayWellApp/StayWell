@@ -1,8 +1,8 @@
 // src/components/admin/SubscriptionsEndingSoon.js
-
 import React from 'react';
 import moment from 'moment';
 import { BellRing } from 'lucide-react';
+import DashboardWidget from './DashboardWidget'; // Import the wrapper
 
 const SubscriptionsEndingSoon = ({ clients, loading }) => {
     // Dummy data - replace with real subscription logic
@@ -27,7 +27,7 @@ const SubscriptionsEndingSoon = ({ clients, loading }) => {
 
         if (endingSoon.length === 0) {
             return (
-                <div className="text-center py-6">
+                <div className="text-center py-6 h-full flex flex-col justify-center items-center">
                     <BellRing className="mx-auto h-10 w-10 text-gray-400" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">All Good!</h3>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">No subscriptions are ending soon.</p>
@@ -52,11 +52,11 @@ const SubscriptionsEndingSoon = ({ clients, loading }) => {
         );
     };
 
+    // Use the DashboardWidget wrapper
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Subscriptions Ending Soon</h3>
+        <DashboardWidget title="Subscriptions Ending Soon">
             {renderContent()}
-        </div>
+        </DashboardWidget>
     );
 };
 
