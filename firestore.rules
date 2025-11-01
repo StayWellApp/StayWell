@@ -20,10 +20,19 @@ service cloud.firestore {
 
     // == SUPER ADMIN & USER RULES ==
     match /users/{userId} {
-      allow get: if request.auth.uid == userId || isSuperAdmin();
-      allow list: if isSuperAdmin();
+      allow get: if request.auth.uid == userId ||
+        isSuperAdmin();
+      
+      // --- FIX: UPDATED LIST RULE ---
+      // This allows a list query if it's by a super admin OR
+      // if a user is querying for users by their own ownerId.
+      allow list: if isSuperAdmin() ||
+                    (request.auth.uid != null &&
+                     request.query.keys.hasAny(['ownerId']) &&
+                     request.query.filters.ownerId == request.auth.uid);
+      
       allow write, create: if request.auth.uid == userId || isSuperAdmin();
-
+      
       // --- FIX: ADDED RULE FOR ACTIVITY LOG SUBCOLLECTION ---
       // This rule explicitly allows super admins to read logs.
       match /activity_logs/{logId} {
@@ -33,19 +42,15 @@ service cloud.firestore {
       }
       // --- END OF FIX ---
     }
-
-    // Rule for public suspension information
-    match /suspendedUsers/{email} {
-      allow get: if true;
-    }
-
     match /users/{userId}/configs/{configId} {
-      allow read, write: if request.auth.uid == userId || isSuperAdmin();
+      allow read, write: if request.auth.uid == userId ||
+        isSuperAdmin();
     }
 
     // == PROPERTY RULES ==
     match /properties/{propertyId} {
-      allow read: if isOwner(resource) || isSuperAdmin();
+      allow read: if isOwner(resource) ||
+        isSuperAdmin();
       allow write: if isOwner(resource);
     }
     
@@ -78,11 +83,12 @@ service cloud.firestore {
         allow read, write: if isOwner(resource);
     }
     match /tasks/{taskId} {
-      allow read, write: if isOwner(resource) || request.auth.uid == resource.data.assignedTo;
+      allow read, write: if isOwner(resource) ||
+        request.auth.uid == resource.data.assignedTo;
     }
     match /tasks/{taskId}/comments/{commentId} {
         allow read, create: if get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid ||
-                                get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
+          get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
     }
   }
 }
