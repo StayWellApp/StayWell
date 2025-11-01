@@ -1,17 +1,5 @@
 import React from 'react';
 import { getAuth } from 'firebase/auth';
-import ClientSubscriptionManager from '../ClientSubscriptionManager';
-import { UserSearch, Download, AlertTriangle } from 'lucide-react';
-import { toast } from 'react-toastify';
-
-const ManagementTab = ({ client, refreshClientData, allPlans, loadingPlans, onImpersonate }) => {
-    
-    if (!client) {
-        return <div>Loading management details...</div>;
-    }
-
-import React from 'react';
-import { getAuth } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import ClientSubscriptionManager from '../ClientSubscriptionManager';
 import { UserSearch, Download, AlertTriangle } from 'lucide-react';
