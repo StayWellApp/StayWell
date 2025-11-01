@@ -174,7 +174,4 @@ export const Auth = () => {
   );
 };
 
-const renderForm = () => {
-    return <div>Render Form Placeholder</div>;
-};
-};
+const GoogleIcon = (props) => (
