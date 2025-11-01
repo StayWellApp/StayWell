@@ -41,7 +41,16 @@ service cloud.firestore {
         allow write: if false;
       }
       // --- END OF FIX ---
+
+      // --- FIX FOR COMMUNICATION TAB ---
+      // This allows Super Admins to read, write, and delete
+      // communication logs from the client-side tab.
+      match /communication_logs/{logId} {
+        allow read, write, delete: if isSuperAdmin();
+      }
+      // --- END OF FIX ---
     }
+    
     match /users/{userId}/configs/{configId} {
       allow read, write: if request.auth.uid == userId ||
         isSuperAdmin();
