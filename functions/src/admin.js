@@ -3,6 +3,28 @@ const admin = require("firebase-admin");
 const cors = require('cors')({origin: true});
 const db = admin.firestore();
 
+const convertTimestamps = (data) => {
+    if (data === null || data === undefined) {
+        return data;
+    }
+    if (typeof data !== 'object') {
+        return data;
+    }
+    if (data instanceof admin.firestore.Timestamp) {
+        return data.toDate().toISOString();
+    }
+    if (Array.isArray(data)) {
+        return data.map(item => convertTimestamps(item));
+    }
+    const newData = {};
+    for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            newData[key] = convertTimestamps(data[key]);
+        }
+    }
+    return newData;
+};
+
 const sendWelcomeEmail = async (email, companyName) => {
     functions.logger.log(`Sending welcome email to ${email} for company ${companyName}.`);
     // This is where you would integrate with an email service like SendGrid or Mailgun.
