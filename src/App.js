@@ -124,7 +124,6 @@ function AppContent() {
     );
 
     const UserRoutes = () => {
-        if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); navigate('/properties'); }} user={currentUser} />;
         if (loadingPermissions) return <div className="flex items-center justify-center h-full"><p>Checking permissions...</p></div>;
 
         return (
@@ -155,7 +154,10 @@ function AppContent() {
             <EndImpersonationBanner />
             <div className={isImpersonating ? 'pt-10' : ''}>
                 <Layout user={currentUser} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
-                    {isSuperAdmin ? <AdminRoutes /> : <UserRoutes />}
+                    {selectedProperty ? 
+                        <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); navigate(-1); }} user={currentUser} /> : 
+                        (isSuperAdmin ? <AdminRoutes /> : <UserRoutes />)
+                    }
                 </Layout>
                 {!isSuperAdmin && (
                     <div className="fixed bottom-4 right-4 z-50">
