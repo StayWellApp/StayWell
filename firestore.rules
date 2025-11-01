@@ -20,37 +20,37 @@ service cloud.firestore {
 
     // == USER RULES ==
 
-    // --- FINAL FIX v4: Correct 'OR' logic with modern syntax ---
+    // --- FIX: This block is for 'list' (query) operations ---
+    // It MUST be on the collection path 'users', not 'users/{userId}'
     match /users {
+      // Rule 1: Allow Super Admin query from App.js
       allow list: if
-        // Case 1: Admin query
-        (request.auth.token.superAdmin == true &&
-         request.query.where.role == 'owner')
-        ||
-        // Case 2: User query for their own staff
-        (request.auth.uid != null &&
-         request.query.where.ownerId == request.auth.uid);
+        request.auth.token.superAdmin == true &&
+        request.query.where.role == 'owner';
+
+      // Rule 2: Allow User query for their own staff (e.g., TeamView)
+      allow list: if
+        request.auth.uid != null &&
+        request.query.where.ownerId == request.auth.uid;
     }
     // --- END OF FIX ---
     
-    // --- Rules for individual user documents AND their subcollections ---
+    // --- This block is for 'get'/'write' (single doc) operations ---
     match /users/{userId} {
       // Allow user to get/write their own doc, or super admin to do so
       allow get: if request.auth.uid == userId || isSuperAdmin();
       allow write, create: if request.auth.uid == userId || isSuperAdmin();
 
-      // Rule for activity logs subcollection
+      // Subcollections must be nested inside the document path
       match /activity_logs/{logId} {
         allow read: if isSuperAdmin();
         allow write: if false; // Only from backend
       }
 
-      // Rule for communication logs subcollection
       match /communication_logs/{logId} {
         allow read, write, delete: if isSuperAdmin();
       }
 
-      // Rule for configs subcollection
       match /configs/{configId} {
         allow read, write: if request.auth.uid == userId || isSuperAdmin();
       }
