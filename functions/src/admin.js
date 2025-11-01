@@ -1,5 +1,6 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const cors = require('cors')({origin: true});
 const db = admin.firestore();
 
 const sendWelcomeEmail = async (email, companyName) => {
@@ -97,55 +98,48 @@ exports.createReauthenticationToken = functions.https.onCall(async (data, contex
     return { token: customToken };
 });
 
-exports.exportClientData = functions.https.onRequest(async (req, res) => {
-    res.set('Access-Control-Allow-Origin', 'http://localhost:3000');
-    res.set('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-    if (req.method === 'OPTIONS') {
-        res.status(204).send('');
-        return;
-    }
-
-    if (req.method !== 'POST') {
-        return res.status(405).send('Method Not Allowed');
-    }
-
-    const { clientId } = req.body.data;
-    if (!clientId) {
-        return res.status(400).send({ error: 'The function must be called with a "clientId" argument.' });
-    }
-
-    const idToken = req.headers.authorization?.split('Bearer ')[1];
-    if (!idToken) {
-        return res.status(401).send({ error: 'Unauthorized' });
-    }
-
-    try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        if (!decodedToken.superAdmin) {
-            return res.status(403).send({ error: 'Permission denied. This function can only be called by a super admin.' });
+exports.exportClientData = functions.https.onRequest((req, res) => {
+    cors(req, res, async () => {
+        if (req.method !== 'POST') {
+            return res.status(405).send('Method Not Allowed');
         }
 
-        const clientDoc = await db.collection('users').doc(clientId).get();
-        if (!clientDoc.exists) {
-            return res.status(404).send({ error: 'Client not found.' });
+        const { clientId } = req.body.data;
+        if (!clientId) {
+            return res.status(400).send({ error: 'The function must be called with a "clientId" argument.' });
         }
 
-        const propertiesQuery = await db.collection('properties').where('ownerId', '==', clientId).get();
-        
-        const clientData = convertTimestamps(clientDoc.data());
-        const properties = propertiesQuery.docs.map(doc => convertTimestamps(doc.data()));
-
-        res.status(200).send({ data: {
-            client: clientData,
-            properties: properties
-        }});
-    } catch (error) {
-        console.error("Error exporting client data:", error);
-        if (error.code === 'auth/id-token-expired') {
+        const idToken = req.headers.authorization?.split('Bearer ')[1];
+        if (!idToken) {
             return res.status(401).send({ error: 'Unauthorized' });
         }
-        return res.status(500).send({ error: 'An internal error occurred while exporting client data.' });
-    }
+
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(idToken);
+            if (!decodedToken.superAdmin) {
+                return res.status(403).send({ error: 'Permission denied. This function can only be called by a super admin.' });
+            }
+
+            const clientDoc = await db.collection('users').doc(clientId).get();
+            if (!clientDoc.exists) {
+                return res.status(4<strong>4).send({ error: 'Client not found.' });
+            }
+
+            const propertiesQuery = await db.collection('properties').where('ownerId', '==', clientId).get();
+            
+            const clientData = convertTimestamps(clientDoc.data());
+            const properties = propertiesQuery.docs.map(doc => convertTimestamps(doc.data()));
+
+            res.status(200).send({ data: {
+                client: clientData,
+                properties: properties
+            }});
+        } catch (error) {
+            console.error("Error exporting client data:", error);
+            if (error.code === 'auth/id-token-expired') {
+                return res.status(401).send({ error: 'Unauthorized' });
+            }
+            return res.status(500).send({ error: 'An internal error occurred while exporting client data.' });
+        }
+    });
 });
