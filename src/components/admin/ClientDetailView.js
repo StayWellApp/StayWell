@@ -173,7 +173,10 @@ const ClientDetailView = ({ onSelectProperty }) => {
             case 'properties': return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
             case 'management': return <ManagementTab client={combinedClientData} refreshClientData={refreshAuthUser} allPlans={allPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate} />;
             case 'billing': return <BillingTab client={combinedClientData} />;
-            case 'communication': return <CommunicationTab client={combinedClientData} />;
+            
+            // --- FIX: Updated prop to pass clientId to the new CommunicationTab component ---
+            case 'communication': return <CommunicationTab clientId={clientId} />;
+            
             case 'documents': return <DocumentsTab client={combinedClientData} />;
             case 'analytics': return <ClientAnalyticsView client={combinedClientData} />;
             default: return null;
