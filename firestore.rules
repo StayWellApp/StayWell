@@ -20,18 +20,15 @@ service cloud.firestore {
 
     // == USER RULES ==
 
-    // --- FINAL FIX v2: Rule for LIST operations on the /users collection ---
+    // --- TEMPORARY TEST RULE ---
+    // This rule ONLY allows the admin query. It will break other queries.
     match /users {
       allow list: if
-        // Case 1: User is a Super Admin (check token directly)
-        request.auth.token.superAdmin == true ||
-        // Case 2: User is a client/manager querying for their staff
-        // (Using your original syntax from source: 7-8)
-        (request.auth.uid != null &&
-         request.query.keys.hasAny(['ownerId']) &&
-         request.query.filters.ownerId == request.auth.uid);
+        request.auth.token.superAdmin == true &&
+        request.query.keys.hasAny(['role']) &&
+        request.query.filters.role == 'owner';
     }
-    // --- END OF FIX ---
+    // --- END OF TEST RULE ---
     
     // --- Rules for individual user documents AND their subcollections ---
     match /users/{userId} {
@@ -57,13 +54,13 @@ service cloud.firestore {
     }
 
     // == PROPERTY RULES ==
+    // ... (rest of your file is the same) ...
     match /properties/{propertyId} {
       allow read: if isOwner(resource) ||
         isSuperAdmin();
       allow write: if isOwner(resource);
     }
     
-    // Other rules for your application...
     match /appSettings/{docId} {
       allow read, write: if isSuperAdmin();
     }
