@@ -20,17 +20,15 @@ service cloud.firestore {
 
     // == USER RULES ==
 
-    // --- FINAL FIX: This block is for 'list' (query) operations ---
-    // It MUST be on the collection path 'users', not 'users/{userId}'
+    // --- FINAL FIX: Two separate 'allow list' rules ---
+    // This is the correct way to allow multiple query types.
     match /users {
       
-      // Rule 1: Allow Super Admin query from App.js
-      allow list: if
-        request.auth.token.superAdmin == true &&
-        request.query.where.role == 'owner';
+      // Rule 1: Allow Super Admin to run ANY list query.
+      // This will match your query: where("role", "==", "owner")
+      allow list: if isSuperAdmin();
 
-      // Rule 2: Allow User query for their own staff (e.g., TeamView)
-      // This uses the correct syntax for your original rule
+      // Rule 2: Allow a normal user to query for their own staff
       allow list: if
         request.auth.uid != null &&
         request.query.where.ownerId == request.auth.uid;
@@ -85,20 +83,20 @@ service cloud.firestore {
       allow read, write: if isOwner(resource) || isSuperAdmin();
     }
     match /storageLocations/{locationId} {
-        allow read, write: if isOwner(resource);
+        allow read, write: if isSuperAdmin() || isOwner(resource); // Added isSuperAdmin() just in case
     }
     match /storageLocations/{locationId}/supplies/{supplyId} {
-        allow read, write: if get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid;
+        allow read, write: if isSuperAdmin() || get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid; // Added isSuperAdmin()
     }
     match /checklistTemplates/{templateId} {
-        allow read, write: if isOwner(resource);
+        allow read, write: if isSuperAdmin() || isOwner(resource); // Added isSuperAdmin()
     }
     match /tasks/{taskId} {
-      allow read, write: if isOwner(resource) ||
+      allow read, write: if isSuperAdmin() || isOwner(resource) || // Added isSuperAdmin()
         request.auth.uid == resource.data.assignedTo;
     }
     match /tasks/{taskId}/comments/{commentId} {
-        allow read, create: if get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid ||
+        allow read, create: if isSuperAdmin() || get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid || // Added isSuperAdmin()
           get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
     }
   }
