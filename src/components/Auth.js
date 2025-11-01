@@ -202,13 +202,7 @@ export const Auth = () => {
                                 </button>
                             </div>
                     </form>
-                    <div className="mt-6">
-                        <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300 dark:border-gray-600" /></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or</span></div></div>
-                        <div className="mt-6 grid grid-cols-2 gap-3">
-                            <button onClick={handleSignInWithGoogle} disabled={isLoading} className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"><GoogleIcon /><span className="ml-3">Google</span></button>
-                            <button onClick={() => alert('Microsoft sign-in coming soon!')} disabled={isLoading} className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"><MicrosoftIcon /><span className="ml-3">Microsoft</span></button>
-                        </div>
-                    </div>
+                    <div>Social Login Placeholder</div>
                     <div className="mt-8 text-sm text-center">
                         <button onClick={() => switchView('signUp')} className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
                             Don't have an account? Sign Up
