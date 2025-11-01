@@ -179,8 +179,8 @@ export const Auth = () => {
                     </div>
                     <form className="space-y-5" onSubmit={handleForgotPassword}>
                         <InputField id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} icon={Mail} />
-                        {successMessage && <p className="text-sm text-center text-green-600 dark:text-green-400">{successMessage}</p>}
-                        {errorMessage && <p className="text-sm text-center text-red-600 dark:text-red-400">{errorMessage}</p>}
+                                                <p className="text-sm text-center text-green-600 dark:text-green-400 min-h-[20px]">{successMessage}</p>
+                                                <p className="text-sm text-center text-red-600 dark:text-red-400 min-h-[20px]">{errorMessage}</p>
                         <div>
                             <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors">
                                 {isLoading ? 'Sending...' : 'Send Reset Link'}
@@ -207,8 +207,7 @@ export const Auth = () => {
                         <InputField id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} icon={Mail} />
                         <InputField id="phone" type="tel" placeholder="Phone Number" value={phone} onChange={handleInputChange} icon={Phone} />
                         <InputField id="country" type="text" placeholder="Country" value={country} onChange={handleInputChange} icon={Globe} />
-                        <InputField id="password" type="password" placeholder="Password" value={password} onChange={handleInputChange} icon={Lock} />
-                        {errorMessage && <p className="text-sm text-center text-red-600 dark:text-red-400">{errorMessage}</p>}
+                        <p className="text-sm text-center text-red-600 dark:text-red-400 min-h-[20px]">{errorMessage}</p>
                         <div className="pt-2">
                             <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors">
                                 {isLoading ? 'Processing...' : 'Create Account'}
