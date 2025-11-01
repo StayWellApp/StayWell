@@ -261,28 +261,8 @@ export const Auth = () => {
     }
   };
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex relative overflow-hidden">
-      <div className="absolute top-6 right-6 flex items-center space-x-4 z-10">
-        <ThemeToggle />
-        <div className="relative">
-          <select className="appearance-none bg-gray-200 dark:bg-gray-700 border-none rounded-full py-2 pl-4 pr-8 text-sm text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <option>English</option><option>Español</option><option>Français</option>
-          </select>
-          <Globe className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400" />
-        </div>
-      </div>
-      <div className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-200 via-sky-200 to-purple-200 dark:from-gray-800 dark:via-indigo-900 dark:to-purple-900" />
-        <div className="text-center z-10">
-          <h1 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">StayWell</h1>
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Management, simplified.</p>
-        </div>
-      </div>
-      <div className="w-full lg:w-1/2 flex p-6 sm:p-12">
-        <div className="w-full max-w-md">
-          {renderForm()}
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <p>Minimal Auth Component</p>
     </div>
   );
 };
