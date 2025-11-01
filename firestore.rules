@@ -20,15 +20,21 @@ service cloud.firestore {
 
     // == USER RULES ==
 
-    // --- TEMPORARY TEST RULE ---
-    // This rule ONLY allows the admin query. It will break other queries.
+    // --- FINAL FIX: Two separate 'allow list' rules ---
     match /users {
+      // Rule 1: Allow Super Admin to query by 'role'
+      // This matches your App.js query
       allow list: if
         request.auth.token.superAdmin == true &&
-        request.query.keys.hasAny(['role']) &&
-        request.query.filters.role == 'owner';
+        request.query.where.role == 'owner';
+
+      // Rule 2: Allow a normal user to query for their own staff
+      // This matches your original rule's intent (e.g., for TeamView)
+      allow list: if
+        request.auth.uid != null &&
+        request.query.where.ownerId == request.auth.uid;
     }
-    // --- END OF TEST RULE ---
+    // --- END OF FIX ---
     
     // --- Rules for individual user documents AND their subcollections ---
     match /users/{userId} {
@@ -54,13 +60,13 @@ service cloud.firestore {
     }
 
     // == PROPERTY RULES ==
-    // ... (rest of your file is the same) ...
     match /properties/{propertyId} {
       allow read: if isOwner(resource) ||
         isSuperAdmin();
       allow write: if isOwner(resource);
     }
     
+    // Other rules for your application...
     match /appSettings/{docId} {
       allow read, write: if isSuperAdmin();
     }
