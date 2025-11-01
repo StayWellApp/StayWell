@@ -119,48 +119,55 @@ const ManagementTab = ({ client, refreshClientData, allPlans, loadingPlans, onIm
     );
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-                <Card title="Subscription Management">
-                    <ClientSubscriptionManager 
-                        client={client} 
-                        onSubscriptionUpdate={refreshClientData} 
-                        allPlans={allPlans} 
-                        loadingPlans={loadingPlans} 
-                    />
-                </Card>
-                <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border-2 border-red-500/30 dark:border-red-500/50">
-                    <div className="p-4 border-b border-red-500/30 dark:border-red-500/50 flex items-center">
-                        <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
-                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Danger Zone</h3>
-                    </div>
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="text-center">
-                            <button onClick={() => handleActionClick('Reset Data')} className="button-outline-danger w-full">Reset Data</button>
-                            <p className="text-xs text-gray-500 mt-1">Delete all data but keep the account.</p>
+        <>
+            <SuspendClientModal 
+                isOpen={isSuspendModalOpen} 
+                onClose={() => setIsSuspendModalOpen(false)} 
+                onConfirm={handleSuspendConfirm} 
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    <Card title="Subscription Management">
+                        <ClientSubscriptionManager 
+                            client={client} 
+                            onSubscriptionUpdate={refreshClientData} 
+                            allPlans={allPlans} 
+                            loadingPlans={loadingPlans} 
+                        />
+                    </Card>
+                    <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border-2 border-red-500/30 dark:border-red-500/50">
+                        <div className="p-4 border-b border-red-500/30 dark:border-red-500/50 flex items-center">
+                            <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
+                            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Danger Zone</h3>
                         </div>
-                        <div className="text-center">
-                            <button onClick={() => handleActionClick('Suspend Account')} className="button-outline-danger w-full">Suspend Account</button>
-                            <p className="text-xs text-gray-500 mt-1">Temporarily disable the client's account.</p>
-                        </div>
-                        <div className="text-center">
-                            <button onClick={() => handleActionClick('Delete Account')} className="button-danger w-full">Delete Account</button>
-                            <p className="text-xs text-gray-500 mt-1">This action is permanent.</p>
+                        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="text-center">
+                                <button onClick={() => handleActionClick('Reset Data')} className="button-outline-danger w-full">Reset Data</button>
+                                <p className="text-xs text-gray-500 mt-1">Delete all data but keep the account.</p>
+                            </div>
+                            <div className="text-center">
+                                <button onClick={() => handleActionClick('Suspend Account')} className="button-outline-danger w-full">{client.disabled ? 'Unsuspend' : 'Suspend'} Account</button>
+                                <p className="text-xs text-gray-500 mt-1">Temporarily disable the client's account.</p>
+                            </div>
+                            <div className="text-center">
+                                <button onClick={() => handleActionClick('Delete Account')} className="button-danger w-full">Delete Account</button>
+                                <p className="text-xs text-gray-500 mt-1">This action is permanent.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <div className="lg:col-span-1 space-y-6">
+                    <Card title="Admin Actions">
+                        <button onClick={() => onImpersonate(client)} className="button-secondary w-full">Impersonate User</button>
+                        <p className="text-xs text-center mt-1 text-gray-500">Log in as this user to troubleshoot.</p>
+                    </Card>
+                    <Card title="Data Management">
+                        <button onClick={handleExportData} className="button-secondary w-full">Export Client Data</button>
+                        <p className="text-xs text-center mt-1 text-gray-500">Download all of the client's data.</p>
+                    </Card>
+                </div>
             </div>
-            <div className="lg:col-span-1 space-y-6">
-                <Card title="Admin Actions">
-                    <button onClick={() => onImpersonate(client)} className="button-secondary w-full">Impersonate User</button>
-                    <p className="text-xs text-center mt-1 text-gray-500">Log in as this user to troubleshoot.</p>
-                </Card>
-                <Card title="Data Management">
-                    <button onClick={handleExportData} className="button-secondary w-full">Export Client Data</button>
-                    <p className="text-xs text-center mt-1 text-gray-500">Download all of the client's data.</p>
-                </Card>
-            </div>
-        </div>
+        </>
     );
 };
 

@@ -196,13 +196,23 @@ exports.suspendClient = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError("permission-denied", "This function can only be called by a super admin.");
     }
 
-    const { clientId, suspend } = data;
+    const { clientId, suspend, duration, reason } = data;
     if (!clientId) {
         throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'clientId' argument.");
     }
 
     try {
         await admin.auth().updateUser(clientId, { disabled: suspend });
+
+        const suspensionInfo = {
+            suspended: suspend,
+            suspensionReason: reason || null,
+            suspensionDuration: duration || null,
+            suspendedAt: suspend ? admin.firestore.FieldValue.serverTimestamp() : null,
+        };
+
+        await db.collection('users').doc(clientId).set({ suspension: suspensionInfo }, { merge: true });
+
         return { success: true, message: `Client account has been ${suspend ? 'suspended' : 'unsuspended'}.` };
     } catch (error) {
         console.error("Error suspending client:", error);

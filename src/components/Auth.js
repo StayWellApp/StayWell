@@ -19,6 +19,25 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+import React, { useContext, useState, useEffect } from "react";
+import { auth, googleProvider, db } from "../firebase-config";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut,
+  sendPasswordResetEmail
+} from "firebase/auth";
+import { Mail, Lock, Building2, User, Phone, Globe, Sun, Moon } from 'lucide-react';
+
+const AuthContext = React.createContext();
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +60,31 @@ export function AuthProvider({ children }) {
     return userCredential;
   }
 
-  function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password);
+  async function login(email, password) {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            if (userData.suspension && userData.suspension.suspended) {
+                await signOut(auth);
+                let message = `Your account has been suspended.`;
+                if (userData.suspension.suspensionReason) {
+                    message += ` Reason: ${userData.suspension.suspensionReason}`;
+                }
+                if (userData.suspension.suspensionDuration && userData.suspension.suspensionDuration !== 'indefinite') {
+                    // This is a simplified calculation. For more accuracy, use a library like date-fns.
+                    const suspendedAt = userData.suspension.suspendedAt.toDate();
+                    const expiresAt = new Date(suspendedAt.getTime() + userData.suspension.suspensionDuration * 24 * 60 * 60 * 1000);
+                    message += ` Your suspension will be lifted on ${expiresAt.toLocaleDateString()}`;
+                }
+                throw new Error(message);
+            }
+        }
+    }
+    return userCredential;
   }
 
   function signInWithGoogle() {
