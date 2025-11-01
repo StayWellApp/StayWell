@@ -2,5 +2,7 @@
     "gitdoc.enabled": true,
     "i18n-ally.localesPaths": [
         "../../../../../Users/neilc/Desktop/StayWellApp"
-    ]
+    ],
+    "geminicodeassist.agentYoloMode": true,
+    "geminicodeassist.agentDebugMode": true
 }
