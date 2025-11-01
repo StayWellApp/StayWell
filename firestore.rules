@@ -29,6 +29,7 @@ service cloud.firestore {
       allow list: if isSuperAdmin();
 
       // Rule 2: Allow a normal user to query for their own staff
+      // This uses the correct syntax for your original rule
       allow list: if
         request.auth.uid != null &&
         request.query.where.ownerId == request.auth.uid;
@@ -83,7 +84,7 @@ service cloud.firestore {
       allow read, write: if isOwner(resource) || isSuperAdmin();
     }
     match /storageLocations/{locationId} {
-        allow read, write: if isSuperAdmin() || isOwner(resource); // Added isSuperAdmin() just in case
+        allow read, write: if isSuperAdmin() || isOwner(resource); // Added isSuperAdmin()
     }
     match /storageLocations/{locationId}/supplies/{supplyId} {
         allow read, write: if isSuperAdmin() || get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid; // Added isSuperAdmin()
