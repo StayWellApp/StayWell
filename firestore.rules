@@ -18,43 +18,41 @@ service cloud.firestore {
       return request.auth.uid == resource.data.ownerId;
     }
 
-    // == SUPER ADMIN & USER RULES ==
-    match /users/{userId} {
-      allow get: if request.auth.uid == userId ||
-        isSuperAdmin();
-      
-      // --- FIX: UPDATED LIST RULE ---
-      // This allows a list query if it's by a super admin OR
-      // if a user is querying for users by their own ownerId.
+    // == USER RULES ==
+
+    // --- FIX: Rule for LIST operations on the /users collection ---
+    // This allows a super admin to list all users, or a user to list
+    // users they own (e.g., staff).
+    match /users { // NOTE: No {userId} wildcard here
       allow list: if isSuperAdmin() ||
                     (request.auth.uid != null &&
                      request.query.keys.hasAny(['ownerId']) &&
                      request.query.filters.ownerId == request.auth.uid);
-      
+    }
+    
+    // --- FIX: Rules for individual user documents AND their subcollections ---
+    match /users/{userId} {
+      // Allow user to get/write their own doc, or super admin to do so
+      allow get: if request.auth.uid == userId || isSuperAdmin();
       allow write, create: if request.auth.uid == userId || isSuperAdmin();
-      
-      // --- FIX: ADDED RULE FOR ACTIVITY LOG SUBCOLLECTION ---
-      // This rule explicitly allows super admins to read logs.
+
+      // Rule for activity logs subcollection
       match /activity_logs/{logId} {
         allow read: if isSuperAdmin();
-        // Writes are blocked from the client to ensure logs are only created by the backend.
-        allow write: if false;
+        allow write: if false; // Only from backend
       }
-      // --- END OF FIX ---
 
-      // --- FIX FOR COMMUNICATION TAB ---
-      // This allows Super Admins to read, write, and delete
-      // communication logs from the client-side tab.
+      // Rule for communication logs subcollection
       match /communication_logs/{logId} {
         allow read, write, delete: if isSuperAdmin();
       }
-      // --- END OF FIX ---
+
+      // Rule for configs subcollection
+      match /configs/{configId} {
+        allow read, write: if request.auth.uid == userId || isSuperAdmin();
+      }
     }
-    
-    match /users/{userId}/configs/{configId} {
-      allow read, write: if request.auth.uid == userId ||
-        isSuperAdmin();
-    }
+    // --- END OF FIX ---
 
     // == PROPERTY RULES ==
     match /properties/{propertyId} {
