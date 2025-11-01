@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase-config';
+import { signOut, signInWithCustomToken } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { doc, onSnapshot, collection, query, where, updateDoc, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare, FolderOpen, BarChart2, Edit, Send } from 'lucide-react';
@@ -92,7 +94,34 @@ const ClientDetailView = ({ onSelectProperty }) => {
         }
     };
     
-    const handleImpersonate = (clientToImpersonate) => { /* Impersonation logic */ };
+    const handleImpersonate = async (clientToImpersonate) => {
+        const functions = getFunctions();
+        const createImpersonationToken = httpsCallable(functions, 'createImpersonationToken');
+        const adminUser = auth.currentUser;
+
+        if (!adminUser) {
+            toast.error("Authentication error. Please sign in again.");
+            return;
+        }
+
+        localStorage.setItem('impersonating_admin_uid', adminUser.uid);
+
+        try {
+            const result = await createImpersonationToken({ uid: clientToImpersonate.id });
+            const token = result.data.token;
+
+            if (token) {
+                await signOut(auth);
+                await signInWithCustomToken(auth, token);
+                navigate('/dashboard');
+            } else {
+                toast.error("Failed to generate impersonation token.");
+            }
+        } catch (error) {
+            console.error("Impersonation error:", error);
+            toast.error(`An error occurred: ${error.message}`);
+        }
+    };
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: User }, { id: 'properties', label: 'Properties', icon: Building },
