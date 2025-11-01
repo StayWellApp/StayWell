@@ -148,13 +148,10 @@ function AppContent() {
 
     if (authLoading) return <div className="flex items-center justify-center h-screen"><p>Loading StayWell...</p></div>;
     
-    // FIX: This now correctly renders the Auth component
-    // (which will be styled by the providers in index.js)
     if (!currentUser) return <Auth />;
     
     if (!isSuperAdmin && !isImpersonating && (loadingPermissions || isUserDataLoading)) return <div className="flex items-center justify-center h-screen"><p>Loading User Profile...</p></div>;
 
-    // FIX: Removed the <ThemeProvider> wrapper from here
     return (
         <>
             <ToastContainer position="bottom-center" autoClose={4000} hideProgressBar={false} />
@@ -179,8 +176,6 @@ function AppContent() {
     );
 }
 
-// FIX: Removed the <AuthProvider> and <AdminProvider> wrappers from here.
-// The App component now just renders AppContent.
 function App() {
     return (
         <AppContent />
