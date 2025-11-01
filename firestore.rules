@@ -20,15 +20,16 @@ service cloud.firestore {
 
     // == USER RULES ==
 
-    // --- FINAL FIX v3: Simplified Logic ---
+    // --- FINAL FIX v4: Correct 'OR' logic with modern syntax ---
     match /users {
-      // Rule 1: Allow Super Admin to run ANY list query.
-      allow list: if isSuperAdmin();
-
-      // Rule 2: Allow a normal user to query for their own staff
       allow list: if
-        request.auth.uid != null &&
-        request.query.where.ownerId == request.auth.uid;
+        // Case 1: Admin query
+        (request.auth.token.superAdmin == true &&
+         request.query.where.role == 'owner')
+        ||
+        // Case 2: User query for their own staff
+        (request.auth.uid != null &&
+         request.query.where.ownerId == request.auth.uid);
     }
     // --- END OF FIX ---
     
