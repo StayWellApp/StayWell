@@ -237,8 +237,7 @@ export const Auth = () => {
                                     Forgot password?
                                 </button>
                             </div>
-                        </div>
-                        <p className="text-sm text-center text-red-600 dark:text-red-400 min-h-[20px]">{errorMessage}</p>
+                        {errorMessage && <p className="text-sm text-center text-red-600 dark:text-red-400 min-h-[20px]">{errorMessage}</p>}
                         <div className="pt-2">
                             <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors">
                                 {isLoading ? 'Processing...' : 'Sign In'}
@@ -279,7 +278,7 @@ export const Auth = () => {
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Management, simplified.</p>
         </div>
       </div>
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
+      <div className="w-full lg:w-1/2 flex p-6 sm:p-12">
         <div className="w-full max-w-md">
           {renderForm()}
         </div>
