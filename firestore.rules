@@ -20,16 +20,12 @@ service cloud.firestore {
 
     // == USER RULES ==
 
-    // --- FINAL FIX: Two separate 'allow list' rules ---
+    // --- FINAL FIX v3: Simplified Logic ---
     match /users {
-      // Rule 1: Allow Super Admin to query by 'role'
-      // This matches your App.js query
-      allow list: if
-        request.auth.token.superAdmin == true &&
-        request.query.where.role == 'owner';
+      // Rule 1: Allow Super Admin to run ANY list query.
+      allow list: if isSuperAdmin();
 
       // Rule 2: Allow a normal user to query for their own staff
-      // This matches your original rule's intent (e.g., for TeamView)
       allow list: if
         request.auth.uid != null &&
         request.query.where.ownerId == request.auth.uid;
