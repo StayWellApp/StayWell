@@ -263,7 +263,7 @@ export const Auth = () => {
     }
   };
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex relative">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex relative overflow-hidden">
       <div className="absolute top-6 right-6 flex items-center space-x-4 z-10">
         <ThemeToggle />
         <div className="relative">
