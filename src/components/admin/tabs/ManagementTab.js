@@ -1,15 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { getAuth } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import ClientSubscriptionManager from '../ClientSubscriptionManager';
+import SuspendClientModal from '../SuspendClientModal';
 import { UserSearch, Download, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const ManagementTab = ({ client, refreshClientData, allPlans, loadingPlans, onImpersonate }) => {
     
+    const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+
     if (!client) {
         return <div>Loading management details...</div>;
     }
+
+    const handleSuspendConfirm = async ({ duration, reason }) => {
+        const suspend = !client.disabled;
+        const toastId = toast.loading(`${suspend ? 'Suspending' : 'Unsuspending'} client...`);
+        try {
+            const functions = getFunctions();
+            const suspendClient = httpsCallable(functions, 'suspendClient');
+            await suspendClient({ clientId: client.id, suspend, duration, reason });
+            toast.update(toastId, { render: `Client ${suspend ? 'suspended' : 'unsuspended'} successfully!`, type: "success", isLoading: false, autoClose: 3000 });
+            refreshClientData();
+        } catch (error) {
+            console.error("Error suspending client:", error);
+            toast.update(toastId, { render: `Error suspending client: ${error.message}`, type: "error", isLoading: false, autoClose: 5000 });
+        }
+    };
 
     const handleActionClick = async (action) => {
         if (action === 'Reset Data') {
@@ -27,20 +45,7 @@ const ManagementTab = ({ client, refreshClientData, allPlans, loadingPlans, onIm
                 }
             }
         } else if (action === 'Suspend Account') {
-            const suspend = !client.disabled;
-            if (window.confirm(`Are you sure you want to ${suspend ? 'suspend' : 'unsuspend'} ${client.companyName}?`)) {
-                const toastId = toast.loading(`${suspend ? 'Suspending' : 'Unsuspending'} client...`);
-                try {
-                    const functions = getFunctions();
-                    const suspendClient = httpsCallable(functions, 'suspendClient');
-                    await suspendClient({ clientId: client.id, suspend });
-                    toast.update(toastId, { render: `Client ${suspend ? 'suspended' : 'unsuspended'} successfully!`, type: "success", isLoading: false, autoClose: 3000 });
-                    refreshClientData();
-                } catch (error) {
-                    console.error("Error suspending client:", error);
-                    toast.update(toastId, { render: `Error suspending client: ${error.message}`, type: "error", isLoading: false, autoClose: 5000 });
-                }
-            }
+            setIsSuspendModalOpen(true);
         } else if (action === 'Delete Account') {
             if (window.confirm(`Are you sure you want to delete the account for ${client.companyName}? This action is permanent and cannot be undone.`)) {
                 const toastId = toast.loading("Deleting client account...");

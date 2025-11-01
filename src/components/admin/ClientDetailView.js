@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase-config';
 import { signOut, signInWithCustomToken } from 'firebase/auth';
@@ -27,6 +27,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         sessionStorage.setItem('clientDetailTab', tabId);
     };
     const [clientData, setClientData] = useState(null);
+    const [authUser, setAuthUser] = useState(null);
     const [loadingClient, setLoadingClient] = useState(true);
     const [properties, setProperties] = useState([]);
     const [loadingProperties, setLoadingProperties] = useState(true);
@@ -36,8 +37,22 @@ const ClientDetailView = ({ onSelectProperty }) => {
     const [activityLogs, setActivityLogs] = useState([]);
     const [loadingLogs, setLoadingLogs] = useState(true);
 
+    const refreshAuthUser = useCallback(async () => {
+        try {
+            const functions = getFunctions();
+            const getUser = httpsCallable(functions, 'getUser');
+            const result = await getUser({ uid: clientId });
+            setAuthUser(result.data.user);
+        } catch (error) {
+            console.error("Error fetching auth user:", error);
+            toast.error("Failed to fetch latest user data.");
+        }
+    }, [clientId]);
+
     useEffect(() => {
         if (!clientId) return;
+
+        refreshAuthUser();
 
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
             if (doc.exists()) {
@@ -58,7 +73,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         const unsubLogs = onSnapshot(query(collection(db, "users", clientId, "activity_logs"), orderBy("timestamp", "desc")), (snapshot) => { setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoadingLogs(false); });
 
         return () => { unsubClient(); unsubProps(); unsubPlans(); unsubLogs(); };
-    }, [clientId, navigate]);
+    }, [clientId, navigate, refreshAuthUser]);
 
     const handleAddNote = async (newNote) => {
         if (!newNote || !newNote.text || !newNote.importance) {
@@ -136,14 +151,16 @@ const ClientDetailView = ({ onSelectProperty }) => {
     ];
 
     const renderTabContent = () => {
-        if (loadingClient || !clientData) return null;
+        if (loadingClient || !clientData || !authUser) return null;
         const monthlyRevenue = clientData?.monthlyRevenue || 199;
         const occupancyRate = 85;
+
+        const combinedClientData = { ...clientData, ...authUser };
 
         switch (activeTab) {
             case 'overview':
                 return <OverviewTab 
-                            clientData={clientData} 
+                            clientData={combinedClientData} 
                             properties={properties} 
                             monthlyRevenue={monthlyRevenue} 
                             occupancyRate={occupancyRate} 
@@ -154,11 +171,11 @@ const ClientDetailView = ({ onSelectProperty }) => {
                             loadingLogs={loadingLogs}
                         />;
             case 'properties': return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
-            case 'management': return <ManagementTab client={clientData} refreshClientData={()=>{}} allPlans={allPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate} />;
-            case 'billing': return <BillingTab client={clientData} />;
-            case 'communication': return <CommunicationTab client={clientData} />;
-            case 'documents': return <DocumentsTab client={clientData} />;
-            case 'analytics': return <ClientAnalyticsView client={clientData} />;
+            case 'management': return <ManagementTab client={combinedClientData} refreshClientData={refreshAuthUser} allPlans={allPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate} />;
+            case 'billing': return <BillingTab client={combinedClientData} />;
+            case 'communication': return <CommunicationTab client={combinedClientData} />;
+            case 'documents': return <DocumentsTab client={combinedClientData} />;
+            case 'analytics': return <ClientAnalyticsView client={combinedClientData} />;
             default: return null;
         }
     };
