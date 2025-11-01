@@ -108,7 +108,16 @@ export const Auth = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const { login, signup, signInWithGoogle } = useAuth();
+
+  useEffect(() => {
+    // Delay showing the form slightly to allow any ResizeObserver to settle
+    const timer = setTimeout(() => {
+      setShowForm(true);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []);
   const handleInputChange = (e) => {
       const { id, value } = e.target;
       setFormState(prev => ({ ...prev, [id]: value }));
@@ -218,7 +227,7 @@ export const Auth = () => {
         <ThemeToggle />
         {errorMessage && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">{errorMessage}</div>}
         {successMessage && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">{successMessage}</div>}
-        {renderForm()}
+        {showForm ? renderForm() : <div className="text-center text-gray-500 dark:text-gray-400">Loading form...</div>}
       </div>
     </div>
   );
