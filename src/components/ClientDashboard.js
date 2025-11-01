@@ -283,7 +283,6 @@ const TaskStatusChart = ({ data }) => {
     if (chartData.length === 0) return <p className="text-center py-4 text-gray-500 dark:text-gray-400">No task data.</p>;
 
     return (
-        // --- FIX: Added debounce={1} to fix ResizeObserver loop error ---
         <ResponsiveContainer width="100%" height="90%" debounce={1}>
             <PieChart>
                 <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={5}>
