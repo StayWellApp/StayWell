@@ -21,7 +21,7 @@ service cloud.firestore {
     // == SUPER ADMIN & USER RULES ==
     match /users/{userId} {
       allow get: if request.auth.uid == userId || isSuperAdmin();
-      allow list: if isSuperAdmin();
+      allow list: if true; // Allow public listing for suspension check
       allow write, create: if request.auth.uid == userId || isSuperAdmin();
 
       // --- FIX: ADDED RULE FOR ACTIVITY LOG SUBCOLLECTION ---
