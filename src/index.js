@@ -1,21 +1,24 @@
-import './index.css';
 import './i18n';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './index.css'; // This correctly imports your styles
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { BrowserRouter } from 'react-router-dom';
-import { AdminProvider } from './contexts/AdminContext'; // <-- Re-added this import
+import { AuthProvider } from './components/Auth'; // <-- 1. Import AuthProvider
+import { AdminProvider } from './contexts/AdminContext'; // <-- 2. Import AdminProvider
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <BrowserRouter>
       <ThemeProvider>
-        <AdminProvider> {/* <-- Re-added this provider wrapper */}
-          <App />
-        </AdminProvider>
+        <AuthProvider> {/* <-- 3. Wrap App in AuthProvider */}
+          <AdminProvider> {/* <-- 4. Wrap App in AdminProvider */}
+            <App />
+          </AdminProvider>
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
