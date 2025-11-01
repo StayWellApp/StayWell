@@ -241,3 +241,22 @@ exports.deleteClient = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError("internal", "An internal error occurred while deleting the client account.");
     }
 });
+
+exports.getUser = functions.https.onCall(async (data, context) => {
+    if (!context.auth || !context.auth.token.superAdmin) {
+        throw new functions.https.HttpsError("permission-denied", "This function can only be called by a super admin.");
+    }
+
+    const { uid } = data;
+    if (!uid) {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'uid' argument.");
+    }
+
+    try {
+        const userRecord = await admin.auth().getUser(uid);
+        return { user: userRecord.toJSON() };
+    } catch (error) {
+        console.error("Error getting user:", error);
+        throw new functions.https.HttpsError("internal", "An internal error occurred while getting the user.");
+    }
+});
