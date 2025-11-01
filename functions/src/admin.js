@@ -202,6 +202,13 @@ exports.suspendClient = functions.https.onCall(async (data, context) => {
     }
 
     try {
+        const userRecord = await admin.auth().getUser(clientId);
+        const email = userRecord.email;
+
+        if (!email) {
+            throw new functions.https.HttpsError("internal", "User email could not be retrieved.");
+        }
+
         await admin.auth().updateUser(clientId, { disabled: suspend });
 
         const suspensionInfo = {
@@ -212,6 +219,21 @@ exports.suspendClient = functions.https.onCall(async (data, context) => {
         };
 
         await db.collection('users').doc(clientId).set({ suspension: suspensionInfo }, { merge: true });
+
+        if (suspend) {
+            await db.collection('suspendedUsers').doc(email).set({ 
+                suspensionReason: reason || 'No reason provided.',
+                suspensionDuration: duration || null,
+                suspendedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            await db.collection('suspendedUsers').doc(email).delete().catch(err => {
+                // It's okay if the doc doesn't exist, so we can ignore not_found errors.
+                if (err.code !== 'not-found') {
+                    throw err;
+                }
+            });
+        }
 
         return { success: true, message: `Client account has been ${suspend ? 'suspended' : 'unsuspended'}.` };
     } catch (error) {

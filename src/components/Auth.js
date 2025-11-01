@@ -2,7 +2,7 @@
 
 import React, { useContext, useState, useEffect } from "react";
 import { auth, googleProvider, db } from "../firebase-config";
-import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -121,20 +121,15 @@ export const Auth = () => {
       await authFn();
     } catch (error) {
       if (error.code === 'auth/user-disabled') {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const userDoc = querySnapshot.docs[0].data();
-          if (userDoc.suspension && userDoc.suspension.suspended) {
-            let message = 'Your account has been suspended.';
-            if (userDoc.suspension.suspensionReason) {
-              message += ` Reason: ${userDoc.suspension.suspensionReason}`;
-            }
-            setErrorMessage(message);
-          } else {
-            setErrorMessage('Your account is disabled. Please contact support.');
+        const suspendedUserDocRef = doc(db, 'suspendedUsers', email);
+        const suspendedUserDoc = await getDoc(suspendedUserDocRef);
+        if (suspendedUserDoc.exists()) {
+          const { suspensionReason } = suspendedUserDoc.data();
+          let message = 'Your account has been suspended.';
+          if (suspensionReason) {
+            message += ` Reason: ${suspensionReason}`;
           }
+          setErrorMessage(message);
         } else {
           setErrorMessage('Your account is disabled. Please contact support.');
         }
