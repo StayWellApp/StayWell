@@ -237,12 +237,13 @@ export const Auth = () => {
                                     Forgot password?
                                 </button>
                             </div>
-                        {errorMessage && <p className="text-sm text-center text-red-600 dark:text-red-400 min-h-[20px]">{errorMessage}</p>}
-                        <div className="pt-2">
-                            <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors">
-                                {isLoading ? 'Processing...' : 'Sign In'}
-                            </button>
                         </div>
+                            {errorMessage && <p className="text-sm text-center text-red-600 dark:text-red-400 min-h-[20px]">{errorMessage}</p>}
+                            <div className="pt-2">
+                                <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                                    {isLoading ? 'Processing...' : 'Sign In'}
+                                </button>
+                            </div>
                     </form>
                     <div className="mt-6">
                         <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300 dark:border-gray-600" /></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or</span></div></div>
