@@ -163,5 +163,4 @@ body {
   opacity: 1;
   background: theme('colors.blue.500'); /* Blue on hover for better interaction */
 }
-
-/* <<<--- THE EXTRA '}' BRACKET WAS HERE. I HAVE REMOVED IT. ---<<< */
+/* NOTE: The extra '}' syntax error at the end has been removed. */
