@@ -2,25 +2,6 @@
 
 import React, { useContext, useState, useEffect } from "react";
 import { auth, googleProvider, db } from "../firebase-config";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  onAuthStateChanged,
-  signOut,
-  sendPasswordResetEmail
-} from "firebase/auth";
-import { Mail, Lock, Building2, User, Phone, Globe, Sun, Moon } from 'lucide-react';
-
-const AuthContext = React.createContext();
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-import React, { useContext, useState, useEffect } from "react";
-import { auth, googleProvider, db } from "../firebase-config";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
