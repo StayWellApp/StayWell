@@ -274,7 +274,7 @@ export const Auth = () => {
         </div>
       </div>
       <div className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-200 via-sky-200 to-purple-200 dark:from-gray-800 dark:via-indigo-900 dark:to-purple-900 animate-gradient-xy" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-200 via-sky-200 to-purple-200 dark:from-gray-800 dark:via-indigo-900 dark:to-purple-900" />
         <div className="text-center z-10">
           <h1 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">StayWell</h1>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Management, simplified.</p>
