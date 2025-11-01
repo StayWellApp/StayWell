@@ -14,8 +14,8 @@ const ManagementTab = ({ client, refreshClientData, allPlans, loadingPlans, onIm
         return <div>Loading management details...</div>;
     }
 
-    const handleSuspendConfirm = async ({ duration, reason }) => {
-        const suspend = !client.disabled;
+    const handleSuspendConfirm = async ({ duration, reason, suspend: suspendAction }) => {
+        const suspend = suspendAction !== undefined ? suspendAction : !client.disabled;
         const toastId = toast.loading(`${suspend ? 'Suspending' : 'Unsuspending'} client...`);
         try {
             const functions = getFunctions();
@@ -45,7 +45,13 @@ const ManagementTab = ({ client, refreshClientData, allPlans, loadingPlans, onIm
                 }
             }
         } else if (action === 'Suspend Account') {
-            setIsSuspendModalOpen(true);
+            if (client.disabled) {
+                if (window.confirm(`Are you sure you want to unsuspend ${client.companyName}?`)) {
+                    handleSuspendConfirm({ suspend: false });
+                }
+            } else {
+                setIsSuspendModalOpen(true);
+            }
         } else if (action === 'Delete Account') {
             if (window.confirm(`Are you sure you want to delete the account for ${client.companyName}? This action is permanent and cannot be undone.`)) {
                 const toastId = toast.loading("Deleting client account...");

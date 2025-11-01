@@ -1,13 +1,22 @@
 import React, { useState } from 'react';
 
+const predefinedReasons = [
+    "Violation of terms of service",
+    "Suspicious activity detected",
+    "Payment issue",
+    "Other (please specify)"
+];
+
 const SuspendClientModal = ({ isOpen, onClose, onConfirm }) => {
     const [duration, setDuration] = useState('indefinite');
-    const [reason, setReason] = useState('');
+    const [reason, setReason] = useState(predefinedReasons[0]);
+    const [customReason, setCustomReason] = useState('');
 
     if (!isOpen) return null;
 
     const handleConfirm = () => {
-        onConfirm({ duration, reason });
+        const finalReason = reason === "Other (please specify)" ? customReason : reason;
+        onConfirm({ duration, reason: finalReason });
         onClose();
     };
 
@@ -27,8 +36,16 @@ const SuspendClientModal = ({ isOpen, onClose, onConfirm }) => {
                     </div>
                     <div>
                         <label htmlFor="reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Reason for Suspension</label>
-                        <textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} rows="3" className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"></textarea>
+                        <select id="reason" value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            {predefinedReasons.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
                     </div>
+                    {reason === "Other (please specify)" && (
+                        <div>
+                            <label htmlFor="customReason" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Custom Reason</label>
+                            <textarea id="customReason" value={customReason} onChange={(e) => setCustomReason(e.target.value)} rows="3" className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"></textarea>
+                        </div>
+                    )}
                 </div>
                 <div className="mt-6 flex justify-end space-x-3">
                     <button onClick={onClose} className="button-secondary">Cancel</button>
