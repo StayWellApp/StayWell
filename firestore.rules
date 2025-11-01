@@ -21,16 +21,22 @@ service cloud.firestore {
     // == USER RULES ==
 
     // --- FIX: Rule for LIST operations on the /users collection ---
-    // This allows a super admin to list all users, or a user to list
-    // users they own (e.g., staff).
     match /users { // NOTE: No {userId} wildcard here
-      allow list: if isSuperAdmin() ||
-                    (request.auth.uid != null &&
-                     request.query.keys.hasAny(['ownerId']) &&
-                     request.query.filters.ownerId == request.auth.uid);
+      allow list: if (
+                      // 1. Allow Super Admin's query from App.js
+                      isSuperAdmin() &&
+                      request.query.keys.hasAny(['role']) &&
+                      request.query.filters.role == 'owner'
+                    ) || (
+                      // 2. Allow a user's query for their own staff
+                      request.auth.uid != null &&
+                      request.query.keys.hasAny(['ownerId']) &&
+                      request.query.filters.ownerId == request.auth.uid
+                    );
     }
+    // --- END OF FIX ---
     
-    // --- FIX: Rules for individual user documents AND their subcollections ---
+    // --- Rules for individual user documents AND their subcollections ---
     match /users/{userId} {
       // Allow user to get/write their own doc, or super admin to do so
       allow get: if request.auth.uid == userId || isSuperAdmin();
@@ -52,7 +58,6 @@ service cloud.firestore {
         allow read, write: if request.auth.uid == userId || isSuperAdmin();
       }
     }
-    // --- END OF FIX ---
 
     // == PROPERTY RULES ==
     match /properties/{propertyId} {
