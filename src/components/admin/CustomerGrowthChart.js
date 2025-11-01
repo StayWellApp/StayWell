@@ -1,12 +1,12 @@
-// src/components/admin/CustomerGrowthChart.js
-
+// staywellapp/staywell/StayWell-6e0b065d1897040a210dff5b77aa1b9a56a8c92f/src/components/admin/CustomerGrowthChart.js
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import moment from 'moment';
+import DashboardWidget from './DashboardWidget';
 import { TrendingUp } from 'lucide-react';
 
 const ChartPlaceholder = ({ title }) => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-80 flex flex-col">
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-full flex flex-col">
         <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{title}</h3>
         <div className="flex-grow flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-md animate-pulse">
             <TrendingUp className="h-12 w-12 text-gray-300 dark:text-gray-600" />
@@ -14,44 +14,56 @@ const ChartPlaceholder = ({ title }) => (
     </div>
 );
 
-const CustomerGrowthChart = ({ clients, loading, onBarClick }) => {
-    if (loading) {
+const CustomerGrowthChart = ({ clients, loading }) => {
+    if (loading || !clients) {
         return <ChartPlaceholder title="Customer Growth" />;
     }
 
-    const data = clients
-        .filter(c => c.createdAt)
+    // Process client data to get counts per month
+    const monthlyData = clients
+        .filter(c => c.createdAt && c.createdAt.toDate)
         .reduce((acc, client) => {
             const month = moment(client.createdAt.toDate()).format('YYYY-MM');
-            const found = acc.find(item => item.month === month);
-            if (found) {
-                found.newClients++;
-            } else {
-                acc.push({ month, newClients: 1 });
-            }
+            acc[month] = (acc[month] || 0) + 1;
             return acc;
-        }, [])
-        .sort((a, b) => a.month.localeCompare(b.month));
+        }, {});
+
+    // Create a data structure for all 12 months of the current year
+    const currentYear = new Date().getFullYear();
+    const data = Array.from({ length: 12 }, (_, i) => {
+        const monthMoment = moment({ year: currentYear, month: i });
+        const monthKey = monthMoment.format('YYYY-MM');
+        return {
+            month: monthKey,
+            customers: monthlyData[monthKey] || 0,
+        };
+    });
 
     return (
-         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-80">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Customer Growth</h3>
-            <ResponsiveContainer width="100%" height="90%">
-                <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 40 }} onClick={onBarClick}>
-                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} stroke="currentColor" />
-                    <XAxis dataKey="month" angle={-45} textAnchor="end" height={60} tick={{ fill: 'currentColor', fontSize: 12 }} />
-                    <YAxis tick={{ fill: 'currentColor', fontSize: 12 }} />
-                    <Tooltip 
-                        contentStyle={{ 
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                            border: '1px solid #ccc',
-                            color: '#333'
-                        }} 
+        <DashboardWidget title="Customer Growth">
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                    data={data}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis 
+                        dataKey="month" 
+                        tickLine={false} 
+                        axisLine={false}
+                        tickFormatter={(tick) => moment(tick).format('MMM')} 
                     />
-                    <Bar dataKey="newClients" fill="#4f46e5" name="New Clients" style={{ cursor: 'pointer' }}/>
-                </BarChart>
+                    <YAxis 
+                        tickLine={false} 
+                        axisLine={false} 
+                        width={30}
+                        allowDecimals={false} 
+                    />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="customers" stroke="#8884d8" fill="#8884d8" />
+                </AreaChart>
             </ResponsiveContainer>
-        </div>
+        </DashboardWidget>
     );
 };
 

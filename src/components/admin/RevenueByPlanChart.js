@@ -1,62 +1,58 @@
-// src/components/admin/RevenueByPlanChart.js
-
+// staywellapp/staywell/StayWell-6e0b065d1897040a210dff5b77aa1b9a56a8c92f/src/components/admin/RevenueByPlanChart.js
 import React from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { PieChart as PieIcon } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import DashboardWidget from './DashboardWidget';
+import { BarChart2 } from 'lucide-react';
 
 const ChartPlaceholder = ({ title }) => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-80 flex flex-col">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{title}</h3>
-        <div className="flex-grow flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-md animate-pulse">
-            <PieIcon className="h-12 w-12 text-gray-300 dark:text-gray-600" />
+    <DashboardWidget title={title}>
+        <div className="h-full flex flex-col items-center justify-center animate-pulse">
+            <BarChart2 className="h-12 w-12 text-gray-300 dark:text-gray-600" />
         </div>
-    </div>
+    </DashboardWidget>
 );
 
 
-// Dummy data
-const data = [
-    { name: 'Basic Plan', value: 400 },
-    { name: 'Pro Plan', value: 300 },
-    { name: 'Enterprise Plan', value: 200 },
-];
-const COLORS = ['#60a5fa', '#818cf8', '#4f46e5'];
-
 const RevenueByPlanChart = ({ clients, loading }) => {
-    if (loading) {
+    if (loading || !clients) {
         return <ChartPlaceholder title="Revenue By Plan" />;
     }
 
+    const revenueData = clients
+        .filter(client => client.subscription && client.subscription.status === 'active' && client.subscription.planName)
+        .reduce((acc, client) => {
+            const planName = client.subscription.planName;
+            const price = client.subscription.price || 0;
+
+            if (!acc[planName]) {
+                acc[planName] = { name: planName, revenue: 0 };
+            }
+            acc[planName].revenue += price;
+            
+            return acc;
+        }, {});
+
+    const data = Object.values(revenueData);
+
     return (
-         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md h-80">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Revenue By Plan</h3>
-            <ResponsiveContainer width="100%" height="90%">
-                <PieChart>
-                    <Pie
-                        data={data}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        nameKey="name"
-                    >
-                        {data.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                    </Pie>
+        <DashboardWidget title="Revenue By Plan">
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                    data={data}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                    <YAxis tickLine={false} axisLine={false} />
                     <Tooltip 
-                        contentStyle={{ 
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                            border: '1px solid #ccc',
-                            color: '#333'
-                        }} 
+                        cursor={{fill: 'rgba(239, 246, 255, 0.5)'}}
+                        formatter={(value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)}
                     />
-                    <Legend />
-                </PieChart>
+                    <Legend iconType="circle" iconSize={8} />
+                    <Bar dataKey="revenue" fill="#4f46e5" name="Revenue" radius={[4, 4, 0, 0]} />
+                </BarChart>
             </ResponsiveContainer>
-        </div>
+        </DashboardWidget>
     );
 };
 
