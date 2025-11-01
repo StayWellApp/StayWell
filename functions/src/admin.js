@@ -144,7 +144,7 @@ exports.exportClientData = functions.https.onRequest((req, res) => {
 
             const clientDoc = await db.collection('users').doc(clientId).get();
             if (!clientDoc.exists) {
-                return res.status(4<strong>4).send({ error: 'Client not found.' });
+                return res.status(404).send({ error: 'Client not found.' });
             }
 
             const propertiesQuery = await db.collection('properties').where('ownerId', '==', clientId).get();
@@ -164,4 +164,80 @@ exports.exportClientData = functions.https.onRequest((req, res) => {
             return res.status(500).send({ error: 'An internal error occurred while exporting client data.' });
         }
     });
+});
+
+exports.resetClientData = functions.https.onCall(async (data, context) => {
+    if (!context.auth || !context.auth.token.superAdmin) {
+        throw new functions.https.HttpsError("permission-denied", "This function can only be called by a super admin.");
+    }
+
+    const { clientId } = data;
+    if (!clientId) {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'clientId' argument.");
+    }
+
+    try {
+        const propertiesQuery = await db.collection('properties').where('ownerId', '==', clientId).get();
+        const batch = db.batch();
+        propertiesQuery.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        return { success: true, message: "Client data reset successfully." };
+    } catch (error) {
+        console.error("Error resetting client data:", error);
+        throw new functions.https.HttpsError("internal", "An internal error occurred while resetting client data.");
+    }
+});
+
+exports.suspendClient = functions.https.onCall(async (data, context) => {
+    if (!context.auth || !context.auth.token.superAdmin) {
+        throw new functions.https.HttpsError("permission-denied", "This function can only be called by a super admin.");
+    }
+
+    const { clientId, suspend } = data;
+    if (!clientId) {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'clientId' argument.");
+    }
+
+    try {
+        await admin.auth().updateUser(clientId, { disabled: suspend });
+        return { success: true, message: `Client account has been ${suspend ? 'suspended' : 'unsuspended'}.` };
+    } catch (error) {
+        console.error("Error suspending client:", error);
+        throw new functions.https.HttpsError("internal", "An internal error occurred while suspending the client account.");
+    }
+});
+
+exports.deleteClient = functions.https.onCall(async (data, context) => {
+    if (!context.auth || !context.auth.token.superAdmin) {
+        throw new functions.https.HttpsError("permission-denied", "This function can only be called by a super admin.");
+    }
+
+    const { clientId } = data;
+    if (!clientId) {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'clientId' argument.");
+    }
+
+    try {
+        // Delete user from Firebase Authentication
+        await admin.auth().deleteUser(clientId);
+
+        // Delete user data from Firestore
+        await db.collection('users').doc(clientId).delete();
+
+        // Delete all properties owned by the user
+        const propertiesQuery = await db.collection('properties').where('ownerId', '==', clientId).get();
+        const batch = db.batch();
+        propertiesQuery.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        return { success: true, message: "Client account deleted successfully." };
+    } catch (error) {
+        console.error("Error deleting client:", error);
+        throw new functions.https.HttpsError("internal", "An internal error occurred while deleting the client account.");
+    }
 });

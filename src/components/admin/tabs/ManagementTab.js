@@ -10,9 +10,67 @@ const ManagementTab = ({ client, refreshClientData, allPlans, loadingPlans, onIm
         return <div>Loading management details...</div>;
     }
 
-    const handleActionClick = (action) => {
-        console.log(`${action} button clicked for client: ${client.id}. Functionality not yet implemented.`);
-        toast.warn(`${action} functionality is not yet implemented.`);
+import React from 'react';
+import { getAuth } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import ClientSubscriptionManager from '../ClientSubscriptionManager';
+import { UserSearch, Download, AlertTriangle } from 'lucide-react';
+import { toast } from 'react-toastify';
+
+const ManagementTab = ({ client, refreshClientData, allPlans, loadingPlans, onImpersonate }) => {
+    
+    if (!client) {
+        return <div>Loading management details...</div>;
+    }
+
+    const handleActionClick = async (action) => {
+        if (action === 'Reset Data') {
+            if (window.confirm(`Are you sure you want to reset all data for ${client.companyName}? This action cannot be undone.`)) {
+                const toastId = toast.loading("Resetting client data...");
+                try {
+                    const functions = getFunctions();
+                    const resetClientData = httpsCallable(functions, 'resetClientData');
+                    await resetClientData({ clientId: client.id });
+                    toast.update(toastId, { render: "Client data reset successfully!", type: "success", isLoading: false, autoClose: 3000 });
+                    refreshClientData();
+                } catch (error) {
+                    console.error("Error resetting client data:", error);
+                    toast.update(toastId, { render: `Error resetting data: ${error.message}`, type: "error", isLoading: false, autoClose: 5000 });
+                }
+            }
+        } else if (action === 'Suspend Account') {
+            const suspend = !client.disabled;
+            if (window.confirm(`Are you sure you want to ${suspend ? 'suspend' : 'unsuspend'} ${client.companyName}?`)) {
+                const toastId = toast.loading(`${suspend ? 'Suspending' : 'Unsuspending'} client...`);
+                try {
+                    const functions = getFunctions();
+                    const suspendClient = httpsCallable(functions, 'suspendClient');
+                    await suspendClient({ clientId: client.id, suspend });
+                    toast.update(toastId, { render: `Client ${suspend ? 'suspended' : 'unsuspended'} successfully!`, type: "success", isLoading: false, autoClose: 3000 });
+                    refreshClientData();
+                } catch (error) {
+                    console.error("Error suspending client:", error);
+                    toast.update(toastId, { render: `Error suspending client: ${error.message}`, type: "error", isLoading: false, autoClose: 5000 });
+                }
+            }
+        } else if (action === 'Delete Account') {
+            if (window.confirm(`Are you sure you want to delete the account for ${client.companyName}? This action is permanent and cannot be undone.`)) {
+                const toastId = toast.loading("Deleting client account...");
+                try {
+                    const functions = getFunctions();
+                    const deleteClient = httpsCallable(functions, 'deleteClient');
+                    await deleteClient({ clientId: client.id });
+                    toast.update(toastId, { render: "Client account deleted successfully!", type: "success", isLoading: false, autoClose: 3000 });
+                    // After deletion, you might want to redirect the user or refresh the client list
+                } catch (error) {
+                    console.error("Error deleting client:", error);
+                    toast.update(toastId, { render: `Error deleting client: ${error.message}`, type: "error", isLoading: false, autoClose: 5000 });
+                }
+            }
+        } else {
+            console.log(`${action} button clicked for client: ${client.id}. Functionality not yet implemented.`);
+            toast.warn(`${action} functionality is not yet implemented.`);
+        }
     };
 
     const handleExportData = async () => {
