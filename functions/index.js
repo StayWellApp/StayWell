@@ -1,5 +1,5 @@
 // functions/index.js
-import './index.css';
+
 const admin = require("firebase-admin");
 admin.initializeApp();
 
