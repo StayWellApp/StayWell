@@ -6,13 +6,16 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { BrowserRouter } from 'react-router-dom';
+import { AdminProvider } from './contexts/AdminContext'; // <-- Re-added this import
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <BrowserRouter>
       <ThemeProvider>
-        <App />
+        <AdminProvider> {/* <-- Re-added this provider wrapper */}
+          <App />
+        </AdminProvider>
       </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>

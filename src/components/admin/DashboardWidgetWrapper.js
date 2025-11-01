@@ -1,5 +1,3 @@
-// src/components/admin/DashboardWidgetWrapper.js
-
 import React from 'react';
 import { GripVertical, X } from 'lucide-react';
 
@@ -20,6 +18,7 @@ const DashboardWidgetWrapper = ({ children, title, isEditing, onRemoveWidget }) 
                     </button>
                 </div>
             )}
+            {/* This div correctly includes 'overflow-hidden' to fix the loop error */}
             <div className="flex-grow p-4 overflow-hidden">
                 {children}
             </div>
