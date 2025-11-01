@@ -73,13 +73,21 @@ function AppContent() {
         }
     }, [isSuperAdmin]);
 
+    // src/App.js, around line 73
+
     useEffect(() => {
         if (currentUser) {
             setIsUserDataLoading(true);
             currentUser.getIdTokenResult(true).then(idTokenResult => {
+                
+                // --- ADD THIS LINE FOR DEBUGGING ---
+                console.log("TOKEN CLAIMS:", idTokenResult.claims);
+                // --- END OF DEBUGGING LINE ---
+
                 const isSuper = idTokenResult.claims.superAdmin === true;
                 setIsSuperAdmin(isSuper);
                 if (!isSuper) {
+                    
                     const userDocRef = doc(db, "users", currentUser.uid);
                     const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
                         setUserData(doc.exists() ? doc.data() : null);
