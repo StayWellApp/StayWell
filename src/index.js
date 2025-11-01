@@ -9,6 +9,22 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './components/Auth'; // <-- 3. Import Auth
 import { AdminProvider } from './contexts/AdminContext'; // <-- 4. Import Admin
 
+window.addEventListener('error', e => {
+  if (e.message === 'ResizeObserver loop completed with undelivered notifications.') {
+    const resizeObserverErrDiv = document.getElementById(
+      'webpack-dev-server-client-overlay-div'
+    );
+    const resizeObserverErr = document.getElementById(
+      'webpack-dev-server-client-overlay'
+    );
+    if (resizeObserverErr) {
+      resizeObserverErr.setAttribute('style', 'display: none');
+    }
+    if (resizeObserverErrDiv) {
+      resizeObserverErrDiv.setAttribute('style', 'display: none');
+    }
+  }
+});
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
