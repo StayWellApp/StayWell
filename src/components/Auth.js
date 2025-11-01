@@ -186,9 +186,9 @@ export const Auth = () => {
                         <p className="text-gray-500 dark:text-gray-400 mt-2">Please enter your details to sign in.</p>
                     </div>
                     <form className="space-y-4" onSubmit={handleSubmit}>
-                        <input id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} className="block w-full pl-10 pr-3 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <InputField id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} icon={Mail} />
                         <div>
-                            <input id="password" type="password" placeholder="Password" value={password} onChange={handleInputChange} className="block w-full pl-10 pr-3 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                            <InputField id="password" type="password" placeholder="Password" value={password} onChange={handleInputChange} icon={Lock} />
                             <div className="text-right mt-2">
                                 <button type="button" onClick={() => switchView('forgotPassword')} className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
                                     Forgot password?
