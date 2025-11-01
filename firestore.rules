@@ -22,17 +22,13 @@ service cloud.firestore {
 
     // --- FIX: Rule for LIST operations on the /users collection ---
     match /users { // NOTE: No {userId} wildcard here
-      allow list: if (
-                      // 1. Allow Super Admin's query from App.js
-                      isSuperAdmin() &&
-                      request.query.keys.hasAny(['role']) &&
-                      request.query.filters.role == 'owner'
-                    ) || (
-                      // 2. Allow a user's query for their own staff
-                      request.auth.uid != null &&
-                      request.query.keys.hasAny(['ownerId']) &&
-                      request.query.filters.ownerId == request.auth.uid
-                    );
+      allow list: if 
+            // 1. Allow Super Admin to run ANY list query
+            isSuperAdmin() || 
+            // 2. Allow a user's query for their own staff
+            (request.auth.uid != null &&
+             request.query.keys.hasAny(['ownerId']) &&
+             request.query.filters.ownerId == request.auth.uid);
     }
     // --- END OF FIX ---
     
