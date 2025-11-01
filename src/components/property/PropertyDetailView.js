@@ -242,7 +242,7 @@ export const PropertyDetailView = ({ property, onBack, user }) => {
                     onClick={() => isEditing ? setIsEditing(false) : onBack()}
                     className="mb-6 text-blue-600 dark:text-blue-400 font-semibold hover:underline"
                 >
-                    {isEditing ? '← Back to Property Details' : '← Back to All Properties'}
+                    {isEditing ? '← Back to Property Details' : '← Back'}
                 </button>
 
                 {isEditingGuestInfo && (

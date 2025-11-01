@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase-config';
+import { signOut, signInWithCustomToken } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { doc, onSnapshot, collection, query, where, updateDoc, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { ArrowLeft, User, Building, Settings, DollarSign, MessageSquare, FolderOpen, BarChart2, Edit, Send } from 'lucide-react';
@@ -18,8 +20,14 @@ const ClientDetailView = ({ onSelectProperty }) => {
     const { clientId } = useParams();
     const navigate = useNavigate();
 
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState(sessionStorage.getItem('clientDetailTab') || 'overview');
+
+    const handleTabClick = (tabId) => {
+        setActiveTab(tabId);
+        sessionStorage.setItem('clientDetailTab', tabId);
+    };
     const [clientData, setClientData] = useState(null);
+    const [authUser, setAuthUser] = useState(null);
     const [loadingClient, setLoadingClient] = useState(true);
     const [properties, setProperties] = useState([]);
     const [loadingProperties, setLoadingProperties] = useState(true);
@@ -29,8 +37,22 @@ const ClientDetailView = ({ onSelectProperty }) => {
     const [activityLogs, setActivityLogs] = useState([]);
     const [loadingLogs, setLoadingLogs] = useState(true);
 
+    const refreshAuthUser = useCallback(async () => {
+        try {
+            const functions = getFunctions();
+            const getUser = httpsCallable(functions, 'getUser');
+            const result = await getUser({ uid: clientId });
+            setAuthUser(result.data.user);
+        } catch (error) {
+            console.error("Error fetching auth user:", error);
+            toast.error("Failed to fetch latest user data.");
+        }
+    }, [clientId]);
+
     useEffect(() => {
         if (!clientId) return;
+
+        refreshAuthUser();
 
         const unsubClient = onSnapshot(doc(db, "users", clientId), (doc) => {
             if (doc.exists()) {
@@ -51,7 +73,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
         const unsubLogs = onSnapshot(query(collection(db, "users", clientId, "activity_logs"), orderBy("timestamp", "desc")), (snapshot) => { setActivityLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); setLoadingLogs(false); });
 
         return () => { unsubClient(); unsubProps(); unsubPlans(); unsubLogs(); };
-    }, [clientId, navigate]);
+    }, [clientId, navigate, refreshAuthUser]);
 
     const handleAddNote = async (newNote) => {
         if (!newNote || !newNote.text || !newNote.importance) {
@@ -92,7 +114,34 @@ const ClientDetailView = ({ onSelectProperty }) => {
         }
     };
     
-    const handleImpersonate = (clientToImpersonate) => { /* Impersonation logic */ };
+    const handleImpersonate = async (clientToImpersonate) => {
+        const functions = getFunctions();
+        const createImpersonationToken = httpsCallable(functions, 'createImpersonationToken');
+        const adminUser = auth.currentUser;
+
+        if (!adminUser) {
+            toast.error("Authentication error. Please sign in again.");
+            return;
+        }
+
+        localStorage.setItem('impersonating_admin_uid', adminUser.uid);
+
+        try {
+            const result = await createImpersonationToken({ uid: clientToImpersonate.id });
+            const token = result.data.token;
+
+            if (token) {
+                await signOut(auth);
+                await signInWithCustomToken(auth, token);
+                navigate('/dashboard');
+            } else {
+                toast.error("Failed to generate impersonation token.");
+            }
+        } catch (error) {
+            console.error("Impersonation error:", error);
+            toast.error(`An error occurred: ${error.message}`);
+        }
+    };
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: User }, { id: 'properties', label: 'Properties', icon: Building },
@@ -102,14 +151,16 @@ const ClientDetailView = ({ onSelectProperty }) => {
     ];
 
     const renderTabContent = () => {
-        if (loadingClient || !clientData) return null;
+        if (loadingClient || !clientData || !authUser) return null;
         const monthlyRevenue = clientData?.monthlyRevenue || 199;
         const occupancyRate = 85;
+
+        const combinedClientData = { ...clientData, ...authUser };
 
         switch (activeTab) {
             case 'overview':
                 return <OverviewTab 
-                            clientData={clientData} 
+                            clientData={combinedClientData} 
                             properties={properties} 
                             monthlyRevenue={monthlyRevenue} 
                             occupancyRate={occupancyRate} 
@@ -120,11 +171,14 @@ const ClientDetailView = ({ onSelectProperty }) => {
                             loadingLogs={loadingLogs}
                         />;
             case 'properties': return <PropertiesTab properties={properties} loading={loadingProperties} onSelectProperty={onSelectProperty} />;
-            case 'management': return <ManagementTab client={clientData} refreshClientData={()=>{}} allPlans={allPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate} />;
-            case 'billing': return <BillingTab client={clientData} />;
-            case 'communication': return <CommunicationTab client={clientData} />;
-            case 'documents': return <DocumentsTab client={clientData} />;
-            case 'analytics': return <ClientAnalyticsView client={clientData} />;
+            case 'management': return <ManagementTab client={combinedClientData} refreshClientData={refreshAuthUser} allPlans={allPlans} loadingPlans={loadingPlans} onImpersonate={handleImpersonate} />;
+            case 'billing': return <BillingTab client={combinedClientData} />;
+            
+            // --- FIX: Pass clientId to the CommunicationTab ---
+            case 'communication': return <CommunicationTab clientId={clientId} />;
+
+            case 'documents': return <DocumentsTab client={combinedClientData} />;
+            case 'analytics': return <ClientAnalyticsView client={combinedClientData} />;
             default: return null;
         }
     };
@@ -165,7 +219,7 @@ const ClientDetailView = ({ onSelectProperty }) => {
                             <div className="border-t border-gray-200 dark:border-gray-700">
                                 <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
                                     {tabs.map((tab) => (
-                                        <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`${activeTab === tab.id ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}>
+                                        <button key={tab.id} onClick={() => handleTabClick(tab.id)} className={`${activeTab === tab.id ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}>
                                             <tab.icon className="mr-2 h-5 w-5" />{tab.label}
                                         </button>
                                     ))}

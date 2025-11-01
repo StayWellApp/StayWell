@@ -25,6 +25,11 @@ exports.createImpersonationToken = adminTasks.createImpersonationToken;
 exports.logAdminAction = adminTasks.logAdminAction;
 exports.createClient = adminTasks.createClient;
 exports.createReauthenticationToken = adminTasks.createReauthenticationToken;
+exports.exportClientData = adminTasks.exportClientData;
+exports.resetClientData = adminTasks.resetClientData;
+exports.suspendClient = adminTasks.suspendClient;
+exports.deleteClient = adminTasks.deleteClient;
+exports.getUser = adminTasks.getUser;
 
 exports.respondToTaskOffer = tasks.respondToTaskOffer;
 exports.submitForInspection = tasks.submitForInspection;

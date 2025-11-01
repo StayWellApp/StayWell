@@ -1,30 +1,29 @@
-// src/components/admin/DashboardWidgetWrapper.js
-
+// src/components/DashboardWidget.js
 import React from 'react';
-import { GripVertical, X } from 'lucide-react';
+import { GripVertical } from 'lucide-react';
 
-const DashboardWidgetWrapper = ({ children, title, isEditing, onRemoveWidget }) => {
+const DashboardWidget = React.forwardRef(({ children, title, showDragHandle = true }, ref) => {
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md h-full flex flex-col">
-            {isEditing && (
-                <div className="relative p-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                    <button className="drag-handle cursor-move text-gray-400 hover:text-gray-600">
-                        <GripVertical className="h-5 w-5" />
-                    </button>
-                    <p className="text-xs font-bold text-gray-500 uppercase">{title}</p>
-                    <button 
-                        onClick={onRemoveWidget}
-                        className="absolute top-1 right-1 p-1 text-gray-400 hover:text-red-500 rounded-full"
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
-                </div>
-            )}
-            <div className="flex-grow p-4 overflow-hidden">
+        <div
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm h-full flex flex-col"
+            ref={ref}
+        >
+            <div className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">{title}</h3>
+                {showDragHandle && (
+                    <div className="drag-handle cursor-move text-gray-400">
+                        <GripVertical size={20} />
+                    </div>
+                )}
+            </div>
+            {/* FIX: Changed 'overflow-auto' to 'overflow-hidden' 
+              to prevent the ResizeObserver loop.
+            */}
+            <div className="p-4 flex-grow overflow-hidden">
                 {children}
             </div>
         </div>
     );
-};
+});
 
-export default DashboardWidgetWrapper;
+export default DashboardWidget;

@@ -1,14 +1,15 @@
 // src/App.js
 
 import React, { useState, useEffect } from 'react';
-// FIX: The Router is in index.js, so we only need routing components here.
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { usePermissions } from './hooks/usePermissions';
 
-import { AuthProvider, useAuth, Auth } from './components/Auth';
+// FIX: REMOVED AuthProvider (it's in index.js)
+// We ONLY import useAuth (the hook) and Auth (the component)
+import { useAuth, Auth } from './components/Auth';
 import Layout from './components/Layout';
 import ClientDashboard from './components/ClientDashboard';
 import StaffDashboard from './components/StaffDashboard';
@@ -30,8 +31,11 @@ import AdminSubscriptionsView from './components/admin/AdminSubscriptionsView';
 import EndImpersonationBanner from './components/EndImpersonationBanner';
 import AddClientModal from './components/admin/AddClientModal';
 import { MessageSquare } from 'lucide-react';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { AdminProvider, useAdmin } from './contexts/AdminContext';
+
+// FIX: REMOVED ThemeProvider (it's in index.js)
+// FIX: REMOVED AdminProvider (it's in index.js)
+import { useAdmin } from './contexts/AdminContext';
+
 import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -69,13 +73,21 @@ function AppContent() {
         }
     }, [isSuperAdmin]);
 
+    // src/App.js, around line 73
+
     useEffect(() => {
         if (currentUser) {
             setIsUserDataLoading(true);
             currentUser.getIdTokenResult(true).then(idTokenResult => {
+                
+                // --- ADD THIS LINE FOR DEBUGGING ---
+                console.log("TOKEN CLAIMS:", idTokenResult.claims);
+                // --- END OF DEBUGGING LINE ---
+
                 const isSuper = idTokenResult.claims.superAdmin === true;
                 setIsSuperAdmin(isSuper);
                 if (!isSuper) {
+                    
                     const userDocRef = doc(db, "users", currentUser.uid);
                     const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
                         setUserData(doc.exists() ? doc.data() : null);
@@ -118,13 +130,11 @@ function AppContent() {
             <Route path="/admin/subscriptions" element={<AdminSubscriptionsView />} />
             <Route path="/admin/settings" element={<AdminSettingsView />} />
             <Route path="/admin/auditlog" element={<AuditLogView />} />
-            {/* A default or fallback route for admin */}
             <Route path="*" element={<SuperAdminDashboard allClients={allClients} loading={clientsLoading} setActiveView={handleSetActiveView} />} />
         </Routes>
     );
 
     const UserRoutes = () => {
-        if (selectedProperty) return <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); navigate('/properties'); }} user={currentUser} />;
         if (loadingPermissions) return <div className="flex items-center justify-center h-full"><p>Checking permissions...</p></div>;
 
         return (
@@ -137,7 +147,6 @@ function AppContent() {
                 <Route path="/storage" element={hasPermission('storage_view') ? <StorageView user={currentUser} ownerId={userData?.ownerId || currentUser.uid} hasPermission={hasPermission} /> : null} />
                 <Route path="/calendar" element={hasPermission('tasks_view_all') ? <MasterCalendarView user={currentUser} userData={userData} /> : <StaffDashboard user={currentUser} userData={userData} />} />
                 <Route path="/settings" element={hasPermission('team_manage') ? <SettingsView user={currentUser} userData={userData} /> : null} />
-                 {/* A default or fallback route for users */}
                 <Route path="*" element={hasPermission('properties_view_all') ? <ClientDashboard user={currentUser} setActiveView={handleSetActiveView} /> : <StaffDashboard user={currentUser} userData={userData} />} />
             </Routes>
         );
@@ -146,16 +155,24 @@ function AppContent() {
     const isImpersonating = !!localStorage.getItem('impersonating_admin_uid');
 
     if (authLoading) return <div className="flex items-center justify-center h-screen"><p>Loading StayWell...</p></div>;
+    
+    // FIX: This now correctly renders the Auth component
+    // (which will be styled by the providers in index.js)
     if (!currentUser) return <Auth />;
+    
     if (!isSuperAdmin && !isImpersonating && (loadingPermissions || isUserDataLoading)) return <div className="flex items-center justify-center h-screen"><p>Loading User Profile...</p></div>;
 
+    // FIX: Removed the <ThemeProvider> wrapper from here
     return (
-        <ThemeProvider>
+        <>
             <ToastContainer position="bottom-center" autoClose={4000} hideProgressBar={false} />
             <EndImpersonationBanner />
             <div className={isImpersonating ? 'pt-10' : ''}>
                 <Layout user={currentUser} userData={{ ...(userData || {}), isSuperAdmin }} activeView={activeView} setActiveView={handleSetActiveView} hasPermission={hasPermission}>
-                    {isSuperAdmin ? <AdminRoutes /> : <UserRoutes />}
+                    {selectedProperty ? 
+                        <PropertyDetailView property={selectedProperty} onBack={() => { setSelectedProperty(null); navigate(-1); }} user={currentUser} /> : 
+                        (isSuperAdmin ? <AdminRoutes /> : <UserRoutes />)
+                    }
                 </Layout>
                 {!isSuperAdmin && (
                     <div className="fixed bottom-4 right-4 z-50">
@@ -166,18 +183,15 @@ function AppContent() {
                 )}
             </div>
             <AddClientModal isOpen={isAddClientModalOpen} onClose={() => setAddClientModalOpen(false)} />
-        </ThemeProvider>
+        </>
     );
 }
 
-// FIX: Removed the <Router> wrapper from here.
+// FIX: Removed the <AuthProvider> and <AdminProvider> wrappers from here.
+// The App component now just renders AppContent.
 function App() {
     return (
-        <AuthProvider>
-            <AdminProvider>
-                <AppContent />
-            </AdminProvider>
-        </AuthProvider>
+        <AppContent />
     );
 }
 

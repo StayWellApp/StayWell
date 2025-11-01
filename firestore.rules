@@ -18,28 +18,49 @@ service cloud.firestore {
       return request.auth.uid == resource.data.ownerId;
     }
 
-    // == SUPER ADMIN & USER RULES ==
-    match /users/{userId} {
-      allow get: if request.auth.uid == userId || isSuperAdmin();
+    // == USER RULES ==
+
+    // --- FINAL FIX: Two separate 'allow list' rules ---
+    // This is the correct way to allow multiple query types.
+    match /users {
+      
+      // Rule 1: Allow Super Admin to run ANY list query.
+      // This will match your query: where("role", "==", "owner")
       allow list: if isSuperAdmin();
+
+      // Rule 2: Allow a normal user to query for their own staff
+      // This uses the correct syntax for your original rule
+      allow list: if
+        request.auth.uid != null &&
+        request.query.where.ownerId == request.auth.uid;
+    }
+    // --- END OF FIX ---
+    
+    // --- This block is for 'get'/'write' (single doc) operations ---
+    match /users/{userId} {
+      // Allow user to get/write their own doc, or super admin to do so
+      allow get: if request.auth.uid == userId || isSuperAdmin();
       allow write, create: if request.auth.uid == userId || isSuperAdmin();
 
-      // --- FIX: ADDED RULE FOR ACTIVITY LOG SUBCOLLECTION ---
-      // This rule explicitly allows super admins to read logs.
+      // Subcollections must be nested inside the document path
       match /activity_logs/{logId} {
         allow read: if isSuperAdmin();
-        // Writes are blocked from the client to ensure logs are only created by the backend.
-        allow write: if false;
+        allow write: if false; // Only from backend
       }
-      // --- END OF FIX ---
-    }
-    match /users/{userId}/configs/{configId} {
-      allow read, write: if request.auth.uid == userId || isSuperAdmin();
+
+      match /communication_logs/{logId} {
+        allow read, write, delete: if isSuperAdmin();
+      }
+
+      match /configs/{configId} {
+        allow read, write: if request.auth.uid == userId || isSuperAdmin();
+      }
     }
 
     // == PROPERTY RULES ==
     match /properties/{propertyId} {
-      allow read: if isOwner(resource) || isSuperAdmin();
+      allow read: if isOwner(resource) ||
+        isSuperAdmin();
       allow write: if isOwner(resource);
     }
     
@@ -63,20 +84,21 @@ service cloud.firestore {
       allow read, write: if isOwner(resource) || isSuperAdmin();
     }
     match /storageLocations/{locationId} {
-        allow read, write: if isOwner(resource);
+        allow read, write: if isSuperAdmin() || isOwner(resource); // Added isSuperAdmin()
     }
     match /storageLocations/{locationId}/supplies/{supplyId} {
-        allow read, write: if get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid;
+        allow read, write: if isSuperAdmin() || get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid; // Added isSuperAdmin()
     }
     match /checklistTemplates/{templateId} {
-        allow read, write: if isOwner(resource);
+        allow read, write: if isSuperAdmin() || isOwner(resource); // Added isSuperAdmin()
     }
     match /tasks/{taskId} {
-      allow read, write: if isOwner(resource) || request.auth.uid == resource.data.assignedTo;
+      allow read, write: if isSuperAdmin() || isOwner(resource) || // Added isSuperAdmin()
+        request.auth.uid == resource.data.assignedTo;
     }
     match /tasks/{taskId}/comments/{commentId} {
-        allow read, create: if get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid ||
-                                get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
+        allow read, create: if isSuperAdmin() || get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid || // Added isSuperAdmin()
+          get(/databases/$(database)/documents/tasks/$(taskId)).data.assignedTo == request.auth.uid;
     }
   }
 }

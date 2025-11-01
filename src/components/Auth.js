@@ -83,12 +83,19 @@ const ThemeToggle = () => {
         });
     };
     return (
-        <button onClick={toggleTheme} className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">
+        // --- FIX: Added aria-label to fix the accessibility error ---
+        <button 
+            onClick={toggleTheme} 
+            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+            aria-label="Toggle theme"
+        >
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
     );
 };
-const InputField = React.memo(({ id, type, placeholder, value, onChange, icon: Icon }) => (
+
+// --- FIX: Added 'autocomplete' to props and pass it to the input ---
+const InputField = React.memo(({ id, type, placeholder, value, onChange, icon: Icon, autocomplete }) => (
     <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Icon className="h-5 w-5 text-gray-400" />
@@ -96,9 +103,11 @@ const InputField = React.memo(({ id, type, placeholder, value, onChange, icon: I
         <input id={id} name={id} type={type} required
             className="block w-full pl-10 pr-3 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder={placeholder} value={value} onChange={onChange}
+            autoComplete={autocomplete} // <-- FIX: Added this line
         />
     </div>
 ));
+
 // Main Auth Component
 export const Auth = () => {
   const [view, setView] = useState('signIn');
@@ -118,7 +127,12 @@ export const Auth = () => {
     setSuccessMessage("");
     setIsLoading(true);
     try {
-      await authFn();
+      // FIX: Check if authFn is a function before calling
+      if (typeof authFn === 'function') {
+        await authFn();
+      } else {
+        console.error("Auth function not available. Check AuthProvider in index.js");
+      }
     } catch (error) {
       setErrorMessage(error.message.replace('Firebase: ', ''));
     } finally {
@@ -163,7 +177,7 @@ export const Auth = () => {
                         <p className="text-gray-500 dark:text-gray-400 mt-2">Enter your email to receive a reset link.</p>
                     </div>
                     <form className="space-y-5" onSubmit={handleForgotPassword}>
-                        <InputField id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} icon={Mail} />
+                        <InputField id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} icon={Mail} autocomplete="email" />
                         {successMessage && <p className="text-sm text-center text-green-600 dark:text-green-400">{successMessage}</p>}
                         {errorMessage && <p className="text-sm text-center text-red-600 dark:text-red-400">{errorMessage}</p>}
                         <div>
@@ -187,12 +201,12 @@ export const Auth = () => {
                         <p className="text-gray-500 dark:text-gray-400 mt-2">Let's get you started.</p>
                     </div>
                     <form className="space-y-4" onSubmit={handleSubmit}>
-                        <InputField id="companyName" type="text" placeholder="Company Name" value={companyName} onChange={handleInputChange} icon={Building2} />
-                        <InputField id="fullName" type="text" placeholder="Full Name" value={fullName} onChange={handleInputChange} icon={User} />
-                        <InputField id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} icon={Mail} />
-                        <InputField id="phone" type="tel" placeholder="Phone Number" value={phone} onChange={handleInputChange} icon={Phone} />
-                        <InputField id="country" type="text" placeholder="Country" value={country} onChange={handleInputChange} icon={Globe} />
-                        <InputField id="password" type="password" placeholder="Password" value={password} onChange={handleInputChange} icon={Lock} />
+                        <InputField id="companyName" type="text" placeholder="Company Name" value={companyName} onChange={handleInputChange} icon={Building2} autocomplete="organization" />
+                        <InputField id="fullName" type="text" placeholder="Full Name" value={fullName} onChange={handleInputChange} icon={User} autocomplete="name" />
+                        <InputField id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} icon={Mail} autocomplete="email" />
+                        <InputField id="phone" type="tel" placeholder="Phone Number" value={phone} onChange={handleInputChange} icon={Phone} autocomplete="tel" />
+                        <InputField id="country" type="text" placeholder="Country" value={country} onChange={handleInputChange} icon={Globe} autocomplete="country-name" />
+                        <InputField id="password" type="password" placeholder="Password" value={password} onChange={handleInputChange} icon={Lock} autocomplete="new-password" />
                         {errorMessage && <p className="text-sm text-center text-red-600 dark:text-red-400">{errorMessage}</p>}
                         <div className="pt-2">
                             <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors">
@@ -215,9 +229,9 @@ export const Auth = () => {
                         <p className="text-gray-500 dark:text-gray-400 mt-2">Please enter your details to sign in.</p>
                     </div>
                     <form className="space-y-4" onSubmit={handleSubmit}>
-                        <InputField id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} icon={Mail} />
+                        <InputField id="email" type="email" placeholder="Email Address" value={email} onChange={handleInputChange} icon={Mail} autocomplete="email" />
                         <div>
-                            <InputField id="password" type="password" placeholder="Password" value={password} onChange={handleInputChange} icon={Lock} />
+                            <InputField id="password" type="password" placeholder="Password" value={password} onChange={handleInputChange} icon={Lock} autocomplete="current-password" />
                             <div className="text-right mt-2">
                                 <button type="button" onClick={() => switchView('forgotPassword')} className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
                                     Forgot password?
@@ -252,7 +266,11 @@ export const Auth = () => {
       <div className="absolute top-6 right-6 flex items-center space-x-4 z-10">
         <ThemeToggle />
         <div className="relative">
-          <select className="appearance-none bg-gray-200 dark:bg-gray-700 border-none rounded-full py-2 pl-4 pr-8 text-sm text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          {/* --- FIX: Added aria-label to the select element --- */}
+          <select 
+            className="appearance-none bg-gray-200 dark:bg-gray-700 border-none rounded-full py-2 pl-4 pr-8 text-sm text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            aria-label="Select language"
+          >
             <option>English</option><option>Español</option><option>Français</option>
           </select>
           <Globe className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400" />
