@@ -180,7 +180,7 @@ export const Auth = () => {
             );
         default: // 'signIn'
             return (
-                <>
+                <div className="max-w-md mx-auto p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
                     <div className="text-center lg:text-left mb-10">
                         <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Welcome Back</h2>
                         <p className="text-gray-500 dark:text-gray-400 mt-2">Please enter your details to sign in.</p>
@@ -214,7 +214,7 @@ export const Auth = () => {
                             Don't have an account? Sign Up
                         </button>
                     </div>
-                </>
+                </div>
             );
     }
   };
