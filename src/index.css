@@ -120,7 +120,7 @@ body {
 /* Custom styles for the grid placeholder */
 .react-grid-item.react-grid-placeholder {
     background: #a2a6df !important;
-    opacity: 0.2 !importanT;
+    opacity: 0.2 !important;
     transition-duration: 100ms !important;
     z-index: 2 !important;
     -webkit-user-select: none;
@@ -159,4 +159,4 @@ body {
   opacity: 1;
   background: theme('colors.blue.500'); /* Blue on hover for better interaction */
 }
-/* NOTE: The extra '}' syntax error at the end has been removed. */
+/* NOTE: The extra '}' syntax error and other typos at the end have been removed. */
