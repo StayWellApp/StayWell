@@ -96,8 +96,6 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
         case 'status':
             const statusColor = cellValue === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
             return <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${statusColor}`}>{cellValue || 'Inactive'}</span>;
-        
-        // --- FIX: Use correct subscription data source ---
         case 'subscriptionTier':
             return client.subscription?.planName || 'N/A';
         case 'subscriptionEndDate':
@@ -105,8 +103,6 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
             return subDate?.seconds ? new Date(subDate.seconds * 1000).toLocaleDateString() : 'N/A';
         case 'createdAt':
             return cellValue?.seconds ? new Date(cellValue.seconds * 1000).toLocaleDateString() : 'N/A';
-
-        // --- FIX: Add country flag ---
         case 'country':
             const countryCode = client.country ? getCode(client.country) : null;
             return (
