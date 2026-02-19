@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 // Import the necessary auth functions, including setPersistence
 import { getAuth, setPersistence, browserSessionPersistence, signInWithCustomToken } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const ImpersonateLogin = () => {
     const navigate = useNavigate();
     const auth = getAuth();
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         const token = sessionStorage.getItem('impersonationToken');
@@ -28,13 +29,23 @@ const ImpersonateLogin = () => {
                 .catch((error) => {
                     console.error("Impersonation sign-in failed:", error);
                     sessionStorage.removeItem('impersonationToken');
-                    document.body.innerHTML = `<h1>Impersonation Failed</h1><p>${error.message}</p><p>Please close this tab.</p>`;
+                    setError(error.message);
                 });
         } else {
             // If there's no token, redirect away.
             navigate('/');
         }
     }, [auth, navigate]);
+
+    if (error) {
+        return (
+            <div className="flex flex-col justify-center items-center h-screen p-4">
+                <h1 className="text-2xl font-bold mb-4">Impersonation Failed</h1>
+                <p className="text-red-600 mb-4 text-center">{error}</p>
+                <p>Please close this tab.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex justify-center items-center h-screen">
