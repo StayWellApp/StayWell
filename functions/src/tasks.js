@@ -4,7 +4,7 @@ const db = admin.firestore();
 
 exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
     const { taskId, response } = data; // 'accepted' or 'rejected'
-    const userId = context.auth.uid;
+    const userId = context.auth?.uid;
 
     if (!userId) {
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
@@ -53,7 +53,7 @@ exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
 
 exports.submitForInspection = functions.https.onCall(async (data, context) => {
     const { taskId } = data;
-    const userId = context.auth.uid;
+    const userId = context.auth?.uid;
     if (!userId) {
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
     }
@@ -78,7 +78,7 @@ exports.submitForInspection = functions.https.onCall(async (data, context) => {
 
 exports.reviewTask = functions.https.onCall(async (data, context) => {
     const { taskId, approved, comments } = data;
-    const userId = context.auth.uid;
+    const userId = context.auth?.uid;
     if (!userId) {
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
     }
