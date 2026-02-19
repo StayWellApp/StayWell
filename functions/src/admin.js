@@ -96,3 +96,37 @@ exports.createReauthenticationToken = functions.https.onCall(async (data, contex
     const customToken = await admin.auth().createCustomToken(adminUid);
     return { token: customToken };
 });
+
+// --- NEW FUNCTION: toggleUserStatus ---
+exports.toggleUserStatus = functions.https.onCall(async (data, context) => {
+    if (!context.auth || !context.auth.token.superAdmin) {
+        throw new functions.https.HttpsError("permission-denied", "This function can only be called by a super admin.");
+    }
+    const { uid, disabled } = data;
+    if (!uid || typeof disabled !== 'boolean') {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with 'uid' and 'disabled' (boolean).");
+    }
+
+    try {
+        // Update Auth
+        await admin.auth().updateUser(uid, { disabled });
+
+        // Update Firestore
+        await db.collection('users').doc(uid).update({
+            status: disabled ? 'disabled' : 'active',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Log action
+        await db.collection('auditLog').add({
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            adminEmail: context.auth.token.email,
+            action: disabled ? `Disabled user ${uid}` : `Enabled user ${uid}`,
+        });
+
+        return { success: true, status: disabled ? 'disabled' : 'active' };
+    } catch (error) {
+        functions.logger.error("Error toggling user status:", error);
+        throw new functions.https.HttpsError("internal", "Failed to update user status.");
+    }
+});
