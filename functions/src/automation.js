@@ -3,7 +3,22 @@ const admin = require("firebase-admin");
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
-const cors = require("cors")({ origin: true });
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "https://dev.staywellapp.com",
+    "https://qa.staywellapp.com",
+    "https://staywellapp.com",
+    "https://dev-staywellapp.web.app",
+    "https://dev-staywellapp.firebaseapp.com",
+    "https://qa-staywellapp.web.app",
+    "https://qa-staywellapp.firebaseapp.com",
+    "https://staywellapp.web.app",
+    "https://staywellapp.firebaseapp.com",
+    "https://staywellapp-49b62.web.app",
+    "https://staywellapp-49b62.firebaseapp.com"
+];
+const cors = require("cors")({ origin: allowedOrigins });
 const Busboy = require("busboy");
 const ical = require("node-ical");
 const db = admin.firestore();
