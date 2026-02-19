@@ -133,16 +133,22 @@ const ClientDashboard = ({ user, setActiveView }) => {
         const fetchLowStockItems = async () => {
              const locationsQuery = query(collection(db, "storageLocations"), where("ownerId", "==", user.uid));
              const locationsSnapshot = await getDocs(locationsQuery);
-             let lowItems = [];
-             for (const locationDoc of locationsSnapshot.docs) {
+
+             const promises = locationsSnapshot.docs.map(async (locationDoc) => {
                  const suppliesSnapshot = await getDocs(collection(db, `storageLocations/${locationDoc.id}/supplies`));
+                 const localLowItems = [];
                  suppliesSnapshot.forEach(supplyDoc => {
                      const supply = supplyDoc.data();
                      if (parseInt(supply.currentStock) < parseInt(supply.parLevel)) {
-                         lowItems.push({ ...supply, id: supplyDoc.id, locationName: locationDoc.data().name });
+                         localLowItems.push({ ...supply, id: supplyDoc.id, locationName: locationDoc.data().name });
                      }
                  });
-             }
+                 return localLowItems;
+             });
+
+             const results = await Promise.all(promises);
+             const lowItems = results.flat();
+
              setLowStockItems(lowItems);
              setStats(prev => ({ ...prev, lowStockItems: lowItems.length }));
         };
