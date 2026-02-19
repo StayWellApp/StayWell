@@ -49,8 +49,9 @@ const triggerAutomationForBooking = async (bookingDetails) => {
 
     const propertyData = propertyDoc.data();
     const rules = rulesDoc.data().rules;
-    const tasksToCreate = [];
-    const notificationsToSend = [];
+    const batch = db.batch();
+    let taskCount = 0;
+    let notificationCount = 0;
 
     for (const rule of rules) {
         const coDate = new Date(checkoutDate);
@@ -78,26 +79,29 @@ const triggerAutomationForBooking = async (bookingDetails) => {
             checklistItems: [],
         };
 
-        const taskCreationPromise = db.collection('tasks').add(taskData).then(docRef => {
-            if (taskData.primaryAssignee) {
-                const notification = {
-                    userId: taskData.primaryAssignee,
-                    taskId: docRef.id,
-                    type: "NEW_TASK_OFFER",
-                    message: `You have a new task offer: "${taskData.taskName}" for property "${taskData.propertyName}".`,
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    isRead: false,
-                };
-                notificationsToSend.push(db.collection('notifications').add(notification));
-            }
-        });
+        const taskRef = db.collection('tasks').doc();
+        batch.set(taskRef, taskData);
+        taskCount++;
 
-        tasksToCreate.push(taskCreationPromise);
+        if (taskData.primaryAssignee) {
+            const notificationRef = db.collection('notifications').doc();
+            const notification = {
+                userId: taskData.primaryAssignee,
+                taskId: taskRef.id,
+                type: "NEW_TASK_OFFER",
+                message: `You have a new task offer: "${taskData.taskName}" for property "${taskData.propertyName}".`,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                isRead: false,
+            };
+            batch.set(notificationRef, notification);
+            notificationCount++;
+        }
     }
 
-    await Promise.all(tasksToCreate);
-    await Promise.all(notificationsToSend);
-    functions.logger.log(`Automation successful: Created ${tasksToCreate.length} tasks and sent notifications for property ${propertyId}.`);
+    if (taskCount > 0) {
+        await batch.commit();
+    }
+    functions.logger.log(`Automation successful: Created ${taskCount} tasks and sent ${notificationCount} notifications for property ${propertyId}.`);
 };
 
 // --- HELPER FUNCTION FOR DOUBLE BOOKING DETECTION ---
