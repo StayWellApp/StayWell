@@ -193,8 +193,22 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
                     const { taskId, itemIndex, originalFilename } = fields;
                     if (!taskId || !itemIndex || !originalFilename) throw new Error("Required fields missing.");
 
+                    // Validate taskId to prevent path traversal
+                    if (!/^[a-zA-Z0-9_-]+$/.test(taskId)) {
+                        throw new Error("Invalid taskId format.");
+                    }
+
+                    // Validate itemIndex
+                    const index = parseInt(itemIndex, 10);
+                    if (isNaN(index) || index < 0) {
+                        throw new Error("Invalid itemIndex.");
+                    }
+
+                    // Sanitize originalFilename
+                    const safeFilename = path.basename(originalFilename);
+
                     const bucket = admin.storage().bucket();
-                    const destination = `proofs/${taskId}/${itemIndex}-${originalFilename}`;
+                    const destination = `proofs/${taskId}/${index}-${safeFilename}`;
                     
                     await bucket.upload(fileData.filepath, { destination, metadata: { contentType: fileData.mimeType } });
                     fs.unlinkSync(fileData.filepath);
@@ -207,8 +221,8 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
                     if (taskDoc.exists) {
                         const taskData = taskDoc.data();
                         const checklistItems = taskData.checklistItems || [];
-                        if (checklistItems[itemIndex]) {
-                            checklistItems[itemIndex].photoURL = url;
+                        if (checklistItems[index]) {
+                            checklistItems[index].photoURL = url;
                             await taskRef.update({ checklistItems });
                         }
                     }
