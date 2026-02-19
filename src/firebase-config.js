@@ -8,13 +8,13 @@ import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCRvsod68MdgMagGx4SKWpK57qM7N7qyZ8",
-    authDomain: "staywellapp-49b62.firebaseapp.com",
-    projectId: "staywellapp-49b62",
-    storageBucket: "staywellapp-49b62.appspot.com",
-    messagingSenderId: "240146050261",
-    appId: "1:240146050261:web:9b807607032c45a452465c",
-    measurementId: "G-N2YJYST032"
+    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.REACT_APP_FIREBASE_APP_ID,
+    measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase App
