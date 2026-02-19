@@ -315,3 +315,4 @@ exports.addManualBooking = functions.https.onRequest(async (req, res) => {
         }
     });
 });
+exports.triggerAutomationForBooking = triggerAutomationForBooking;
