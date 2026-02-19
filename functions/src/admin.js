@@ -3,7 +3,7 @@ const admin = require("firebase-admin");
 const db = admin.firestore();
 
 const sendWelcomeEmail = async (email, companyName) => {
-    functions.logger.log(`Sending welcome email to ${email} for company ${companyName}.`);
+    functions.logger.log(`Sending welcome email to company ${companyName}.`);
     // This is where you would integrate with an email service like SendGrid or Mailgun.
     return { success: true };
 };
