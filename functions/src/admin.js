@@ -1,6 +1,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const db = admin.firestore();
+const { requireSuperAdmin, requireAuth } = require("./utils/auth");
 
 const sendWelcomeEmail = async (email, companyName) => {
     functions.logger.log(`Sending welcome email to ${email} for company ${companyName}.`);
@@ -9,9 +10,7 @@ const sendWelcomeEmail = async (email, companyName) => {
 };
 
 exports.createImpersonationToken = functions.https.onCall(async (data, context) => {
-    if (!context.auth || !context.auth.token.superAdmin) {
-        throw new functions.https.HttpsError("permission-denied", "This function can only be called by a super admin.");
-    }
+    requireSuperAdmin(context);
     const { uid } = data;
     if (!uid) {
         throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'uid' argument.");
@@ -26,9 +25,7 @@ exports.createImpersonationToken = functions.https.onCall(async (data, context) 
 });
 
 exports.logAdminAction = functions.https.onCall(async (data, context) => {
-    if (!context.auth || !context.auth.token.superAdmin) {
-        throw new functions.https.HttpsError("permission-denied", "This function can only be called by a super admin.");
-    }
+    requireSuperAdmin(context);
     const { message } = data;
     if (!message) {
         throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'message' argument.");
@@ -42,9 +39,7 @@ exports.logAdminAction = functions.https.onCall(async (data, context) => {
 });
 
 exports.createClient = functions.https.onCall(async (data, context) => {
-    if (!context.auth || !context.auth.token.superAdmin) {
-        throw new functions.https.HttpsError("permission-denied", "This function can only be called by a super admin.");
-    }
+    requireSuperAdmin(context);
     const { companyName, email, plan, planExpiration } = data;
     if (!companyName || !email || !plan) {
         throw new functions.https.HttpsError("invalid-argument", "Missing required fields.");
@@ -77,9 +72,7 @@ exports.createClient = functions.https.onCall(async (data, context) => {
 });
 
 exports.createReauthenticationToken = functions.https.onCall(async (data, context) => {
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "User must be authenticated.");
-    }
+    requireAuth(context);
     const { adminUid } = data;
     if (!adminUid) {
         throw new functions.https.HttpsError("invalid-argument", "The function must be called with an 'adminUid'.");
