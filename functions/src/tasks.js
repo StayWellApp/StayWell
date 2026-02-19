@@ -1,14 +1,11 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const db = admin.firestore();
+const { requireAuth } = require('./utils');
 
 exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
     const { taskId, response } = data; // 'accepted' or 'rejected'
-    const userId = context.auth?.uid;
-
-    if (!userId) {
-        throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
-    }
+    const userId = requireAuth(context);
 
     const taskRef = db.collection('tasks').doc(taskId);
     const taskDoc = await taskRef.get();
@@ -53,10 +50,7 @@ exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
 
 exports.submitForInspection = functions.https.onCall(async (data, context) => {
     const { taskId } = data;
-    const userId = context.auth?.uid;
-    if (!userId) {
-        throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
-    }
+    const userId = requireAuth(context);
 
     const taskRef = db.collection('tasks').doc(taskId);
     const taskDoc = await taskRef.get();
@@ -78,10 +72,7 @@ exports.submitForInspection = functions.https.onCall(async (data, context) => {
 
 exports.reviewTask = functions.https.onCall(async (data, context) => {
     const { taskId, approved, comments } = data;
-    const userId = context.auth?.uid;
-    if (!userId) {
-        throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
-    }
+    const userId = requireAuth(context);
 
     const taskRef = db.collection('tasks').doc(taskId);
     const taskDoc = await taskRef.get();
