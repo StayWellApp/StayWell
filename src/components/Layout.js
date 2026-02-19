@@ -6,8 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { Menu, Transition } from '@headlessui/react';
 import {
     LayoutDashboard, Users, Building, MessageSquare, BookCheck, Archive, Calendar, Settings,
-    FileText, LifeBuoy, ShieldCheck, LogOut, ChevronDown, Menu as MenuIcon, Bell, Sun, Moon, Globe, Search, ChevronsLeft, ChevronsRight, X
+    FileText, LifeBuoy, ShieldCheck, LogOut, ChevronDown, Menu as MenuIcon, Sun, Moon, Globe, Search, ChevronsLeft, ChevronsRight, X
 } from 'lucide-react';
+import NotificationCenter from './NotificationCenter';
 
 const NavLink = ({ active, onClick, icon: Icon, children, isCollapsed }) => (
     <button
@@ -177,9 +178,7 @@ const Layout = ({ user, userData, activeView, setActiveView, hasPermission, chil
                                 </Transition>
                             </Menu>
 
-                            <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors">
-                                <Bell className="h-5 w-5" />
-                            </button>
+                            <NotificationCenter user={user} />
                             
                             {/* User Dropdown */}
                             <Menu as="div" className="relative">
