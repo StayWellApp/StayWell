@@ -200,7 +200,8 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
                     fs.unlinkSync(fileData.filepath);
 
                     const file = bucket.file(destination);
-                    const [url] = await file.getSignedUrl({ action: "read", expires: "03-09-2491" });
+                    await file.makePublic();
+                    const url = file.publicUrl();
 
                     const taskRef = db.collection('tasks').doc(taskId);
                     const taskDoc = await taskRef.get();
