@@ -390,7 +390,7 @@ const SettingsView = ({ user, userData }) => {
         const storageRef = ref(storage, `profile-pictures/${user.uid}`);
 
         try {
-            const snapshot = await uploadBytes(storageRef, file);
+            const snapshot = await uploadBytes(storageRef, file, { customMetadata: { ownerId: user.uid } });
             const downloadURL = await getDownloadURL(snapshot.ref);
 
             await updateDoc(doc(db, "users", user.uid), { photoURL: downloadURL });

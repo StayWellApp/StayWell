@@ -3,7 +3,7 @@
 // MODIFIED to allow direct image uploads for checklist items instead of URL pasting.
 
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../firebase-config'; // --- MODIFIED: Ensure storage is imported
+import { db, storage, auth } from '../firebase-config'; // --- MODIFIED: Ensure storage is imported
 import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // --- NEW ---
 import { toast } from 'react-toastify';
@@ -130,7 +130,7 @@ export const ChecklistTemplateForm = ({ onSave, onCancel, existingTemplate, prop
                 filteredItems.map(async (item) => {
                     if (item.imageFile) {
                         const imageRef = ref(storage, `checklist_template_images/${Date.now()}_${item.imageFile.name}`);
-                        await uploadBytes(imageRef, item.imageFile);
+                        await uploadBytes(imageRef, item.imageFile, { customMetadata: { ownerId: auth.currentUser.uid } });
                         const downloadURL = await getDownloadURL(imageRef);
                         return { ...item, imageUrl: downloadURL, imageFile: null }; // Replace blob URL with final URL
                     }

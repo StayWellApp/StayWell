@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { db, storage } from '../../firebase-config';
+import { db, storage, auth } from '../../firebase-config';
 // CORRECTED IMPORT PATH
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -411,7 +411,7 @@ export const TaskDetailModal = ({ task, team, user, onClose }) => {
         const toastId = toast.loading(`Uploading proof for "${checklist[index].text}"...`);
         try {
             const proofRef = ref(storage, `checklist_proofs/${task.id}/${index}-${Date.now()}-${file.name}`);
-            await uploadBytes(proofRef, file);
+            await uploadBytes(proofRef, file, { customMetadata: { ownerId: auth.currentUser.uid } });
             const downloadURL = await getDownloadURL(proofRef);
             const newChecklist = [...checklist];
             newChecklist[index].proofUrl = downloadURL;
