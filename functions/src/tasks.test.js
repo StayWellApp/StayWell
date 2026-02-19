@@ -78,7 +78,7 @@ describe('reviewTask', () => {
 
     mockGet.mockResolvedValue({
       exists: true,
-      data: () => ({ propertyManagerId: 'pm-123' })
+      data: () => ({ propertyManagerId: 'pm-123', status: 'Pending Inspection' })
     });
 
     await expect(reviewTask(data, context)).rejects.toMatchObject({
@@ -93,7 +93,7 @@ describe('reviewTask', () => {
 
     mockGet.mockResolvedValue({
       exists: true,
-      data: () => ({ propertyManagerId: userId })
+      data: () => ({ propertyManagerId: userId, status: 'Pending Inspection' })
     });
     mockUpdate.mockResolvedValue({ success: true });
 
@@ -119,7 +119,7 @@ describe('reviewTask', () => {
 
     mockGet.mockResolvedValue({
       exists: true,
-      data: () => ({ propertyManagerId: userId, assignedTo: 'worker-123' })
+      data: () => ({ propertyManagerId: userId, assignedTo: 'worker-123', status: 'Pending Inspection' })
     });
     mockUpdate.mockResolvedValue({ success: true });
 
@@ -143,7 +143,7 @@ describe('reviewTask', () => {
 
     mockGet.mockResolvedValue({
       exists: true,
-      data: () => ({ propertyManagerId: userId })
+      data: () => ({ propertyManagerId: userId, status: 'Pending Inspection' })
     });
     mockUpdate.mockResolvedValue({ success: true });
 
@@ -154,5 +154,30 @@ describe('reviewTask', () => {
         comments: '',
       }),
     }));
+  });
+
+  it('should throw invalid-argument error if approved is not a boolean', async () => {
+    const data = { taskId, approved: 'yes' }; // Invalid type
+    const context = { auth: { uid: userId } };
+
+    await expect(reviewTask(data, context)).rejects.toMatchObject({
+        code: 'invalid-argument',
+        message: 'The "approved" field must be a boolean.'
+    });
+  });
+
+  it('should throw failed-precondition error if task status is not Pending Inspection', async () => {
+    const data = { taskId, approved: true };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ propertyManagerId: userId, status: 'Completed' })
+    });
+
+    await expect(reviewTask(data, context)).rejects.toMatchObject({
+        code: 'failed-precondition',
+        message: 'Task is not pending inspection.'
+    });
   });
 });

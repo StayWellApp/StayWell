@@ -83,6 +83,10 @@ exports.reviewTask = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
     }
 
+    if (typeof approved !== 'boolean') {
+        throw new functions.https.HttpsError('invalid-argument', 'The "approved" field must be a boolean.');
+    }
+
     const taskRef = db.collection('tasks').doc(taskId);
     const taskDoc = await taskRef.get();
     if (!taskDoc.exists) {
@@ -93,6 +97,10 @@ exports.reviewTask = functions.https.onCall(async (data, context) => {
     // Assuming propertyManagerId is the inspector
     if (userId !== taskData.propertyManagerId) {
         throw new functions.https.HttpsError('permission-denied', 'You are not authorized to review this task.');
+    }
+
+    if (taskData.status !== 'Pending Inspection') {
+        throw new functions.https.HttpsError('failed-precondition', 'Task is not pending inspection.');
     }
 
     const newStatus = approved ? 'Completed' : 'Requires Revisions';
