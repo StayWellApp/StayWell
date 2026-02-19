@@ -42,7 +42,7 @@ service cloud.firestore {
       allow read: if isOwner(resource) || isSuperAdmin();
       allow write: if isOwner(resource);
     }
-    
+
     // Other rules for your application...
     match /appSettings/{docId} {
       allow read, write: if isSuperAdmin();
