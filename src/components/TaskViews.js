@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, storage } from '../firebase-config';
-import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks, Info, Image, ChevronDown, Upload } from 'lucide-react';
 import { toast } from 'react-toastify'; // --- NEW ---
@@ -115,11 +115,10 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
         setEditedTask(task);
         setChecklist(task.checklistItems || []);
 
-        const commentsQuery = query(collection(db, `tasks/${task.id}/comments`));
+        const commentsQuery = query(collection(db, `tasks/${task.id}/comments`), orderBy('createdAt', 'desc'));
         // --- MODIFIED: Added error handling to snapshot ---
         const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
             const fetchedComments = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-            fetchedComments.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
             setComments(fetchedComments);
         }, (error) => {
             console.error("Error fetching comments:", error);
