@@ -30,7 +30,6 @@ import AdminSubscriptionsView from './components/admin/AdminSubscriptionsView';
 import EndImpersonationBanner from './components/EndImpersonationBanner';
 import AddClientModal from './components/admin/AddClientModal';
 import { MessageSquare } from 'lucide-react';
-import { ThemeProvider } from './contexts/ThemeContext';
 import { AdminProvider, useAdmin } from './contexts/AdminContext';
 import 'flag-icons/css/flag-icons.min.css';
 import { ToastContainer } from 'react-toastify';
@@ -183,7 +182,7 @@ function AppContent() {
     if (!isSuperAdmin && !isImpersonating && (loadingPermissions || isUserDataLoading)) return <div className="flex items-center justify-center h-screen"><p>Loading User Profile...</p></div>;
 
     return (
-        <ThemeProvider>
+        <>
             <ToastContainer position="bottom-center" autoClose={4000} hideProgressBar={false} />
             <EndImpersonationBanner />
             <div className={isImpersonating ? 'pt-10' : ''}>
@@ -199,7 +198,7 @@ function AppContent() {
                 )}
             </div>
             <AddClientModal isOpen={isAddClientModalOpen} onClose={() => setAddClientModalOpen(false)} />
-        </ThemeProvider>
+        </>
     );
 }
 
