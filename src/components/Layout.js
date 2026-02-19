@@ -6,8 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { Menu, Transition } from '@headlessui/react';
 import {
     LayoutDashboard, Users, Building, MessageSquare, BookCheck, Archive, Calendar, Settings,
-    FileText, LifeBuoy, ShieldCheck, LogOut, ChevronDown, Menu as MenuIcon, Bell, Sun, Moon, Globe, Search, ChevronsLeft, ChevronsRight, X
+    FileText, LifeBuoy, ShieldCheck, LogOut, ChevronDown, Menu as MenuIcon, Bell, Globe, Search, ChevronsLeft, ChevronsRight, X
 } from 'lucide-react';
+import ThemeToggle from './common/ThemeToggle';
 
 const NavLink = ({ active, onClick, icon: Icon, children, isCollapsed }) => (
     <button
@@ -23,21 +24,6 @@ const NavLink = ({ active, onClick, icon: Icon, children, isCollapsed }) => (
     </button>
 );
 
-const ThemeToggle = () => {
-    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
-    const toggleTheme = () => {
-        setIsDark(prev => {
-            const newIsDark = !prev;
-            document.documentElement.classList.toggle('dark', newIsDark);
-            return newIsDark;
-        });
-    };
-    return (
-        <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors">
-            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </button>
-    );
-};
 
 
 const Layout = ({ user, userData, activeView, setActiveView, hasPermission, children }) => {
@@ -162,7 +148,7 @@ const Layout = ({ user, userData, activeView, setActiveView, hasPermission, chil
                                 </Transition>
                             </div>
 
-                            <ThemeToggle />
+                            <ThemeToggle className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors" />
                             
                              {/* Language Dropdown */}
                             <Menu as="div" className="relative">
