@@ -197,7 +197,7 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
                     const destination = `proofs/${taskId}/${itemIndex}-${originalFilename}`;
                     
                     await bucket.upload(fileData.filepath, { destination, metadata: { contentType: fileData.mimeType } });
-                    fs.unlinkSync(fileData.filepath);
+                    await fs.promises.unlink(fileData.filepath);
 
                     const file = bucket.file(destination);
                     const [url] = await file.getSignedUrl({ action: "read", expires: "03-09-2491" });
