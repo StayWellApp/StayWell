@@ -54,16 +54,49 @@ function AppContent() {
     useEffect(() => {
         if (isSuperAdmin) {
             setClientsLoading(true);
-            const q = query(collection(db, "users"), where("role", "==", "owner"));
-            const unsubscribe = onSnapshot(q, (snapshot) => {
-                const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setAllClients(clientsData);
-                setClientsLoading(false);
+
+            const q1 = query(collection(db, "users"), where("role", "==", "owner"));
+            const q2 = query(collection(db, "users"), where("roles", "array-contains", "client_admin"));
+
+            let clients1 = [];
+            let clients2 = [];
+            let loaded1 = false;
+            let loaded2 = false;
+
+            const updateClients = () => {
+                if (loaded1 && loaded2) {
+                    const all = [...clients1, ...clients2];
+                    // Deduplicate by ID
+                    const uniqueClients = Array.from(new Map(all.map(item => [item.id, item])).values());
+                    setAllClients(uniqueClients);
+                    setClientsLoading(false);
+                }
+            };
+
+            const unsubscribe1 = onSnapshot(q1, (snapshot) => {
+                clients1 = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                loaded1 = true;
+                updateClients();
             }, (error) => {
-                console.error("Error fetching clients:", error);
-                setClientsLoading(false);
+                console.error("Error fetching clients (owner):", error);
+                loaded1 = true;
+                updateClients();
             });
-            return () => unsubscribe();
+
+            const unsubscribe2 = onSnapshot(q2, (snapshot) => {
+                clients2 = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                loaded2 = true;
+                updateClients();
+            }, (error) => {
+                console.error("Error fetching clients (client_admin):", error);
+                loaded2 = true;
+                updateClients();
+            });
+
+            return () => {
+                unsubscribe1();
+                unsubscribe2();
+            };
         } else {
             setAllClients([]);
         }
