@@ -1,7 +1,6 @@
 // src/App.js
 
 import React, { useState, useEffect } from 'react';
-// FIX: The Router is in index.js, so we only need routing components here.
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { auth, db } from './firebase-config';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -202,7 +201,6 @@ function AppContent() {
     );
 }
 
-// FIX: Removed the <Router> wrapper from here.
 function App() {
     return (
         <AuthProvider>
