@@ -35,7 +35,11 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
     localStorage.setItem('visibleClientColumns', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
 
-    const filteredAndSortedClients = useMemo(() => {
+  const enabledColumns = useMemo(() => {
+    return ALL_COLUMNS.filter(col => visibleColumns.includes(col.key));
+  }, [visibleColumns]);
+
+  const filteredAndSortedClients = useMemo(() => {
         let filteredClients = [...allClients];
         if (searchTerm) {
             filteredClients = filteredClients.filter(client =>
@@ -167,7 +171,7 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => (
+              {enabledColumns.map(col => (
                 <th key={col.key} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" onClick={() => requestSort(col.key)}>
                   <div className="flex items-center">{col.label}{getSortIcon(col.key)}</div>
                 </th>
@@ -186,7 +190,7 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
                     onClick={() => navigate(`/admin/clients/${client.id}`)} 
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                 >
-                  {ALL_COLUMNS.filter(col => visibleColumns.includes(col.key)).map(col => (
+                  {enabledColumns.map(col => (
                     <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                       {renderCell(client, col.key)}
                     </td>
