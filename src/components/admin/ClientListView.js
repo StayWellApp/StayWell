@@ -3,6 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Settings, Search, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { getCode } from 'country-list'; // We'll need to add this package
 
+const getCountryCode = (countryName) => {
+    if (!countryName) return null;
+    const name = countryName.trim().toLowerCase();
+    const aliases = {
+        'usa': 'us',
+        'us': 'us',
+        'united states': 'us',
+        'uk': 'gb',
+        'united kingdom': 'gb',
+        'uae': 'ae',
+        'united arab emirates': 'ae'
+    };
+    if (aliases[name]) return aliases[name];
+    return getCode(name);
+};
+
 const ALL_COLUMNS = [
   { key: 'companyName', label: 'Company' },
   { key: 'fullName', label: 'Contact Name' },
@@ -112,7 +128,7 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
 
         // --- FIX: Add country flag ---
         case 'country':
-            const countryCode = client.country ? getCode(client.country) : null;
+            const countryCode = getCountryCode(client.country);
             return (
                 <div className="flex items-center">
                     {countryCode && <span className={`fi fi-${countryCode.toLowerCase()} mr-2`}></span>}
