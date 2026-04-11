@@ -1,8 +1,6 @@
 // PhotoUploadModal.js
 
 import React, { useState } from 'react';
-import { getStorage, ref, uploadBytes } from "firebase/storage";
-import { getFunctions, httpsCallable } from 'firebase/functions';
 
 
 const PhotoUploadModal = ({ task, item, onClose, onPhotoUploaded }) => {
@@ -22,9 +20,6 @@ const PhotoUploadModal = ({ task, item, onClose, onPhotoUploaded }) => {
     // In a real app, you would call your 'uploadProof' Cloud Function
     // by passing the file to it.
     
-    const functions = getFunctions();
-    const uploadProof = httpsCallable(functions, 'uploadProof');
-
     try {
         const formData = new FormData();
         formData.append('file', file);
