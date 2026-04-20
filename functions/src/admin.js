@@ -84,6 +84,9 @@ exports.createReauthenticationToken = functions.https.onCall(async (data, contex
     if (!adminUid) {
         throw new functions.https.HttpsError("invalid-argument", "The function must be called with an 'adminUid'.");
     }
+    if (context.auth.uid !== adminUid) {
+        throw new functions.https.HttpsError("permission-denied", "You can only request a reauthentication token for yourself.");
+    }
     try {
         const adminUserRecord = await admin.auth().getUser(adminUid);
         if (!adminUserRecord.customClaims || !adminUserRecord.customClaims.superAdmin) {
