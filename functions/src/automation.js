@@ -21,6 +21,7 @@ const allowedOrigins = [
 const cors = require("cors")({ origin: allowedOrigins });
 const Busboy = require("busboy");
 const ical = require("node-ical");
+const { fetchSafeUrl } = require("./utils");
 const db = admin.firestore();
 
 // --- REUSABLE AUTOMATION FUNCTION ---
@@ -250,7 +251,8 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
         const property = doc.data();
         if (property.iCalUrl) {
             try {
-                const data = await ical.fromURL(property.iCalUrl);
+                const iCalData = await fetchSafeUrl(property.iCalUrl);
+                const data = ical.parseICS(iCalData);
                 for (const k in data) {
                     if (data[k].type === 'VEVENT') {
                         const event = data[k];
