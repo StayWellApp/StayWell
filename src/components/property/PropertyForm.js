@@ -3,7 +3,7 @@
 // MODIFIED to remove House Rules and Access Info, which are now in a separate form.
 
 import React, { useState, useEffect } from 'react';
-import { storage } from '../../firebase-config';
+import { storage, auth } from '../../firebase-config';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from 'react-toastify';
 import { AmenitiesForm, initialAmenitiesState } from './AmenitiesForm';
@@ -74,7 +74,7 @@ export const PropertyForm = ({ onSave, onCancel, existingProperty = null }) => {
             const newImageUrls = await Promise.all(
                 imageFiles.map(async (file) => {
                     const photoRef = ref(storage, `property_photos/${existingProperty.id || Date.now()}/${Date.now()}_${file.name}`);
-                    await uploadBytes(photoRef, file);
+                    await uploadBytes(photoRef, file, { customMetadata: { ownerId: auth.currentUser.uid } });
                     return await getDownloadURL(photoRef);
                 })
             );

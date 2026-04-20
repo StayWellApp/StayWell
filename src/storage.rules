@@ -1,9 +1,61 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user is setting themselves as owner on create
+    function isSettingOwner() {
+       return request.resource.metadata.ownerId == request.auth.uid;
+    }
+
+    // Helper function to check if the user is the owner of the file (via metadata)
+    function isOwner() {
+      return resource.metadata.ownerId == request.auth.uid;
+    }
+
+    // Profile pictures: strict path-based ownership
+    match /profile-pictures/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Chat images
+    match /chat_images/{chatId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isSettingOwner();
+      allow update, delete: if isAuthenticated() && isOwner();
+    }
+
+    // Proofs
+    match /proofs/{taskId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isSettingOwner();
+      allow update, delete: if isAuthenticated() && isOwner();
+    }
+
+    // Checklist Template Images
+    match /checklist_template_images/{fileName} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isSettingOwner();
+      allow update, delete: if isAuthenticated() && isOwner();
+    }
+
+    // Property Photos
+    match /property_photos/{propertyId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isSettingOwner();
+      allow update, delete: if isAuthenticated() && isOwner();
+    }
+
+    // Checklist Proofs
+    match /checklist_proofs/{taskId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isSettingOwner();
+      allow update, delete: if isAuthenticated() && isOwner();
     }
   }
 }

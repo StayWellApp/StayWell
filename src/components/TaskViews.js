@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../firebase-config';
+import { db, storage, auth } from '../firebase-config';
 import { doc, updateDoc, deleteDoc, serverTimestamp, addDoc, collection, onSnapshot, query } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Calendar, User, CheckSquare, Trash2, Plus, MessageSquare, Siren, ListChecks, Info, Image, ChevronDown, Upload } from 'lucide-react';
@@ -146,7 +146,7 @@ export const TaskDetailModal = ({ task, team, onClose }) => {
 
         try {
             const proofRef = ref(storage, `proofs/${task.id}/${Date.now()}-${proofFile.name}`);
-            const uploadResult = await uploadBytes(proofRef, proofFile);
+            const uploadResult = await uploadBytes(proofRef, proofFile, { customMetadata: { ownerId: auth.currentUser.uid } });
             const proofURL = await getDownloadURL(uploadResult.ref);
 
             await addDoc(collection(db, `tasks/${task.id}/comments`), {

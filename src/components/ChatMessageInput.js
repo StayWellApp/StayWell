@@ -51,7 +51,7 @@ const ChatMessageInput = ({ chatId, currentUser }) => {
 
         const chatRef = doc(db, 'chats', chatId);
         const storageRef = ref(storage, `chat_images/${chatId}/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
+        await uploadBytes(storageRef, file, { customMetadata: { ownerId: currentUser.uid } });
         const imageUrl = await getDownloadURL(storageRef);
 
         const messageData = {
