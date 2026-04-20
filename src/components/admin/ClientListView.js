@@ -1,7 +1,52 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Settings, Search, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
-import { getCode } from 'country-list'; // We'll need to add this package
+import { getData } from 'country-list';
+
+// Build a robust country map for name-to-code lookup
+const countries = getData();
+const countryMap = new Map();
+
+countries.forEach(c => {
+    countryMap.set(c.code.toLowerCase(), c.code);
+    countryMap.set(c.name.toLowerCase(), c.code);
+
+    // Handle " (the)" suffix e.g. "United States of America (the)" -> "United States of America"
+    if (c.name.endsWith(' (the)')) {
+        countryMap.set(c.name.replace(' (the)', '').toLowerCase(), c.code);
+    }
+
+    if (c.name.includes(',')) {
+        const parts = c.name.split(',');
+        countryMap.set(parts[0].trim().toLowerCase(), c.code);
+        // Also reverse order? e.g. "Korea, Republic of" -> "Republic of Korea"
+        if (parts.length > 1) {
+            const reversed = parts[1].trim() + ' ' + parts[0].trim();
+            countryMap.set(reversed.toLowerCase(), c.code);
+        }
+    }
+});
+
+// Add common aliases
+const aliases = {
+    "usa": "US",
+    "united states": "US",
+    "uk": "GB",
+    "united kingdom": "GB",
+    "russia": "RU",
+    "uae": "AE",
+    "south korea": "KR",
+    "north korea": "KP",
+    "vietnam": "VN"
+};
+Object.keys(aliases).forEach(alias => {
+    countryMap.set(alias, aliases[alias]);
+});
+
+const getCountryCode = (input) => {
+    if (!input) return null;
+    return countryMap.get(input.toLowerCase()) || null;
+}
 
 const getCountryCode = (countryName) => {
     if (!countryName) return null;
@@ -126,7 +171,6 @@ const ClientListView = ({ allClients, loading, onAddClient }) => {
         case 'createdAt':
             return cellValue?.seconds ? new Date(cellValue.seconds * 1000).toLocaleDateString() : 'N/A';
 
-        // --- FIX: Add country flag ---
         case 'country':
             const countryCode = getCountryCode(client.country);
             return (
