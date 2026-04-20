@@ -39,7 +39,7 @@ jest.mock('firebase-admin', () => ({
 }), { virtual: true });
 
 // We must require tasks AFTER mocking because it uses them at the top level
-const { reviewTask } = require('./tasks');
+const { reviewTask, submitForInspection } = require('./tasks');
 
 describe('reviewTask', () => {
   const taskId = 'test-task-id';
@@ -154,5 +154,72 @@ describe('reviewTask', () => {
         comments: '',
       }),
     }));
+  });
+});
+
+describe('submitForInspection', () => {
+  const taskId = 'test-task-id';
+  const userId = 'user-123';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should throw unauthenticated error if user is not logged in', async () => {
+    const data = { taskId };
+    const context = { auth: null };
+
+    await expect(submitForInspection(data, context)).rejects.toMatchObject({
+        code: 'unauthenticated',
+        message: 'You must be logged in.'
+    });
+  });
+
+  it('should throw not-found error if task does not exist', async () => {
+    const data = { taskId };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({ exists: false });
+
+    await expect(submitForInspection(data, context)).rejects.toMatchObject({
+        code: 'not-found',
+        message: 'Task not found.'
+    });
+  });
+
+  it('should throw permission-denied error if user is not assigned to the task', async () => {
+    const data = { taskId };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ assignedTo: 'other-user' })
+    });
+
+    await expect(submitForInspection(data, context)).rejects.toMatchObject({
+        code: 'permission-denied',
+        message: 'You are not assigned to this task.'
+    });
+  });
+
+  it('should successfully submit task for inspection', async () => {
+    const data = { taskId };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ assignedTo: userId })
+    });
+    mockUpdate.mockResolvedValue({ success: true });
+
+    const result = await submitForInspection(data, context);
+
+    expect(result).toEqual({ success: true });
+    expect(mockCollection).toHaveBeenCalledWith('tasks');
+    expect(mockDoc).toHaveBeenCalledWith(taskId);
+    expect(mockUpdate).toHaveBeenCalledWith({
+      status: 'Pending Inspection',
+      submittedAt: 'mock-timestamp',
+    });
   });
 });
