@@ -4,8 +4,6 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { X, Save, Building, User, Mail, Phone, MapPin, Hash } from 'lucide-react';
 
-// --- FIX: InputField moved outside of the main component ---
-// This component is now defined only once and won't be re-created on every render.
 const InputField = ({ label, name, value, onChange, placeholder, type = "text", icon: Icon }) => (
     <div>
         <label htmlFor={name} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
@@ -28,7 +26,15 @@ const InputField = ({ label, name, value, onChange, placeholder, type = "text", 
 
 
 const EditClientModal = ({ isOpen, onClose, client }) => {
-    const [formData, setFormData] = useState({});
+    const [formData, setFormData] = useState({
+        companyName: '',
+        fullName: '',
+        email: '',
+        phone: '',
+        country: '',
+        billingAddress: '',
+        vatNumber: ''
+    });
 
     useEffect(() => {
         if (client) {
