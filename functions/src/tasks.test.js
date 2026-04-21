@@ -39,7 +39,7 @@ jest.mock('firebase-admin', () => ({
 }), { virtual: true });
 
 // We must require tasks AFTER mocking because it uses them at the top level
-const { reviewTask } = require('./tasks');
+const { reviewTask, respondToTaskOffer } = require('./tasks');
 
 describe('reviewTask', () => {
   const taskId = 'test-task-id';
@@ -154,5 +154,159 @@ describe('reviewTask', () => {
         comments: '',
       }),
     }));
+  });
+});
+
+describe('respondToTaskOffer', () => {
+  const taskId = 'test-task-id';
+  const userId = 'user-123';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should throw unauthenticated error if user is not logged in', async () => {
+    const data = { taskId, response: 'accepted' };
+    const context = { auth: null };
+
+    await expect(respondToTaskOffer(data, context)).rejects.toMatchObject({
+        code: 'unauthenticated',
+        message: 'You must be logged in.'
+    });
+  });
+
+  it('should throw not-found error if task does not exist', async () => {
+    const data = { taskId, response: 'accepted' };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({ exists: false });
+
+    await expect(respondToTaskOffer(data, context)).rejects.toMatchObject({
+        code: 'not-found',
+        message: 'Task not found.'
+    });
+  });
+
+  it('should throw permission-denied error if user is not authorized', async () => {
+    const data = { taskId, response: 'accepted' };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({
+        assignmentStatus: 'PendingPrimary',
+        primaryAssignee: 'other-user',
+        fallbackAssignee: 'other-user-2'
+      })
+    });
+
+    await expect(respondToTaskOffer(data, context)).rejects.toMatchObject({
+        code: 'permission-denied',
+        message: 'You are not authorized to respond to this offer.'
+    });
+  });
+
+  it('should throw invalid-argument error if response is invalid', async () => {
+    const data = { taskId, response: 'maybe' };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({
+        assignmentStatus: 'PendingPrimary',
+        primaryAssignee: userId
+      })
+    });
+
+    await expect(respondToTaskOffer(data, context)).rejects.toMatchObject({
+        code: 'invalid-argument',
+        message: 'Response must be "accepted" or "rejected".'
+    });
+  });
+
+  it('should successfully accept a task', async () => {
+    const data = { taskId, response: 'accepted' };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({
+        assignmentStatus: 'PendingPrimary',
+        primaryAssignee: userId
+      })
+    });
+    mockUpdate.mockResolvedValue({ success: true });
+
+    const result = await respondToTaskOffer(data, context);
+
+    expect(result).toEqual({ success: true });
+    expect(mockUpdate).toHaveBeenCalledWith({
+        status: 'Pending',
+        assignmentStatus: 'Accepted',
+        assignedTo: userId,
+    });
+  });
+
+  it('should increment rejection count and offer to fallback assignee if primary rejects', async () => {
+    const data = { taskId, response: 'rejected' };
+    const context = { auth: { uid: userId } };
+    const fallbackUserId = 'fallback-user';
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({
+        assignmentStatus: 'PendingPrimary',
+        primaryAssignee: userId,
+        fallbackAssignee: fallbackUserId
+      })
+    });
+    mockUpdate.mockResolvedValue({ success: true });
+
+    const result = await respondToTaskOffer(data, context);
+
+    expect(result).toEqual({ success: true });
+    // Verify rejection count increment
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ rejectionCount: 1 }));
+    // Verify assignment to fallback
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ assignmentStatus: 'PendingFallback' }));
+  });
+
+  it('should escalate if primary rejects and no fallback exists', async () => {
+    const data = { taskId, response: 'rejected' };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({
+        assignmentStatus: 'PendingPrimary',
+        primaryAssignee: userId,
+        fallbackAssignee: null
+      })
+    });
+    mockUpdate.mockResolvedValue({ success: true });
+
+    const result = await respondToTaskOffer(data, context);
+
+    expect(result).toEqual({ success: true });
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: 'Unassigned', assignmentStatus: 'Rejected' }));
+  });
+
+  it('should escalate if fallback rejects', async () => {
+    const data = { taskId, response: 'rejected' };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({
+        assignmentStatus: 'PendingFallback',
+        fallbackAssignee: userId
+      })
+    });
+    mockUpdate.mockResolvedValue({ success: true });
+
+    const result = await respondToTaskOffer(data, context);
+
+    expect(result).toEqual({ success: true });
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: 'Unassigned', assignmentStatus: 'Rejected' }));
   });
 });
