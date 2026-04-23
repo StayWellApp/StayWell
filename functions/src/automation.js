@@ -152,9 +152,23 @@ const checkForDoubleBooking = async (newBooking, existingBookingId = null) => {
 // --- EXPORTED FUNCTIONS ---
 
 exports.uploadProof = functions.https.onRequest((req, res) => {
-    cors(req, res, () => {
+    cors(req, res, async () => {
         if (req.method !== "POST") {
             return res.status(405).send({ error: "Method Not Allowed" });
+        }
+
+        let userId;
+        try {
+            if (!req.headers.authorization || !req.headers.authorization.startsWith("Bearer ")) {
+                functions.logger.warn("Missing or invalid Authorization header");
+                return res.status(403).send({ error: "Unauthorized" });
+            }
+            const idToken = req.headers.authorization.split("Bearer ")[1];
+            const decodedToken = await admin.auth().verifyIdToken(idToken);
+            userId = decodedToken.uid;
+        } catch (error) {
+            functions.logger.error("Authentication failed:", error);
+            return res.status(403).send({ error: "Unauthorized" });
         }
 
         try {
@@ -193,6 +207,26 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
                     const { taskId, itemIndex, originalFilename } = fields;
                     if (!taskId || !itemIndex || !originalFilename) throw new Error("Required fields missing.");
 
+                    const taskRef = db.collection('tasks').doc(taskId);
+                    const taskDoc = await taskRef.get();
+
+                    if (!taskDoc.exists) {
+                        return res.status(404).send({ error: "Task not found." });
+                    }
+
+                    let taskData = taskDoc.data();
+
+                    // Verify if the user is authorized to upload proof for this task
+                    // Allowed if: Assigned to task OR Owner of property (ownerId on task)
+                    if (taskData.assignedTo !== userId && taskData.ownerId !== userId) {
+                         functions.logger.warn(`Unauthorized upload attempt by user ${userId} on task ${taskId}`);
+                         // Clean up temp file
+                         if (fileData.filepath && fs.existsSync(fileData.filepath)) {
+                             fs.unlinkSync(fileData.filepath);
+                         }
+                         return res.status(403).send({ error: "You are not authorized to upload proofs for this task." });
+                    }
+
                     const bucket = admin.storage().bucket();
                     const destination = `proofs/${taskId}/${itemIndex}-${originalFilename}`;
                     
@@ -202,10 +236,10 @@ exports.uploadProof = functions.https.onRequest((req, res) => {
                     const file = bucket.file(destination);
                     const [url] = await file.getSignedUrl({ action: "read", expires: "03-09-2491" });
 
-                    const taskRef = db.collection('tasks').doc(taskId);
-                    const taskDoc = await taskRef.get();
-                    if (taskDoc.exists) {
-                        const taskData = taskDoc.data();
+                    // Refetch task data to ensure checklistItems is up to date before update
+                    const updatedTaskDoc = await taskRef.get();
+                    if (updatedTaskDoc.exists) {
+                        taskData = updatedTaskDoc.data();
                         const checklistItems = taskData.checklistItems || [];
                         if (checklistItems[itemIndex]) {
                             checklistItems[itemIndex].photoURL = url;
