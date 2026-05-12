@@ -155,4 +155,52 @@ describe('reviewTask', () => {
       }),
     }));
   });
+
+  it('should successfully reject a task without comments', async () => {
+    const data = { taskId, approved: false };
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ propertyManagerId: userId, assignedTo: 'worker-123' })
+    });
+    mockUpdate.mockResolvedValue({ success: true });
+
+    const result = await reviewTask(data, context);
+
+    expect(result).toEqual({ success: true, newStatus: 'Requires Revisions' });
+    expect(mockUpdate).toHaveBeenCalledWith({
+      status: 'Requires Revisions',
+      inspection: {
+        approved: false,
+        reviewedBy: userId,
+        reviewedAt: 'mock-timestamp',
+        comments: '',
+      },
+    });
+  });
+
+  it('should default to rejection if approved flag is missing', async () => {
+    const data = { taskId }; // approved is undefined
+    const context = { auth: { uid: userId } };
+
+    mockGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ propertyManagerId: userId, assignedTo: 'worker-123' })
+    });
+    mockUpdate.mockResolvedValue({ success: true });
+
+    const result = await reviewTask(data, context);
+
+    expect(result).toEqual({ success: true, newStatus: 'Requires Revisions' });
+    expect(mockUpdate).toHaveBeenCalledWith({
+      status: 'Requires Revisions',
+      inspection: {
+        approved: undefined,
+        reviewedBy: userId,
+        reviewedAt: 'mock-timestamp',
+        comments: '',
+      },
+    });
+  });
 });
