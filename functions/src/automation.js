@@ -281,6 +281,20 @@ exports.addManualBooking = functions.https.onRequest(async (req, res) => {
         if (req.method !== "POST") {
             return res.status(405).send({ error: "Method Not Allowed" });
         }
+
+        const idToken = req.headers.authorization?.split('Bearer ')[1];
+        if (!idToken) {
+            return res.status(401).send({ error: "Unauthorized" });
+        }
+
+        let decodedToken;
+        try {
+            decodedToken = await admin.auth().verifyIdToken(idToken);
+        } catch (error) {
+            functions.logger.error("Error verifying auth token:", error);
+            return res.status(401).send({ error: "Unauthorized" });
+        }
+
         try {
             const { propertyId, startDate, endDate, guestName } = req.body;
             if (!propertyId || !startDate || !endDate || !guestName) {
@@ -293,6 +307,11 @@ exports.addManualBooking = functions.https.onRequest(async (req, res) => {
             }
 
             const propertyData = propertyDoc.data();
+
+            if (propertyData.ownerId !== decodedToken.uid) {
+                return res.status(403).send({ error: "Forbidden" });
+            }
+
             const bookingId = `manual_${Date.now()}`;
             const newBooking = {
                 propertyId,
