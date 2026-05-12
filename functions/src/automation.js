@@ -246,7 +246,7 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
     const propertiesSnapshot = await db.collection('properties').get();
     if (propertiesSnapshot.empty) return null;
 
-    for (const doc of propertiesSnapshot.docs) {
+    await Promise.all(propertiesSnapshot.docs.map(async (doc) => {
         const property = doc.data();
         if (property.iCalUrl) {
             try {
@@ -272,7 +272,7 @@ exports.syncIcalFeeds = functions.pubsub.schedule('every 1 minutes').onRun(async
                 functions.logger.error(`Error processing iCal for property ${doc.id}:`, err);
             }
         }
-    }
+    }));
     return null;
 });
 
