@@ -17,7 +17,6 @@ exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
     }
 
     const taskData = taskDoc.data();
-    const notificationsToSend = [];
     const isPrimary = taskData.assignmentStatus === 'PendingPrimary' && taskData.primaryAssignee === userId;
     const isFallback = taskData.assignmentStatus === 'PendingFallback' && taskData.fallbackAssignee === userId;
 
@@ -31,23 +30,22 @@ exports.respondToTaskOffer = functions.https.onCall(async (data, context) => {
             assignmentStatus: 'Accepted',
             assignedTo: userId,
         });
-        // Notify property manager of acceptance
+        // TODO: Notify property manager of acceptance
     } else if (response === 'rejected') {
         await taskRef.update({ rejectionCount: admin.firestore.FieldValue.increment(1) });
-        // Notify property manager of rejection
+        // TODO: Notify property manager of rejection
 
         if (isPrimary && taskData.fallbackAssignee) {
             await taskRef.update({ assignmentStatus: 'PendingFallback' });
-            // Create notification for fallback assignee
+            // TODO: Create notification for fallback assignee
         } else {
             await taskRef.update({ status: 'Unassigned', assignmentStatus: 'Rejected' });
-            // Notify admins of escalation
+            // TODO: Notify admins of escalation
         }
     } else {
         throw new functions.https.HttpsError('invalid-argument', 'Response must be "accepted" or "rejected".');
     }
 
-    await Promise.all(notificationsToSend);
     return { success: true };
 });
 
